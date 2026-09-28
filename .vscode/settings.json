@@ -1,0 +1,68 @@
+{
+    "folderTemplates.templateNotation": {
+        "start": ["<", "["],
+        "end": [">", "]"]
+    },
+    "folderTemplates.fileTemplates": {
+        "ComponentIndex": [
+            "export {default as <FTName>} from './<FTName>';",
+            "export type { <FTName>Props } from './<FTName>.types';"
+        ],
+        "Component": [
+            "import { <FTName>Props } from './<FTName>.types';",
+            "",
+            "const <FTName> = ({}:<FTName>Props) => {",
+            "  return (",
+            "    <>",
+            "       ",
+            "    </>",
+            "  );",
+            "};",
+            "",
+            "export default <FTName>;"
+        ],
+        "ComponentsHooks": [
+            "// eslint-disable-next-line @typescript-eslint/no-unused-vars",
+            "import { <FTName>Props } from './<FTName>.types';",
+            "",
+            "const use<FTName | capitalize>Hook = () => {",
+            "   ",
+            "}",
+            "",
+            "export default use<FTName | capitalize>Hook"
+        ],
+        "ComponentTypes": [
+            "// eslint-disable-next-line @typescript-eslint/no-empty-object-type",
+            "export type <FTName>Props = {}"
+        ]
+    },
+    "folderTemplates.structures": [
+        {
+            "name": "Component Template",
+            "omitParentDirectory": false,
+            "structure": [
+                {
+                    "fileName": "index.ts",
+                    "template": "ComponentIndex"
+                },
+                {
+                    "fileName": "<FTName>.tsx",
+                    "template": "Component"
+                },
+                {
+                    "fileName": "<FTName>.hooks.ts",
+                    "template": "ComponentsHooks"
+                },
+                {
+                    "fileName": "<FTName>.types.ts",
+                    "template": "ComponentTypes"
+                }
+            ]
+        }
+    ],
+    "editor.formatOnSave": true,
+    "editor.rulers": [100],
+    "editor.wordWrapColumn": 100,
+    "editor.wordWrap": "wordWrapColumn"
+}
+//! https://marketplace.visualstudio.com/items?itemName=Huuums.vscode-fast-folder-structure
