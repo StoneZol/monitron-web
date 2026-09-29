@@ -11,7 +11,7 @@ const ScreensOverlay = ({ children }: ScreensOverlayProps) => {
     return (
         <div
             className={cn(
-                "absolute inset-0 z-10 flex h-screen w-screen items-center justify-center bg-black/30 transition-opacity duration-300",
+                "absolute inset-0 z-10 flex h-screen w-screen items-center justify-center",
                 hideHud && "pointer-events-none opacity-0",
             )}
             aria-hidden={hideHud}

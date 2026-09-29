@@ -38,6 +38,9 @@ function toneFog(src: THREE.Color, out: THREE.Color) {
 export type GlowAudio = {
   enabled: boolean;
   bass: number;
+  mid: number;
+  high: number;
+  beat: number;
 };
 
 /**
@@ -46,6 +49,7 @@ export type GlowAudio = {
  *   neither → follow edge hue
  *   fogFixed → static fogIdle/fogPeak
  *   fogParallel → hue-cycle fogIdle/fogPeak with edge
+ * Reactive fog jumps use fogChannel (off | bass | mid | high | beat).
  */
 export function applyGlow(
   edgeMaterial: THREE.LineBasicMaterial,
@@ -68,14 +72,25 @@ export function applyGlow(
   }
 
   accentLight.color.set(0xffffff);
-  accentLight.intensity = 0.5;
+  accentLight.intensity =
+    0.5 * Math.max(0, Math.min(2, live.lightIntensity));
 
-  // Caps fog is driven in Canvas from beat palette — skip here
+  // Caps fog is driven in Canvas from fog palette + fogChannel — skip here
   if (live.caps) return;
 
-  const bass = audio?.enabled
-    ? Math.max(0, Math.min(1, audio.bass))
-    : 0;
+  const fogLevel = (() => {
+    if (!audio?.enabled || live.fogChannel === "off") return 0;
+    const ch = live.fogChannel;
+    const raw =
+      ch === "beat"
+        ? audio.beat
+        : ch === "bass"
+          ? audio.bass
+          : ch === "mid"
+            ? audio.mid
+            : audio.high;
+    return Math.max(0, Math.min(1, raw));
+  })();
 
   if (garland && !live.fogFixed && !live.fogParallel) {
     // Default: haze follows edge rainbow
@@ -90,7 +105,7 @@ export function applyGlow(
       resolveHueColor(live.fogPeak, fogHueOffsetDeg, cycleFog),
       _fogPeak,
     );
-    _fog.lerp(_fogPeak, bass);
+    _fog.lerp(_fogPeak, fogLevel);
   }
 
   fog.color.copy(_fog);

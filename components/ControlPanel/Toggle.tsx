@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { fieldControlRow, fieldRoot } from "./field";
 
 type ToggleProps = {
   label: string;
@@ -22,40 +23,40 @@ export function Toggle({
   return (
     <label
       className={cn(
-        "flex items-center justify-between gap-3 text-[10px] uppercase tracking-[0.2em]",
+        fieldRoot,
         inert ? "text-muted" : "text-signal",
         disabled && "pointer-events-none opacity-40",
         className,
       )}
     >
-      <span>{label}</span>
-      <button
-        type="button"
-        role="switch"
-        aria-checked={checked}
-        aria-readonly={readOnly || undefined}
-        disabled={disabled}
-        onClick={() => {
-          if (!inert) onChange(!checked);
-        }}
-        className={cn(
-          "relative h-5 w-9 shrink-0 border transition-colors",
-          checked
-            ? "border-signal bg-signal/25"
-            : "border-muted bg-screen",
-          !inert &&
-            "hover:border-cyan focus-visible:outline focus-visible:outline-offset-2 focus-visible:outline-signal",
-        )}
-      >
-        <span
+      <span className={cn(fieldControlRow, "justify-between gap-3")}>
+        <span className="leading-none">{label}</span>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={checked}
+          aria-readonly={readOnly || undefined}
+          disabled={disabled}
+          onClick={() => {
+            if (!inert) onChange(!checked);
+          }}
           className={cn(
-            "absolute top-0.5 h-3.5 w-3.5 transition-transform",
-            checked
-              ? "left-4 bg-signal shadow-[0_0_6px_var(--signal)]"
-              : "left-0.5 bg-muted",
+            "relative h-5 w-9 shrink-0 border transition-colors",
+            checked ? "border-signal bg-signal/25" : "border-muted bg-screen",
+            !inert &&
+              "hover:border-cyan focus-visible:outline focus-visible:outline-offset-2 focus-visible:outline-signal",
           )}
-        />
-      </button>
+        >
+          <span
+            className={cn(
+              "absolute top-0.5 h-3.5 w-3.5 transition-transform",
+              checked
+                ? "left-4 bg-signal shadow-[0_0_6px_var(--signal)]"
+                : "left-0.5 bg-muted",
+            )}
+          />
+        </button>
+      </span>
     </label>
   );
 }

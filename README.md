@@ -167,6 +167,8 @@ if (viz.enabled) {
 | [`components/ScreensOverlay`](components/ScreensOverlay)   | Idle-hide HUD shell                                   |
 | [`components/NavBackButton`](components/NavBackButton.tsx) | Back to library                                       |
 
+**UI reference:** props and usage for every shared control → [`docs/ui.md`](docs/ui.md).
+
 ---
 
 ## Audio bus API

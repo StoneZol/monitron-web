@@ -18,6 +18,17 @@ export type HexagonsPlaceLive = {
   fogParallel: boolean;
   /** Multiplier on colorSpeed for parallel fog hue cycle */
   fogParallelSpeed: number;
+  /** Aux ground grid tint when gridFixed */
+  gridColor: string;
+  /** Fixed picker vs follow edge / reactive grid palette */
+  gridFixed: boolean;
+  /** Grid palette — idle / peak (jumps driven by gridChannel when reactive) */
+  capGridIdle: string;
+  capGridPeak: string;
+  /** Reactive: which audio band drives grid idle→peak; off = static idle */
+  gridChannel: "off" | "bass" | "mid" | "high" | "beat";
+  /** Scales the aux ground grid helper */
+  gridScale: number;
   garland: boolean;
   /**
    * Spectrum caps mode — replaces garland.
@@ -31,9 +42,11 @@ export type HexagonsPlaceLive = {
   capMidPeak: string;
   capHighIdle: string;
   capHighPeak: string;
-  /** Beat washes fog in caps mode */
-  capBeatFogIdle: string;
-  capBeatFogPeak: string;
+  /** Caps fog palette — idle / peak (jumps via fogChannel when reactive) */
+  capFogIdle: string;
+  capFogPeak: string;
+  /** Reactive: which audio band drives caps/non-fixed fog idle→peak; off = static idle */
+  fogChannel: "off" | "bass" | "mid" | "high" | "beat";
   /** Hue degrees per second when garland is on */
   colorSpeed: number;
   /** Pitch down in degrees — tips the view, does not move the camera */
@@ -56,6 +69,8 @@ export type HexagonsPlaceLive = {
   fogHeight: number;
   /** 0 = clear, 1 = opaque haze inside the fog layer */
   fogDensity: number;
+  /** Scene light multiplier (1 = default ambient/spot/point) */
+  lightIntensity: number;
   /** Grid extent (NxN hexes) */
   hexGrid: number;
   /** Individual hex radius / spacing scale */

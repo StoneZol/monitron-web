@@ -13,6 +13,12 @@ export const HEXAGONS_DEFAULTS: HexagonsPlaceLive = {
     fogFixed: false,
     fogParallel: false,
     fogParallelSpeed: 1,
+    gridColor: "#ff9940",
+    gridFixed: false,
+    capGridIdle: "#1a4a20",
+    capGridPeak: "#6dff4a",
+    gridChannel: "beat",
+    gridScale: 1,
     garland: false,
     caps: false,
     capBassIdle: "#8f0070",
@@ -21,8 +27,9 @@ export const HEXAGONS_DEFAULTS: HexagonsPlaceLive = {
     capMidPeak: "#fef606",
     capHighIdle: "#0644fe",
     capHighPeak: "#3496fe",
-    capBeatFogIdle: "#1a0c14",
-    capBeatFogPeak: "#4a1830",
+    capFogIdle: "#0c1a2e",
+    capFogPeak: "#1a4a9e",
+    fogChannel: "beat",
     colorSpeed: 40,
     cameraAngle: 25,
     cameraHeight: 8,
@@ -34,6 +41,7 @@ export const HEXAGONS_DEFAULTS: HexagonsPlaceLive = {
     spinSpeed: 1,
     fogHeight: 2,
     fogDensity: 0.7,
+    lightIntensity: 1,
     hexGrid: 81,
     hexSize: 0.5,
     hexHeightSpread: 1,
@@ -78,6 +86,8 @@ function readPrefs(): HexagonsPlaceLive {
         fogStrength: legacyStrength,
         fogColor: legacyFogColor,
         coloredFog: _coloredFog,
+        capBeatFogIdle: legacyBeatFogIdle,
+        capBeatFogPeak: legacyBeatFogPeak,
         ...rest
     } = loaded as HexagonsPlaceLive & {
         cameraRotation?: number;
@@ -85,6 +95,8 @@ function readPrefs(): HexagonsPlaceLive {
         fogStrength?: number;
         fogColor?: string;
         coloredFog?: boolean;
+        capBeatFogIdle?: string;
+        capBeatFogPeak?: string;
     };
     cached = { ...HEXAGONS_DEFAULTS, ...rest };
     // Legacy single fogColor → fogIdle
@@ -93,6 +105,37 @@ function readPrefs(): HexagonsPlaceLive {
         typeof legacyFogColor === "string"
     ) {
         cached.fogIdle = legacyFogColor;
+    }
+    // Legacy caps beat-fog row → caps fog palette
+    if (
+        cached.capFogIdle === HEXAGONS_DEFAULTS.capFogIdle &&
+        typeof legacyBeatFogIdle === "string"
+    ) {
+        cached.capFogIdle = legacyBeatFogIdle;
+    }
+    if (
+        cached.capFogPeak === HEXAGONS_DEFAULTS.capFogPeak &&
+        typeof legacyBeatFogPeak === "string"
+    ) {
+        cached.capFogPeak = legacyBeatFogPeak;
+    }
+    if (
+        cached.gridChannel !== "off" &&
+        cached.gridChannel !== "bass" &&
+        cached.gridChannel !== "mid" &&
+        cached.gridChannel !== "high" &&
+        cached.gridChannel !== "beat"
+    ) {
+        cached.gridChannel = HEXAGONS_DEFAULTS.gridChannel;
+    }
+    if (
+        cached.fogChannel !== "off" &&
+        cached.fogChannel !== "bass" &&
+        cached.fogChannel !== "mid" &&
+        cached.fogChannel !== "high" &&
+        cached.fogChannel !== "beat"
+    ) {
+        cached.fogChannel = HEXAGONS_DEFAULTS.fogChannel;
     }
     // Legacy dolly zoom was ~6–40; scene scale lives in 0.25–2.5
     if (cached.cameraZoom > 3) cached.cameraZoom = HEXAGONS_DEFAULTS.cameraZoom;
@@ -155,6 +198,20 @@ export default function useHexagonsPlaceHook() {
             fogParallelSpeed: live.fogParallelSpeed,
             setFogParallelSpeed: (fogParallelSpeed: number) =>
                 commit({ fogParallelSpeed }),
+            gridColor: live.gridColor,
+            setGridColor: (gridColor: string) => commit({ gridColor }),
+            gridFixed: live.gridFixed,
+            setGridFixed: (gridFixed: boolean) => commit({ gridFixed }),
+            capGridIdle: live.capGridIdle,
+            setCapGridIdle: (capGridIdle: string) => commit({ capGridIdle }),
+            capGridPeak: live.capGridPeak,
+            setCapGridPeak: (capGridPeak: string) => commit({ capGridPeak }),
+            gridChannel: live.gridChannel,
+            setGridChannel: (
+                gridChannel: HexagonsPlaceLive["gridChannel"],
+            ) => commit({ gridChannel }),
+            gridScale: live.gridScale,
+            setGridScale: (gridScale: number) => commit({ gridScale }),
             garland: live.garland,
             setGarland: (garland: boolean) =>
                 commit(garland ? { garland: true, caps: false } : { garland }),
@@ -173,12 +230,13 @@ export default function useHexagonsPlaceHook() {
             setCapHighIdle: (capHighIdle: string) => commit({ capHighIdle }),
             capHighPeak: live.capHighPeak,
             setCapHighPeak: (capHighPeak: string) => commit({ capHighPeak }),
-            capBeatFogIdle: live.capBeatFogIdle,
-            setCapBeatFogIdle: (capBeatFogIdle: string) =>
-                commit({ capBeatFogIdle }),
-            capBeatFogPeak: live.capBeatFogPeak,
-            setCapBeatFogPeak: (capBeatFogPeak: string) =>
-                commit({ capBeatFogPeak }),
+            capFogIdle: live.capFogIdle,
+            setCapFogIdle: (capFogIdle: string) => commit({ capFogIdle }),
+            capFogPeak: live.capFogPeak,
+            setCapFogPeak: (capFogPeak: string) => commit({ capFogPeak }),
+            fogChannel: live.fogChannel,
+            setFogChannel: (fogChannel: HexagonsPlaceLive["fogChannel"]) =>
+                commit({ fogChannel }),
             colorSpeed: live.colorSpeed,
             setColorSpeed: (colorSpeed: number) => commit({ colorSpeed }),
             cameraAngle: live.cameraAngle,
@@ -201,6 +259,9 @@ export default function useHexagonsPlaceHook() {
             setFogHeight: (fogHeight: number) => commit({ fogHeight }),
             fogDensity: live.fogDensity,
             setFogDensity: (fogDensity: number) => commit({ fogDensity }),
+            lightIntensity: live.lightIntensity,
+            setLightIntensity: (lightIntensity: number) =>
+                commit({ lightIntensity }),
             hexGrid: live.hexGrid,
             setHexGrid: (hexGrid: number) => commit({ hexGrid }),
             hexSize: live.hexSize,

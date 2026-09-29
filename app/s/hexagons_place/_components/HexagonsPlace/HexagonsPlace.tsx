@@ -9,11 +9,21 @@ import {
     ControlSection,
     Meter,
     PanelButton,
+    Select,
     Slider,
     Toggle,
 } from "@/components/ControlPanel";
+import { PLUGIN_URL } from "@/lib/audioBus";
 import useHexagonsPlaceHook from "./HexagonsPlace.hooks";
 import type { HexagonsPlaceProps } from "./HexagonsPlace.types";
+
+const REACTIVE_CHANNEL_OPTIONS = [
+    { value: "off", label: "off" },
+    { value: "bass", label: "bass" },
+    { value: "mid", label: "mid" },
+    { value: "high", label: "high" },
+    { value: "beat", label: "beat" },
+] as const;
 
 const HexagonsCanvas = dynamic(() => import("./HexagonsPlace.Canvas"), {
     ssr: false,
@@ -21,6 +31,10 @@ const HexagonsCanvas = dynamic(() => import("./HexagonsPlace.Canvas"), {
 
 const HexagonsPlace = ({ showOverlay = true }: HexagonsPlaceProps) => {
     const { live, controls, visualizer } = useHexagonsPlaceHook();
+    const peakLocked = !visualizer.reactive;
+    const peakStamp = !visualizer.pluginPresent
+        ? ({ peak: "reactive" } as const)
+        : undefined;
 
     return (
         <div className="relative h-screen w-screen overflow-hidden bg-black select-none">
@@ -30,7 +44,7 @@ const HexagonsPlace = ({ showOverlay = true }: HexagonsPlaceProps) => {
                 <ScreensOverlay>
                     <ControlPanel title="hexagons">
                         <ControlSection label="look">
-                            <div className="flex gap-2 py-2">
+                            <div className="flex gap-2">
                                 <Toggle
                                     label="Garland"
                                     checked={controls.garland}
@@ -64,6 +78,8 @@ const HexagonsPlace = ({ showOverlay = true }: HexagonsPlaceProps) => {
                                 <ColorTable
                                     label="caps palette"
                                     columns={["idle", "peak"]}
+                                    lockedColumns={peakLocked ? ["peak"] : []}
+                                    columnStamps={peakStamp}
                                     rows={[
                                         {
                                             label: "bass",
@@ -111,17 +127,32 @@ const HexagonsPlace = ({ showOverlay = true }: HexagonsPlaceProps) => {
                                             ],
                                         },
                                         {
-                                            label: "beat",
+                                            label: "fog",
                                             cells: [
                                                 {
-                                                    value: controls.capBeatFogIdle,
+                                                    value: controls.capFogIdle,
                                                     onChange:
-                                                        controls.setCapBeatFogIdle,
+                                                        controls.setCapFogIdle,
                                                 },
                                                 {
-                                                    value: controls.capBeatFogPeak,
+                                                    value: controls.capFogPeak,
                                                     onChange:
-                                                        controls.setCapBeatFogPeak,
+                                                        controls.setCapFogPeak,
+                                                },
+                                            ],
+                                        },
+                                        {
+                                            label: "grid",
+                                            cells: [
+                                                {
+                                                    value: controls.capGridIdle,
+                                                    onChange:
+                                                        controls.setCapGridIdle,
+                                                },
+                                                {
+                                                    value: controls.capGridPeak,
+                                                    onChange:
+                                                        controls.setCapGridPeak,
                                                 },
                                             ],
                                         },
@@ -142,7 +173,7 @@ const HexagonsPlace = ({ showOverlay = true }: HexagonsPlaceProps) => {
                         <ControlSection label="fog">
                             {controls.garland && !controls.caps && (
                                 <>
-                                    <div className="flex gap-2 py-1">
+                                    <div className="flex gap-2">
                                         <Toggle
                                             label="Fixed"
                                             checked={controls.fogFixed}
@@ -173,27 +204,29 @@ const HexagonsPlace = ({ showOverlay = true }: HexagonsPlaceProps) => {
                                 (!controls.garland ||
                                     controls.fogFixed ||
                                     controls.fogParallel) && (
-                                <ColorTable
-                                    columns={["idle", "peak"]}
-                                    rows={[
-                                        {
-                                            label: "",
-                                            cells: [
-                                                {
-                                                    value: controls.fogIdle,
-                                                    onChange:
-                                                        controls.setFogIdle,
-                                                },
-                                                {
-                                                    value: controls.fogPeak,
-                                                    onChange:
-                                                        controls.setFogPeak,
-                                                },
-                                            ],
-                                        },
-                                    ]}
-                                />
-                            )}
+                                    <ColorTable
+                                        columns={["idle", "peak"]}
+                                        lockedColumns={peakLocked ? ["peak"] : []}
+                                        columnStamps={peakStamp}
+                                        rows={[
+                                            {
+                                                label: "",
+                                                cells: [
+                                                    {
+                                                        value: controls.fogIdle,
+                                                        onChange:
+                                                            controls.setFogIdle,
+                                                    },
+                                                    {
+                                                        value: controls.fogPeak,
+                                                        onChange:
+                                                            controls.setFogPeak,
+                                                    },
+                                                ],
+                                            },
+                                        ]}
+                                    />
+                                )}
                             <Slider
                                 label="Height"
                                 value={controls.fogHeight}
@@ -211,6 +244,18 @@ const HexagonsPlace = ({ showOverlay = true }: HexagonsPlaceProps) => {
                                 step={0.01}
                                 onChange={controls.setFogDensity}
                                 format={(v) => v.toFixed(2)}
+                            />
+                        </ControlSection>
+
+                        <ControlSection label="light">
+                            <Slider
+                                label="Intensity"
+                                value={controls.lightIntensity}
+                                min={0}
+                                max={2}
+                                step={0.05}
+                                onChange={controls.setLightIntensity}
+                                format={(v) => `×${v.toFixed(2)}`}
                             />
                         </ControlSection>
 
@@ -284,6 +329,55 @@ const HexagonsPlace = ({ showOverlay = true }: HexagonsPlaceProps) => {
                             )}
                         </ControlSection>
 
+                        <ControlSection label="grid">
+                            <Toggle
+                                label="Fixed"
+                                checked={controls.gridFixed}
+                                onChange={controls.setGridFixed}
+                            />
+                            {controls.gridFixed ? (
+                                <ColorField
+                                    label="Color"
+                                    value={controls.gridColor}
+                                    onChange={controls.setGridColor}
+                                />
+                            ) : (
+                                !controls.caps && (
+                                    <ColorTable
+                                        columns={["idle", "peak"]}
+                                        lockedColumns={peakLocked ? ["peak"] : []}
+                                        columnStamps={peakStamp}
+                                        rows={[
+                                            {
+                                                label: "",
+                                                cells: [
+                                                    {
+                                                        value: controls.capGridIdle,
+                                                        onChange:
+                                                            controls.setCapGridIdle,
+                                                    },
+                                                    {
+                                                        value: controls.capGridPeak,
+                                                        onChange:
+                                                            controls.setCapGridPeak,
+                                                    },
+                                                ],
+                                            },
+                                        ]}
+                                    />
+                                )
+                            )}
+                            <Slider
+                                label="Scale ×"
+                                value={controls.gridScale}
+                                min={0.25}
+                                max={4}
+                                step={0.05}
+                                onChange={controls.setGridScale}
+                                format={(v) => v.toFixed(2)}
+                            />
+                        </ControlSection>
+
                         <ControlSection label="actions">
                             <div className="flex gap-2">
                                 <PanelButton onClick={controls.reset} className="flex-1">
@@ -308,6 +402,20 @@ const HexagonsPlace = ({ showOverlay = true }: HexagonsPlaceProps) => {
                                     {visualizer.pluginPresent ? "online" : "offline"}
                                 </span>
                             </div>
+                            {!visualizer.pluginPresent && (
+                                <a
+                                    href={PLUGIN_URL}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.2em] text-muted transition-colors hover:text-signal focus-visible:outline focus-visible:outline-offset-2 focus-visible:outline-signal"
+                                >
+                                    <span className="text-warn/80">get</span>
+                                    plugin
+                                    <span aria-hidden className="text-cyan">
+                                        →
+                                    </span>
+                                </a>
+                            )}
                             <div className="flex gap-2 py-2">
                                 <Toggle
                                     label="reactive"
@@ -322,6 +430,22 @@ const HexagonsPlace = ({ showOverlay = true }: HexagonsPlaceProps) => {
                                     disabled={!visualizer.reactive}
                                 />
                             </div>
+                            {visualizer.reactive && (
+                                <>
+                                    <Select
+                                        label="Grid channel"
+                                        value={controls.gridChannel}
+                                        options={[...REACTIVE_CHANNEL_OPTIONS]}
+                                        onChange={controls.setGridChannel}
+                                    />
+                                    <Select
+                                        label="Fog channel"
+                                        value={controls.fogChannel}
+                                        options={[...REACTIVE_CHANNEL_OPTIONS]}
+                                        onChange={controls.setFogChannel}
+                                    />
+                                </>
+                            )}
                             <div className="flex items-center justify-between gap-3 text-[10px] uppercase tracking-[0.2em]">
                                 <span className="text-muted">bpm</span>
                                 <span

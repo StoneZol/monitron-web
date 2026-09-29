@@ -1,7 +1,6 @@
 import { PlaceholderCard } from "@/components/PlaceholderCard";
+import { PLUGIN_URL } from "@/lib/audioBus";
 import { placeholders } from "@/lib/placeholders";
-
-const PLUGIN_URL = "https://github.com/StoneZol/monitron-plugin";
 
 export default function Home() {
     return (

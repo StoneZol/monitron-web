@@ -17,7 +17,27 @@ const FLAT_TOP = Math.PI / 6;
  * so glowing edges stay visible between neighbours.
  */
 const HEX_GAP = 1;
-/** Fixed orbit radius — Angle pitches in place; Zoom scales the field. */
+/** Default light intensities at lightIntensity=1 */
+const LIGHT_AMBIENT = 4;
+const LIGHT_SPOT = 10;
+const LIGHT_POINT = 0.5;
+/** Auxiliary ground grid — base footprint / density at scale=1 */
+const AUX_GRID_SIZE = 240;
+const AUX_GRID_DIV = 48;
+
+/**
+ * Scale down → denser cells, same footprint.
+ * Scale up → larger cells + wider footprint (grid doesn't shrink away).
+ */
+function resolveAuxGrid(scale: number) {
+    const mul = THREE.MathUtils.clamp(scale, 0.25, 4);
+    const baseCell = AUX_GRID_SIZE / AUX_GRID_DIV;
+    const cell = baseCell * mul;
+    const size = mul <= 1 ? AUX_GRID_SIZE : AUX_GRID_SIZE * mul;
+    const divisions = Math.max(4, Math.round(size / cell));
+    return { size, divisions, mul };
+}
+/** Initial camera Z before CameraRig; Offset slider is live radius. */
 const CAMERA_Z = 20;
 const CAMERA_FOV = 20;
 
@@ -30,31 +50,139 @@ function audioColorMul(viz: VizBands, bassBoost: number) {
 const BEAT_EDGE = 0.06;
 const BEAT_MIN = 0.08;
 
-/** Hex cap / bounce groups — beat drives fog, not a hex pile */
+/** Hex cap / bounce groups — beat is not a hex pile (fog uses fogChannel) */
 type CapBand = "bass" | "mid" | "high";
 
 const CAP_BANDS: CapBand[] = ["bass", "mid", "high"];
 
-/** Per-band height dance (Band bounce toggle) */
+/**
+ * Per-band height dance (Band bounce toggle).
+ * mid uses relative drive — plugin mid sits ~0.1 flat, so absolute follow looks dead.
+ */
 const BAND_HEIGHT: Record<
     CapBand,
-    { amp: number; decay: number; follow: number; punch: number }
+    {
+        amp: number;
+        decay: number;
+        follow: number;
+        punch: number;
+        /** absolute = raw×gain; relative = spikes above slow floor */
+        drive: "absolute" | "relative";
+        gain: number;
+    }
 > = {
-    bass: { amp: 0.32, decay: 3.0, follow: 0.55, punch: 2 },
-    mid: { amp: 0.24, decay: 4.0, follow: 0.4, punch: 1 },
-    high: { amp: 0.44, decay: 6.0, follow: 0.5, punch: 1 },
+    bass: {
+        amp: 0.32,
+        decay: 3.0,
+        follow: 0.55,
+        punch: 2,
+        drive: "absolute",
+        gain: 1,
+    },
+    mid: {
+        amp: 0.22,
+        decay: 5.5,
+        follow: 0.95,
+        punch: 1.8,
+        drive: "relative",
+        gain: 1,
+    },
+    high: {
+        amp: 0.44,
+        decay: 6.0,
+        follow: 0.5,
+        punch: 1,
+        drive: "absolute",
+        gain: 1,
+    },
 };
 
-/** Interleave hexes into 3 fixed band groups */
-function buildBandGroups(count: number): Record<CapBand, Uint32Array> {
-    const buckets: number[][] = [[], [], []];
-    for (let i = 0; i < count; i++) {
-        buckets[i % 3]!.push(i);
-    }
+type BandEnv = { ema: number; prev: number; flash: number; primed: boolean };
+
+function createBandEnvs(): Record<CapBand, BandEnv> {
     return {
-        bass: new Uint32Array(buckets[0]),
-        mid: new Uint32Array(buckets[1]),
-        high: new Uint32Array(buckets[2]),
+        bass: { ema: 0, prev: 0, flash: 0, primed: false },
+        mid: { ema: 0, prev: 0, flash: 0, primed: false },
+        high: { ema: 0, prev: 0, flash: 0, primed: false },
+    };
+}
+
+/**
+ * Map plugin band → 0..1 hit for caps / bounce.
+ * Relative mode (mid): ignore the flat floor, fire on micro-rises.
+ */
+function sampleBandHit(
+    env: BandEnv,
+    raw: number,
+    dt: number,
+    drive: "absolute" | "relative",
+    gain: number,
+): number {
+    const x = Math.max(0, raw);
+    if (drive === "absolute") {
+        env.ema += (x - env.ema) * Math.min(1, dt * 4);
+        env.prev = x;
+        env.flash = 0;
+        env.primed = true;
+        return Math.min(1, x * gain);
+    }
+
+    // First sample: lock floor, don't count cold-start as a hit
+    if (!env.primed) {
+        env.ema = x;
+        env.prev = x;
+        env.primed = true;
+        return 0;
+    }
+
+    // Slow floor — mid often parks ~0.1 with tiny wiggles
+    const floorAlpha = 1 - Math.exp(-dt * 1.8);
+    env.ema += (x - env.ema) * floorAlpha;
+    const excess = Math.max(0, x - env.ema);
+    const rise = Math.max(0, x - env.prev);
+    env.prev = x;
+
+    // Micro-transients: ±0.01 around the floor should still flash
+    if (rise > 0.002 || excess > 0.004) {
+        env.flash = Math.max(
+            env.flash,
+            Math.min(1, rise * 55 + excess * 35),
+        );
+    }
+    env.flash *= Math.exp(-dt * 7);
+    if (env.flash < 0.015) env.flash = 0;
+
+    return Math.min(1, Math.max(excess * 25, env.flash));
+}
+
+/** Balanced random band tags (no striped %3 pattern) */
+function shuffleBands(count: number): CapBand[] {
+    const bands: CapBand[] = [];
+    for (let i = 0; i < count; i++) bands.push(CAP_BANDS[i % 3]!);
+    for (let i = count - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        const a = bands[i]!;
+        bands[i] = bands[j]!;
+        bands[j] = a;
+    }
+    return bands;
+}
+
+/** Index lists from actual tower.userData.band */
+function buildBandGroups(town: THREE.Group): Record<CapBand, Uint32Array> {
+    const buckets: Record<CapBand, number[]> = {
+        bass: [],
+        mid: [],
+        high: [],
+    };
+    town.children.forEach((child, i) => {
+        const band = child.userData.band as CapBand;
+        if (band in buckets) buckets[band].push(i);
+    });
+    return {
+        bass: new Uint32Array(buckets.bass),
+        mid: new Uint32Array(buckets.mid),
+        high: new Uint32Array(buckets.high),
     };
 }
 
@@ -85,6 +213,7 @@ const _capPeak = new THREE.Color();
 const _capColor = new THREE.Color();
 const _fogIdle = new THREE.Color();
 const _fogPeak = new THREE.Color();
+const _gridColor = new THREE.Color();
 
 type TownShared = {
     geometry: THREE.CylinderGeometry;
@@ -119,6 +248,18 @@ function hexPosition(iCol: number, iRow: number, origin: number, R: number) {
     return { x, z };
 }
 
+/** Flat-top odd-q offset → axial; matches iCol%2 stagger in hexPosition */
+function offsetToAxial(iCol: number, iRow: number, n: number) {
+    const q = iCol - Math.floor(n / 2);
+    const row = iRow - Math.floor(n / 2);
+    const r = row - (q - (q & 1)) / 2;
+    return { q, r };
+}
+
+function axialHexDistance(q: number, r: number) {
+    return (Math.abs(q) + Math.abs(r) + Math.abs(q + r)) / 2;
+}
+
 function buildTown(
     town: THREE.Group,
     edgeMaterial: THREE.LineBasicMaterial,
@@ -129,6 +270,8 @@ function buildTown(
     const origin = (n - 1) / 2;
     const minH = 0.12 * R;
     const maxH = minH + Math.max(0.05, opts.heightSpread) * 1.6 * R;
+    // Big hex of the same cells — radius in hex steps from center
+    const hexRadius = Math.floor((n - 1) / 2);
 
     const geometry = new THREE.CylinderGeometry(R, R, 1, 6, 1, false);
     // Cylinder groups: 0 = side, 1 = top, 2 = bottom
@@ -142,28 +285,34 @@ function buildTown(
     const capMaterials = createCapMaterials();
     const edges = new THREE.EdgesGeometry(geometry);
 
-    let index = 0;
+    const slots: { x: number; z: number }[] = [];
     for (let iCol = 0; iCol < n; iCol++) {
         for (let iRow = 0; iRow < n; iRow++) {
-            const { x, z } = hexPosition(iCol, iRow, origin, R);
-            const height = minH + Math.random() * (maxH - minH);
-            const band = CAP_BANDS[index % 3]!;
-            const tower = new THREE.Mesh(geometry, [
-                sideMaterial,
-                capMaterials[band],
-                bottomMaterial,
-            ]);
-            tower.rotation.y = FLAT_TOP;
-            tower.scale.y = height;
-            tower.position.set(x, height / 2, z);
-            tower.userData.baseH = height;
-            tower.userData.band = band;
-            const outline = new THREE.LineSegments(edges, edgeMaterial);
-            outline.renderOrder = 1;
-            tower.add(outline);
-            town.add(tower);
-            index++;
+            const { q, r } = offsetToAxial(iCol, iRow, n);
+            if (axialHexDistance(q, r) > hexRadius) continue;
+            slots.push(hexPosition(iCol, iRow, origin, R));
         }
+    }
+
+    const bands = shuffleBands(slots.length);
+    for (let i = 0; i < slots.length; i++) {
+        const { x, z } = slots[i]!;
+        const height = minH + Math.random() * (maxH - minH);
+        const band = bands[i]!;
+        const tower = new THREE.Mesh(geometry, [
+            sideMaterial,
+            capMaterials[band],
+            bottomMaterial,
+        ]);
+        tower.rotation.y = FLAT_TOP;
+        tower.scale.y = height;
+        tower.position.set(x, height / 2, z);
+        tower.userData.baseH = height;
+        tower.userData.band = band;
+        const outline = new THREE.LineSegments(edges, edgeMaterial);
+        outline.renderOrder = 1;
+        tower.add(outline);
+        town.add(tower);
     }
 
     const box = new THREE.Box3().setFromObject(town);
@@ -219,10 +368,14 @@ function City({
 }) {
     const liveRef = useRef(live);
     const cityRef = useRef<THREE.Group>(null);
+    const ambientRef = useRef<THREE.AmbientLight>(null);
+    const spotRef = useRef<THREE.SpotLight>(null);
     const lightBackRef = useRef<THREE.PointLight>(null);
+    const gridRef = useRef<THREE.GridHelper>(null);
     const hueOffset = useRef(0);
     const fogHueOffset = useRef(0);
     const prevBands = useRef({ bass: 0, mid: 0, high: 0 });
+    const bandEnvs = useRef(createBandEnvs());
 
     useEffect(() => {
         liveRef.current = live;
@@ -253,7 +406,7 @@ function City({
         });
         const n = group.children.length;
         group.userData.pulses = new Float32Array(n);
-        group.userData.bandGroups = buildBandGroups(n);
+        group.userData.bandGroups = buildBandGroups(group);
         group.userData.capMaterials = shared.capMaterials;
         return { town: group, shared };
     }, [edgeMaterial, hexGrid, hexSize, hexHeightSpread]);
@@ -261,6 +414,7 @@ function City({
     useEffect(() => {
         townRef.current = town;
         prevBands.current = { bass: 0, mid: 0, high: 0 };
+        bandEnvs.current = createBandEnvs();
     }, [town]);
 
     useEffect(() => {
@@ -319,32 +473,115 @@ function City({
                 {
                     enabled: reactive && !knobs.caps,
                     bass: viz?.bass ?? 0,
+                    mid: viz?.mid ?? 0,
+                    high: viz?.high ?? 0,
+                    beat: viz?.beat ?? 0,
                 },
             );
-            // Caps: beat washes the fog (idle → peak), not a 4th hex group
+            // Aux grid: fixed | reactive jumps on capGridIdle→Peak via channel | edge
+            const grid = gridRef.current;
+            if (grid) {
+                let c: THREE.Color;
+                if (knobs.gridFixed) {
+                    c = _gridColor.set(knobs.gridColor);
+                } else if (reactive && knobs.gridChannel !== "off") {
+                    const ch = knobs.gridChannel;
+                    const level = Math.max(
+                        0,
+                        Math.min(
+                            1,
+                            ch === "beat" ? (viz?.beat ?? 0) : (viz?.[ch] ?? 0),
+                        ),
+                    );
+                    _fogIdle.setHex(
+                        cssHexToInt(knobs.capGridIdle, 0x1a4a20),
+                    );
+                    _fogPeak.setHex(
+                        cssHexToInt(knobs.capGridPeak, 0x6dff4a),
+                    );
+                    c = _gridColor.copy(_fogIdle).lerp(_fogPeak, level);
+                } else if (reactive && knobs.gridChannel === "off") {
+                    // Static grid tint from palette idle (no audio jump)
+                    c = _gridColor.set(knobs.capGridIdle);
+                } else {
+                    c = knobs.caps
+                        ? _gridColor.set(knobs.capGridIdle)
+                        : edgeMaterial.color;
+                }
+                const attr = grid.geometry.getAttribute(
+                    "color",
+                ) as THREE.BufferAttribute | null;
+                if (attr) {
+                    for (let i = 0; i < attr.count; i++) {
+                        attr.setXYZ(i, c.r, c.g, c.b);
+                    }
+                    attr.needsUpdate = true;
+                }
+            }
+            // Caps / reactive fog: palette idle→peak via fogChannel (not hard-wired to beat)
             if (knobs.caps) {
-                const beat = reactive
-                    ? Math.max(0, Math.min(1, viz?.beat ?? 0))
-                    : 0;
-                _fogIdle.setHex(
-                    cssHexToInt(knobs.capBeatFogIdle, 0x1a0c14),
-                );
-                _fogPeak.setHex(
-                    cssHexToInt(knobs.capBeatFogPeak, 0x4a1830),
-                );
-                fog.color.copy(_fogIdle).lerp(_fogPeak, beat);
+                _fogIdle.setHex(cssHexToInt(knobs.capFogIdle, 0x0c1a2e));
+                _fogPeak.setHex(cssHexToInt(knobs.capFogPeak, 0x1a4a9e));
+                if (reactive && knobs.fogChannel !== "off") {
+                    const ch = knobs.fogChannel;
+                    const level = Math.max(
+                        0,
+                        Math.min(
+                            1,
+                            ch === "beat" ? (viz?.beat ?? 0) : (viz?.[ch] ?? 0),
+                        ),
+                    );
+                    fog.color.copy(_fogIdle).lerp(_fogPeak, level);
+                } else {
+                    fog.color.copy(_fogIdle);
+                }
                 bg.copy(fog.color);
             }
             const density = THREE.MathUtils.clamp(knobs.fogDensity, 0, 1);
             const ceil = Math.max(0.05, knobs.fogHeight) * zoom;
             fog.near = density;
             fog.far = Math.max(ceil, density + 0.001);
+
+            const lightMul = THREE.MathUtils.clamp(knobs.lightIntensity, 0, 2);
+            if (ambientRef.current) {
+                ambientRef.current.intensity = LIGHT_AMBIENT * lightMul;
+            }
+            if (spotRef.current) {
+                spotRef.current.intensity = LIGHT_SPOT * lightMul;
+            }
+            // point intensity also set in applyGlow; keep in sync when caps skips glow fog path
+            light.intensity = LIGHT_POINT * lightMul;
         }
 
         const city = cityRef.current;
         const field = townRef.current;
         if (!city || !field) return;
         field.scale.setScalar(zoom);
+
+        // One sample per band per frame — mid is relative (spikes over flat floor)
+        const bandHits: Record<CapBand, number> = {
+            bass: 0,
+            mid: 0,
+            high: 0,
+        };
+        if (reactive && viz) {
+            for (const key of CAP_BANDS) {
+                const cfg = BAND_HEIGHT[key];
+                bandHits[key] = sampleBandHit(
+                    bandEnvs.current[key],
+                    Math.max(0, viz[key] ?? 0),
+                    dt,
+                    cfg.drive,
+                    cfg.gain,
+                );
+            }
+        } else if (
+            bandEnvs.current.bass.primed ||
+            bandEnvs.current.mid.primed ||
+            bandEnvs.current.high.primed
+        ) {
+            bandEnvs.current = createBandEnvs();
+        }
 
         // Caps: solid color lerp idle → peak (no transparency)
         const capMats = field.userData.capMaterials as
@@ -359,9 +596,7 @@ function City({
             for (const key of CAP_BANDS) {
                 const mat = capMats[key];
                 if (knobs.caps) {
-                    const level = reactive
-                        ? Math.max(0, Math.min(1, viz?.[key] ?? 0))
-                        : 0;
+                    const level = bandHits[key];
                     const fb = BAND_CAP_FALLBACK[key];
                     const pal = palette[key];
                     _capIdle.setHex(cssHexToInt(pal.idle, fb.idle));
@@ -395,10 +630,12 @@ function City({
             if (bounce) {
                 for (const key of CAP_BANDS) {
                     const cfg = BAND_HEIGHT[key];
-                    const level = Math.max(0, viz[key] ?? 0);
+                    const level = bandHits[key];
                     const prev = prevBands.current[key];
-                    const onset =
-                        level > prev + BEAT_EDGE && level >= BEAT_MIN;
+                    // Mid flashes are already spike-shaped — softer onset gate
+                    const edge = cfg.drive === "relative" ? 0.04 : BEAT_EDGE;
+                    const minHit = cfg.drive === "relative" ? 0.05 : BEAT_MIN;
+                    const onset = level > prev + edge && level >= minHit;
                     const follow = level * cfg.follow;
                     const punch = onset
                         ? (0.45 + level * 0.55) * cfg.punch
@@ -421,7 +658,9 @@ function City({
                     typeof mesh.userData.baseH === "number"
                         ? mesh.userData.baseH
                         : mesh.scale.y;
-                const band = CAP_BANDS[i % 3]!;
+                const band =
+                    (mesh.userData.band as CapBand | undefined) ??
+                    CAP_BANDS[i % 3]!;
                 const decay = Math.exp(-dt * BAND_HEIGHT[band].decay);
                 pulses[i] *= bounce ? decay : Math.exp(-dt * 8);
                 if (pulses[i] < 0.008) pulses[i] = 0;
@@ -452,6 +691,11 @@ function City({
         if (city.rotation.x < -0.05) city.rotation.x = -0.05;
     });
 
+    const { size: gridSize, divisions: gridDiv } = useMemo(
+        () => resolveAuxGrid(live.gridScale),
+        [live.gridScale],
+    );
+
     return (
         <group ref={cityRef}>
             <primitive object={town} />
@@ -469,16 +713,37 @@ function City({
                 />
             </mesh>
             <spotLight
+                ref={spotRef}
                 position={[5, 5, 5]}
                 rotation={[(45 * Math.PI) / 180, 0, (-45 * Math.PI) / 180]}
-                intensity={10}
+                intensity={LIGHT_SPOT}
                 distance={10}
                 penumbra={0.2}
                 castShadow
                 shadow-mapSize={[1000, 1000]}
             />
-            <pointLight ref={lightBackRef} position={[0, 4, 0]} intensity={0.5} />
-            <gridHelper args={[1000, 1000, 0x000000, live.edgeColor]} />
+            <pointLight
+                ref={lightBackRef}
+                position={[0, 4, 0]}
+                intensity={LIGHT_POINT}
+            />
+            <ambientLight ref={ambientRef} intensity={LIGHT_AMBIENT} />
+            <gridHelper
+                key={`${gridSize}-${gridDiv}`}
+                ref={gridRef}
+                args={[gridSize, gridDiv, 0xffffff, 0xffffff]}
+                position={[0, 0.05, 0]}
+                onUpdate={(g) => {
+                    const mats = Array.isArray(g.material)
+                        ? g.material
+                        : [g.material];
+                    for (const m of mats) {
+                        m.depthWrite = false;
+                        m.transparent = true;
+                        m.opacity = 0.45;
+                    }
+                }}
+            />
         </group>
     );
 }
@@ -520,7 +785,6 @@ export default function HexagonsCanvas({ live, vizRef }: HexagonsCanvasProps) {
             <color attach="background" args={[FOG_NEUTRAL]} />
             {/* near=density, far=fog ceiling — see HexagonsPlace.fog */}
             <fog attach="fog" args={[FOG_NEUTRAL, 0.9, 0.85]} />
-            <ambientLight intensity={4} />
             <CameraRig live={live} />
             <City live={live} vizRef={vizRef} />
         </Canvas>

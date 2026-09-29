@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { ColorInput } from "./ColorInput";
 
 export type ColorTableCell = {
   value: string;
@@ -18,6 +19,13 @@ type ColorTableProps = {
   columns: string[];
   rows: ColorTableRow[];
   disabled?: boolean;
+  /** Column keys that are non-interactive (e.g. peak without reactive) */
+  lockedColumns?: string[];
+  /**
+   * Stamp badge on a column header — e.g. `{ peak: "reactive" }`
+   * when the plugin is offline and peak needs reactive.
+   */
+  columnStamps?: Partial<Record<string, string>>;
   className?: string;
 };
 
@@ -26,8 +34,12 @@ export function ColorTable({
   columns,
   rows,
   disabled = false,
+  lockedColumns = [],
+  columnStamps,
   className,
 }: ColorTableProps) {
+  const locked = new Set(lockedColumns);
+
   return (
     <div
       className={cn(
@@ -45,11 +57,31 @@ export function ColorTable({
         <thead>
           <tr className="text-muted">
             <th className="py-1 pr-2 text-left font-normal" />
-            {columns.map((col) => (
-              <th key={col} className="px-1 py-1 text-center font-normal">
-                {col}
-              </th>
-            ))}
+            {columns.map((col) => {
+              const stamp = columnStamps?.[col];
+              const isLocked = locked.has(col);
+              return (
+                <th
+                  key={col}
+                  className={cn(
+                    "relative px-1 py-1 text-center font-normal",
+                    isLocked && "opacity-50",
+                  )}
+                >
+                  <span className="inline-flex flex-col items-center gap-1">
+                    {stamp ? (
+                      <span
+                        className="stamp px-1 py-0.5 text-[7px] tracking-[0.16em]"
+                        title="Requires Monitron extension + reactive"
+                      >
+                        {stamp}
+                      </span>
+                    ) : null}
+                    <span>{col}</span>
+                  </span>
+                </th>
+              );
+            })}
           </tr>
         </thead>
         <tbody>
@@ -58,19 +90,21 @@ export function ColorTable({
               <td className="py-1 pr-2 text-left text-muted">{row.label}</td>
               {row.cells.map((cell, i) => {
                 const col = columns[i] ?? `col-${i}`;
-                const cellDisabled = disabled || cell.disabled;
+                const cellDisabled =
+                  disabled || cell.disabled || locked.has(col);
                 return (
-                  <td key={`${row.label}-${col}`} className="px-1 py-1 text-center">
-                    <input
-                      type="color"
-                      aria-label={`${row.label} ${col}`}
+                  <td
+                    key={`${row.label}-${col}`}
+                    className={cn(
+                      "px-1 py-1.5 text-center align-middle",
+                      locked.has(col) && "opacity-50",
+                    )}
+                  >
+                    <ColorInput
                       value={cell.value}
+                      onChange={cell.onChange}
                       disabled={cellDisabled}
-                      onChange={(e) => cell.onChange(e.target.value)}
-                      className={cn(
-                        "mx-auto h-7 w-9 cursor-pointer border border-signal bg-screen p-0.5",
-                        "disabled:cursor-default disabled:border-muted",
-                      )}
+                      aria-label={`${row.label} ${col}`.trim()}
                     />
                   </td>
                 );

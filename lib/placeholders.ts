@@ -20,7 +20,7 @@ export const placeholders: PlaceholderMeta[] = [
         id: "hexagons_place",
         title: "Hexagons Place",
         href: "/s/hexagons_place",
-        // previewSrc: "/s/hexagons_place.webp",
+        previewSrc: "/s/hexagons_place.webp",
         reactive: true,
     },
     {
