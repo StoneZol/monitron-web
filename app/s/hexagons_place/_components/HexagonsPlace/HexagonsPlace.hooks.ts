@@ -24,6 +24,7 @@ export const HEXAGONS_DEFAULTS: HexagonsPlaceLive = {
   hexSize: 1.5,
   hexHeightSpread: 1,
   reactive: false,
+  bandBounce: true,
   bassBoost: 2,
 };
 
@@ -31,8 +32,13 @@ const BASS_BOOST_MAX = 8;
 
 const SCREEN_ID = "hexagons_place";
 
-/** bass → color speed + fog sat; beat → hex height punches */
-const HEX_VIZ_BANDS = { bass: true, beat: true } as const;
+/** All bands drive hex groups; bass also colors fog / garland speed */
+const HEX_VIZ_BANDS = {
+  bass: true,
+  mid: true,
+  high: true,
+  beat: true,
+} as const;
 
 const listeners = new Set<() => void>();
 
@@ -134,6 +140,8 @@ export default function useHexagonsPlaceHook() {
       hexHeightSpread: live.hexHeightSpread,
       setHexHeightSpread: (hexHeightSpread: number) =>
         commit({ hexHeightSpread }),
+      bandBounce: live.bandBounce,
+      setBandBounce: (bandBounce: boolean) => commit({ bandBounce }),
       bassBoost: live.bassBoost,
       setBassBoost: (bassBoost: number) => commit({ bassBoost }),
       bassBoostMax: BASS_BOOST_MAX,

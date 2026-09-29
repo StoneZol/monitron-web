@@ -42,6 +42,8 @@ export type VizBands = {
   mid: number;
   high: number;
   beat: number;
+  /** Approx tempo from beat onsets (BPM). 0 = not locked yet */
+  bpm: number;
 };
 
 export const EMPTY_VIZ_BANDS: VizBands = {
@@ -50,6 +52,7 @@ export const EMPTY_VIZ_BANDS: VizBands = {
   mid: 0,
   high: 0,
   beat: 0,
+  bpm: 0,
 };
 
 export function isAudioFrame(data: unknown): data is AudioFrame {

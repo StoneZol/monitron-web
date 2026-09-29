@@ -8,8 +8,9 @@ import {
   subscribeAudioBus,
   type VizBands,
 } from "@/lib/audioBus";
+import { BpmEstimator } from "@/lib/bpmEstimate";
 
-export type VizBandKey = keyof Omit<VizBands, "enabled">;
+export type VizBandKey = "bass" | "mid" | "high" | "beat";
 
 /** Which audio channels this screen actually drives. Unused stay hidden in UI. */
 export type VizBandMask = Partial<Record<VizBandKey, boolean>>;
@@ -65,6 +66,7 @@ export function useAudioReactive({
   const vizRef = useRef<VizBands>({ ...EMPTY_VIZ_BANDS });
   const lastUiSync = useRef(0);
   const beatPeakRef = useRef(0);
+  const bpmEstimatorRef = useRef(new BpmEstimator());
   const pluginRef = useRef(false);
   const lastToggleRef = useRef<boolean | null>(null);
   const preferredRef = useRef(preferredReactive);
@@ -73,6 +75,7 @@ export function useAudioReactive({
   const [pluginPresent, setPluginPresent] = useState(false);
   const [reactive, setReactiveState] = useState(false);
   const [meters, setMeters] = useState<AudioReactiveMeters>(ZERO_METERS);
+  const [bpm, setBpm] = useState(0);
 
   useEffect(() => {
     activeRef.current = resolveBands(bandsMask);
@@ -98,7 +101,9 @@ export function useAudioReactive({
     sendToggle(enabled);
     if (!enabled) {
       setMeters(ZERO_METERS);
+      setBpm(0);
       beatPeakRef.current = 0;
+      bpmEstimatorRef.current.reset();
     }
     if (notify) onReactiveChangeRef.current?.(enabled);
   };
@@ -123,13 +128,16 @@ export function useAudioReactive({
     let lastHelloAt = 0;
     let present = false;
     let pollTimer: number | null = null;
+    const bpmEstimator = bpmEstimatorRef.current;
 
     const pauseForOffline = () => {
       lastToggleRef.current = false;
       setReactiveState(false);
       setMeters(ZERO_METERS);
+      setBpm(0);
       vizRef.current = { ...EMPTY_VIZ_BANDS };
       beatPeakRef.current = 0;
+      bpmEstimator.reset();
     };
 
     const resumeIfPreferred = () => {
@@ -189,26 +197,32 @@ export function useAudioReactive({
 
         const bands = activeRef.current;
         const nextBeat = bands.beat ? frame.beat : 0;
+        const nextBass = bands.bass ? frame.bass : 0;
         // Peak-hold so short kicks stay visible in the panel
         beatPeakRef.current = Math.max(nextBeat, beatPeakRef.current * 0.88);
 
+        const now = performance.now();
+        // BPM from beat onsets first; bass only if beat is weak
+        const nextBpm = bpmEstimator.push(nextBeat, nextBass, now);
+
         vizRef.current = {
           enabled: true,
-          bass: bands.bass ? frame.bass : 0,
+          bass: nextBass,
           mid: bands.mid ? frame.mid : 0,
           high: bands.high ? frame.high : 0,
           beat: nextBeat,
+          bpm: nextBpm,
         };
 
-        const now = performance.now();
         if (now - lastUiSync.current > 80) {
           lastUiSync.current = now;
           setMeters({
-            bass: bands.bass ? frame.bass : 0,
+            bass: nextBass,
             mid: bands.mid ? frame.mid : 0,
             high: bands.high ? frame.high : 0,
             beat: beatPeakRef.current,
           });
+          setBpm(nextBpm > 0 ? nextBpm : 0);
         }
       },
     });
@@ -241,6 +255,8 @@ export function useAudioReactive({
     reactive,
     setReactive,
     meters,
+    /** Smoothed BPM estimate for UI (0 = unlocked) */
+    bpm,
     visibleBands,
   };
 }

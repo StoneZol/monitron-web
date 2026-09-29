@@ -9,7 +9,14 @@ import { applyGlow } from "./HexagonsPlace.glow";
 import type { HexagonsPlaceLive } from "./HexagonsPlace.types";
 
 const ROTATION_SPEED = 0.00005;
+/** Spin rate at this BPM when reactive; scales linearly with estimated tempo */
+const SPIN_BPM_REF = 30;
 const FLAT_TOP = Math.PI / 6;
+/**
+ * Hex center pitch vs tight pack. 1 = touching faces; >1 opens a seam
+ * so glowing edges stay visible between neighbours.
+ */
+const HEX_GAP = 1;
 /** Fixed camera Z — zoom scales the scene, rotate yaws the camera in place. */
 const CAMERA_Z = 20;
 const CAMERA_FOV = 10;
@@ -20,33 +27,47 @@ function audioColorMul(viz: VizBands, bassBoost: number) {
     return 1 + Math.max(0, bassBoost) * Math.max(0, viz.bass) * 0.45;
 }
 
-const BEAT_EDGE = 0.07;
-const BEAT_MIN = 0.1;
-/** Beat → hex height punch (internal only, not in UI) */
-const BEAT_HEIGHT = {
-    /** Fraction of towers that react to beat (fixed set, not random) */
-    hitFrac: 0.2,
-    /** Max extra height vs base (0.05 = +5%) */
-    amp: 0.2,
-    decay: 4.5,
-} as const;
+const BEAT_EDGE = 0.06;
+const BEAT_MIN = 0.08;
 
-/** Evenly spaced tower indices — same hexes every beat */
-function pickBeatTargets(count: number, frac: number): Uint32Array {
-    const hits = Math.max(1, Math.floor(count * frac));
-    const step = count / hits;
-    const out = new Uint32Array(hits);
-    for (let i = 0; i < hits; i++) {
-        out[i] = Math.min(count - 1, Math.floor(i * step + step * 0.5));
+type BandKey = "bass" | "beat" | "mid" | "high";
+
+const BAND_KEYS: BandKey[] = ["bass", "beat", "mid", "high"];
+
+/** Per-band height dance (internal — Band bounce toggle gates all of it) */
+const BAND_HEIGHT: Record<
+    BandKey,
+    { amp: number; decay: number; follow: number; punch: number }
+> = {
+    bass: { amp: 0.32, decay: 3.0, follow: 0.55, punch: 2 },
+    beat: { amp: 0.06, decay: 5.2, follow: 0.12, punch: 1.5 },
+    mid: { amp: 0.05, decay: 4.0, follow: 0.4, punch: 1 },
+    high: { amp: 0.04, decay: 6.0, follow: 0.5, punch: 1 },
+};
+
+/** Interleave hexes into 4 fixed band groups across the field */
+function buildBandGroups(count: number): Record<BandKey, Uint32Array> {
+    const buckets: number[][] = [[], [], [], []];
+    for (let i = 0; i < count; i++) {
+        buckets[i % 4]!.push(i);
     }
-    return out;
+    return {
+        bass: new Uint32Array(buckets[0]),
+        beat: new Uint32Array(buckets[1]),
+        mid: new Uint32Array(buckets[2]),
+        high: new Uint32Array(buckets[3]),
+    };
 }
 
-function hexPosition(col: number, row: number, R: number) {
-    const dx = 1.5 * R;
-    const dz = Math.sqrt(3) * R;
+function hexPosition(iCol: number, iRow: number, origin: number, R: number) {
+    const pitch = R * HEX_GAP;
+    const dx = 1.5 * pitch;
+    const dz = Math.sqrt(3) * pitch;
+    const col = iCol - origin;
+    const row = iRow - origin;
+    // Stagger by grid index (not centered col) — col is *.5 when N is even
     const x = col * dx;
-    const z = row * dz + (col % 2 !== 0 ? dz / 2 : 0);
+    const z = row * dz + (iCol % 2 !== 0 ? dz / 2 : 0);
     return { x, z };
 }
 
@@ -63,21 +84,26 @@ function buildTown(
     const maxH = minH + Math.max(0.05, opts.heightSpread) * 1.6 * R;
 
     const geometry = new THREE.CylinderGeometry(R, R, 1, 6, 1, false);
-    const bodyMaterial = new THREE.MeshStandardMaterial({ color: 0x000000 });
+    const bodyMaterial = new THREE.MeshStandardMaterial({
+        color: 0x000000,
+        polygonOffset: true,
+        polygonOffsetFactor: 1,
+        polygonOffsetUnits: 1,
+    });
     const edges = new THREE.EdgesGeometry(geometry);
 
     for (let iCol = 0; iCol < n; iCol++) {
         for (let iRow = 0; iRow < n; iRow++) {
-            const col = iCol - origin;
-            const row = iRow - origin;
-            const { x, z } = hexPosition(col, row, R);
+            const { x, z } = hexPosition(iCol, iRow, origin, R);
             const height = minH + Math.random() * (maxH - minH);
             const tower = new THREE.Mesh(geometry, bodyMaterial);
             tower.rotation.y = FLAT_TOP;
             tower.scale.y = height;
             tower.position.set(x, height / 2, z);
             tower.userData.baseH = height;
-            tower.add(new THREE.LineSegments(edges, edgeMaterial));
+            const outline = new THREE.LineSegments(edges, edgeMaterial);
+            outline.renderOrder = 1;
+            tower.add(outline);
             town.add(tower);
         }
     }
@@ -127,16 +153,18 @@ function City({
     const cityRef = useRef<THREE.Group>(null);
     const lightBackRef = useRef<THREE.PointLight>(null);
     const hueOffset = useRef(0);
-    const prevBeat = useRef(0);
-    const pulsesRef = useRef<Float32Array | null>(null);
-    const beatTargetsRef = useRef<Uint32Array | null>(null);
+    const prevBands = useRef({ bass: 0, beat: 0, mid: 0, high: 0 });
 
     useEffect(() => {
         liveRef.current = live;
     }, [live]);
 
     const edgeMaterial = useMemo(
-        () => new THREE.LineBasicMaterial({ color: live.edgeColor }),
+        () =>
+            new THREE.LineBasicMaterial({
+                color: live.edgeColor,
+                depthWrite: false,
+            }),
         // eslint-disable-next-line react-hooks/exhaustive-deps -- shared for town lifetime
         [],
     );
@@ -154,15 +182,15 @@ function City({
             size: hexSize,
             heightSpread: hexHeightSpread,
         });
+        const n = group.children.length;
+        group.userData.pulses = new Float32Array(n);
+        group.userData.bandGroups = buildBandGroups(n);
         return { town: group, shared };
     }, [edgeMaterial, hexGrid, hexSize, hexHeightSpread]);
 
     useEffect(() => {
         townRef.current = town;
-        const n = town.children.length;
-        pulsesRef.current = new Float32Array(n);
-        beatTargetsRef.current = pickBeatTargets(n, BEAT_HEIGHT.hitFrac);
-        prevBeat.current = 0;
+        prevBands.current = { bass: 0, beat: 0, mid: 0, high: 0 };
     }, [town]);
 
     useEffect(() => {
@@ -214,47 +242,70 @@ function City({
         if (!city || !field) return;
         field.scale.setScalar(zoom);
 
-        // Beat → height punches on a fixed subset (spin stays steady)
+        // Reactive band bounce: 4 interleaved hex groups → bass/beat/mid/high
         const n = field.children.length;
-        let pulses = pulsesRef.current;
-        if (!pulses || pulses.length !== n) {
-            pulses = new Float32Array(n);
-            pulsesRef.current = pulses;
-            beatTargetsRef.current = pickBeatTargets(n, BEAT_HEIGHT.hitFrac);
-        }
-        const targets = beatTargetsRef.current;
-        const beat = reactive ? Math.max(0, viz?.beat ?? 0) : 0;
-        if (
-            reactive &&
-            targets &&
-            beat > prevBeat.current + BEAT_EDGE &&
-            beat >= BEAT_MIN
-        ) {
-            const strength = 0.55 + beat * 0.45;
-            for (let t = 0; t < targets.length; t++) {
-                const idx = targets[t];
-                pulses[idx] = Math.max(pulses[idx], strength);
-            }
-        }
-        prevBeat.current = beat;
+        const pulses = field.userData.pulses as Float32Array | undefined;
+        const groups = field.userData.bandGroups as
+            | Record<BandKey, Uint32Array>
+            | undefined;
+        if (pulses && pulses.length === n && groups) {
+            const bounce = reactive && knobs.bandBounce && viz;
 
-        const decay = Math.exp(-dt * BEAT_HEIGHT.decay);
-        for (let i = 0; i < n; i++) {
-            const mesh = field.children[i] as THREE.Mesh;
-            const baseH =
-                typeof mesh.userData.baseH === "number"
-                    ? mesh.userData.baseH
-                    : mesh.scale.y;
-            pulses[i] *= decay;
-            if (pulses[i] < 0.008) pulses[i] = 0;
-            const h = baseH * (1 + pulses[i] * BEAT_HEIGHT.amp);
-            mesh.scale.y = h;
-            mesh.position.y = h / 2;
+            if (bounce) {
+                for (const key of BAND_KEYS) {
+                    const cfg = BAND_HEIGHT[key];
+                    const level = Math.max(0, viz[key] ?? 0);
+                    const prev = prevBands.current[key];
+                    const onset =
+                        level > prev + BEAT_EDGE && level >= BEAT_MIN;
+                    const follow = level * cfg.follow;
+                    const punch = onset
+                        ? (0.45 + level * 0.55) * cfg.punch
+                        : 0;
+                    const strength = Math.max(follow, punch);
+                    const idxs = groups[key];
+                    for (let t = 0; t < idxs.length; t++) {
+                        const idx = idxs[t]!;
+                        pulses[idx] = Math.max(pulses[idx], strength);
+                    }
+                    prevBands.current[key] = level;
+                }
+            } else {
+                prevBands.current = { bass: 0, beat: 0, mid: 0, high: 0 };
+            }
+
+            for (let i = 0; i < n; i++) {
+                const mesh = field.children[i] as THREE.Mesh;
+                const baseH =
+                    typeof mesh.userData.baseH === "number"
+                        ? mesh.userData.baseH
+                        : mesh.scale.y;
+                const band = BAND_KEYS[i % 4]!;
+                const decay = Math.exp(-dt * BAND_HEIGHT[band].decay);
+                pulses[i] *= bounce ? decay : Math.exp(-dt * 8);
+                if (pulses[i] < 0.008) pulses[i] = 0;
+                const h = baseH * (1 + pulses[i] * BAND_HEIGHT[band].amp);
+                mesh.scale.y = h;
+                mesh.position.y = h / 2;
+            }
         }
 
         if (knobs.spin) {
             const dir = knobs.spinLeft ? 1 : -1;
-            city.rotation.y += dir * 8 * ROTATION_SPEED;
+            // Reactive: follow locked BPM; until lock, nudge from live energy
+            let tempoMul = 1;
+            if (reactive && viz) {
+                const bpm = viz.bpm;
+                if (bpm > 0) {
+                    tempoMul = THREE.MathUtils.clamp(bpm / SPIN_BPM_REF, 0.45, 2.4);
+                } else {
+                    tempoMul =
+                        1 +
+                        Math.max(0, viz.bass) * 0.55 +
+                        Math.max(0, viz.beat) * 0.35;
+                }
+            }
+            city.rotation.y += dir * 8 * ROTATION_SPEED * tempoMul;
         }
         if (city.rotation.x < -0.05) city.rotation.x = -0.05;
     });

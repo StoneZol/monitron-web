@@ -181,6 +181,26 @@ const HexagonsPlace = ({ showOverlay = true }: HexagonsPlaceProps) => {
                                 onChange={visualizer.setReactive}
                                 disabled={!visualizer.pluginPresent}
                             />
+                            <Toggle
+                                label="Band bounce"
+                                checked={controls.bandBounce}
+                                onChange={controls.setBandBounce}
+                                disabled={!visualizer.reactive}
+                            />
+                            <div className="flex items-center justify-between gap-3 text-[10px] uppercase tracking-[0.2em]">
+                                <span className="text-muted">bpm</span>
+                                <span
+                                    className={
+                                        visualizer.reactive && visualizer.bpm > 0
+                                            ? "text-signal"
+                                            : "text-muted"
+                                    }
+                                >
+                                    {visualizer.reactive && visualizer.bpm > 0
+                                        ? Math.round(visualizer.bpm)
+                                        : "—"}
+                                </span>
+                            </div>
                             <Slider
                                 label="Bass boost"
                                 value={controls.bassBoost}

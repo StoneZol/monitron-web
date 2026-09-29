@@ -35,6 +35,8 @@ export type HexagonsPlaceLive = {
   hexHeightSpread: number;
   /** Prefer extension reactive when plugin is online */
   reactive: boolean;
+  /** When reactive: bounce hex groups on bass/mid/high/beat */
+  bandBounce: boolean;
   /** Multiplies bass → color/spin speed punch */
   bassBoost: number;
 };
