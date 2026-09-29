@@ -29,17 +29,19 @@ const HexagonsPlace = ({ showOverlay = true }: HexagonsPlaceProps) => {
                 <ScreensOverlay>
                     <ControlPanel title="hexagons">
                         <ControlSection label="look">
-                            <Toggle
-                                label="Garland"
-                                checked={controls.garland}
-                                onChange={controls.setGarland}
-                            />
-                            <ColorField
-                                label="Edge"
-                                value={controls.edgeColor}
-                                onChange={controls.setEdgeColor}
-                                disabled={controls.garland}
-                            />
+                            <div className="flex gap-2 py-2">
+                                <Toggle
+                                    label="Garland"
+                                    checked={controls.garland}
+                                    onChange={controls.setGarland}
+                                />
+                                <ColorField
+                                    label="Edge"
+                                    value={controls.edgeColor}
+                                    onChange={controls.setEdgeColor}
+                                    disabled={controls.garland}
+                                />
+                            </div>
                             <Slider
                                 label="Color speed"
                                 value={controls.colorSpeed}
@@ -49,17 +51,19 @@ const HexagonsPlace = ({ showOverlay = true }: HexagonsPlaceProps) => {
                                 onChange={controls.setColorSpeed}
                                 disabled={!controls.garland}
                             />
-                            <Toggle
-                                label="Colored fog"
-                                checked={controls.coloredFog}
-                                onChange={controls.setColoredFog}
-                            />
-                            <ColorField
-                                label="Fog"
-                                value={controls.fogColor}
-                                onChange={controls.setFogColor}
-                                disabled={!controls.coloredFog || controls.garland}
-                            />
+                            <div className="flex gap-2 py-2">
+                                <Toggle
+                                    label="Colored fog"
+                                    checked={controls.coloredFog}
+                                    onChange={controls.setColoredFog}
+                                />
+                                <ColorField
+                                    label="Fog"
+                                    value={controls.fogColor}
+                                    onChange={controls.setFogColor}
+                                    disabled={!controls.coloredFog || controls.garland}
+                                />
+                            </div>
                             <Slider
                                 label="Fog height"
                                 value={controls.fogHeight}
@@ -80,49 +84,20 @@ const HexagonsPlace = ({ showOverlay = true }: HexagonsPlaceProps) => {
                             />
                         </ControlSection>
 
-                        <ControlSection label="field">
-                            <Slider
-                                label="Count"
-                                value={controls.hexGrid}
-                                min={56}
-                                max={128}
-                                step={2}
-                                onChange={controls.setHexGrid}
-                            />
-                            <Slider
-                                label="Size"
-                                value={controls.hexSize}
-                                min={1}
-                                max={2.5}
-                                step={0.1}
-                                onChange={controls.setHexSize}
-                                format={(v) => v.toFixed(2)}
-                            />
-                            <Slider
-                                label="Height spread"
-                                value={controls.hexHeightSpread}
-                                min={0.1}
-                                max={2.5}
-                                step={0.05}
-                                onChange={controls.setHexHeightSpread}
-                                format={(v) => v.toFixed(2)}
-                            />
-                        </ControlSection>
-
                         <ControlSection label="camera">
                             <Slider
                                 label="Angle"
                                 value={controls.cameraAngle}
-                                min={10}
-                                max={60}
+                                min={20}
+                                max={90}
                                 step={1}
                                 onChange={controls.setCameraAngle}
                             />
                             <Slider
                                 label="Height"
                                 value={controls.cameraHeight}
-                                min={1}
-                                max={8}
+                                min={8}
+                                max={14}
                                 step={0.1}
                                 onChange={controls.setCameraHeight}
                                 format={(v) => v.toFixed(1)}
@@ -130,8 +105,8 @@ const HexagonsPlace = ({ showOverlay = true }: HexagonsPlaceProps) => {
                             <Slider
                                 label="Zoom"
                                 value={controls.cameraZoom}
-                                min={0.5}
-                                max={2.5}
+                                min={1}
+                                max={2}
                                 step={0.05}
                                 onChange={controls.setCameraZoom}
                                 format={(v) => v.toFixed(2)}
@@ -143,7 +118,7 @@ const HexagonsPlace = ({ showOverlay = true }: HexagonsPlaceProps) => {
                                     onChange={controls.setSpin}
                                 />
                                 <Toggle
-                                    label={controls.spinLeft ? "Left" : "Right"}
+                                    label={controls.spinLeft ? "Right" : "Left"}
                                     checked={controls.spinLeft}
                                     onChange={controls.setSpinLeft}
                                     disabled={!controls.spin}
@@ -175,18 +150,20 @@ const HexagonsPlace = ({ showOverlay = true }: HexagonsPlaceProps) => {
                                     {visualizer.pluginPresent ? "online" : "offline"}
                                 </span>
                             </div>
-                            <Toggle
-                                label="reactive"
-                                checked={visualizer.reactive}
-                                onChange={visualizer.setReactive}
-                                disabled={!visualizer.pluginPresent}
-                            />
-                            <Toggle
-                                label="Band bounce"
-                                checked={controls.bandBounce}
-                                onChange={controls.setBandBounce}
-                                disabled={!visualizer.reactive}
-                            />
+                            <div className="flex gap-2 py-2">
+                                <Toggle
+                                    label="reactive"
+                                    checked={visualizer.reactive}
+                                    onChange={visualizer.setReactive}
+                                    disabled={!visualizer.pluginPresent}
+                                />
+                                <Toggle
+                                    label="Band bounce"
+                                    checked={controls.bandBounce}
+                                    onChange={controls.setBandBounce}
+                                    disabled={!visualizer.reactive}
+                                />
+                            </div>
                             <div className="flex items-center justify-between gap-3 text-[10px] uppercase tracking-[0.2em]">
                                 <span className="text-muted">bpm</span>
                                 <span
@@ -201,16 +178,6 @@ const HexagonsPlace = ({ showOverlay = true }: HexagonsPlaceProps) => {
                                         : "—"}
                                 </span>
                             </div>
-                            <Slider
-                                label="Bass boost"
-                                value={controls.bassBoost}
-                                min={0}
-                                max={controls.bassBoostMax}
-                                step={0.5}
-                                onChange={controls.setBassBoost}
-                                disabled={!visualizer.reactive}
-                                format={(v) => v.toFixed(1)}
-                            />
                             {visualizer.visibleBands.map((band) => (
                                 <Meter
                                     key={band}

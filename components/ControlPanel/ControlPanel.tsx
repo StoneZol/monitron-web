@@ -11,14 +11,16 @@ export function ControlPanel({ title, children, className }: ControlPanelProps) 
   return (
     <div
       className={cn(
-        "border border-signal bg-screen/85 font-mono text-signal shadow-[2px_2px_0_var(--magenta)] backdrop-blur-sm",
+        "flex max-h-[min(80vh,720px)] flex-col border border-signal bg-screen/85 font-mono text-signal shadow-[2px_2px_0_var(--magenta)] backdrop-blur-sm",
         className,
       )}
     >
-      <div className="border-b border-line px-3 py-2 text-[10px] uppercase tracking-[0.28em]">
+      <div className="shrink-0 border-b border-line px-3 py-2 text-[10px] uppercase tracking-[0.28em]">
         {title}
       </div>
-      <div className="flex flex-col gap-3 p-3">{children}</div>
+      <div className="control-panel-scroll flex flex-col gap-3 overflow-y-auto overscroll-contain p-3">
+        {children}
+      </div>
     </div>
   );
 }

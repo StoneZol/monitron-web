@@ -18,9 +18,7 @@ const ScreensOverlay = ({ children }: ScreensOverlayProps) => {
         >
             <NavBackButton className="absolute top-4 left-4 z-20" />
 
-            <div className="relative z-20 max-h-[min(80vh,720px)] w-80 overflow-y-auto">
-              {children}
-            </div>
+            <div className="relative z-20 w-80">{children}</div>
         </div>
     );
 };

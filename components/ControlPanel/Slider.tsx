@@ -43,6 +43,10 @@ export function Slider({
         value={value}
         disabled={disabled}
         onChange={(e) => onChange(Number(e.target.value))}
+        onWheel={(e) => {
+          // Keep wheel for panel scroll, not accidental slider nudges
+          e.currentTarget.blur();
+        }}
         className={cn(
           "h-1.5 w-full cursor-pointer appearance-none bg-line accent-signal",
           "[&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:bg-signal",
