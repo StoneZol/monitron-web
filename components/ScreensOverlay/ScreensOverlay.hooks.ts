@@ -20,12 +20,18 @@ const useScreensOverlayHook = () => {
       armIdle();
     };
 
+    const onWheel = () => {
+      armIdle();
+    };
+
     armIdle();
     window.addEventListener("mousemove", onMouseMove, { passive: true });
+    window.addEventListener("wheel", onWheel, { passive: true });
 
     return () => {
       clearTimeout(idleTimer);
       window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("wheel", onWheel);
     };
   }, []);
 

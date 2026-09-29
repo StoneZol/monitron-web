@@ -10,6 +10,7 @@ import {
   Slider,
   Toggle,
 } from "@/components/ControlPanel";
+import { PLUGIN_URL } from "@/lib/audioBus";
 import useMatrixHook from "./Matrix.hooks";
 
 const Matrix = ({ showOverlay = true }: { showOverlay?: boolean }) => {
@@ -28,12 +29,22 @@ const Matrix = ({ showOverlay = true }: { showOverlay?: boolean }) => {
                 checked={controls.twinkle}
                 onChange={controls.setTwinkle}
               />
-              <ColorField
-                label="Color"
-                value={controls.color}
-                onChange={controls.setColor}
-                disabled={controls.twinkle}
-              />
+              {controls.twinkle ? (
+                <Slider
+                  label="Color speed"
+                  value={controls.colorSpeed}
+                  min={0}
+                  max={180}
+                  step={1}
+                  onChange={controls.setColorSpeed}
+                />
+              ) : (
+                <ColorField
+                  label="Color"
+                  value={controls.color}
+                  onChange={controls.setColor}
+                />
+              )}
               <Slider
                 label="Fall speed"
                 value={controls.fallSpeed}
@@ -41,15 +52,6 @@ const Matrix = ({ showOverlay = true }: { showOverlay?: boolean }) => {
                 max={60}
                 step={1}
                 onChange={controls.setFallSpeed}
-              />
-              <Slider
-                label="Color speed"
-                value={controls.colorSpeed}
-                min={0}
-                max={180}
-                step={1}
-                onChange={controls.setColorSpeed}
-                disabled={!controls.twinkle}
               />
             </ControlSection>
 
@@ -75,22 +77,38 @@ const Matrix = ({ showOverlay = true }: { showOverlay?: boolean }) => {
                   {visualizer.pluginPresent ? "online" : "offline"}
                 </span>
               </div>
-              <Toggle
-                label="reactive"
-                checked={visualizer.reactive}
-                onChange={visualizer.setReactive}
-                disabled={!visualizer.pluginPresent}
-              />
-              <Slider
-                label="Bass boost"
-                value={controls.bassBoost}
-                min={0}
-                max={controls.bassBoostMax}
-                step={0.5}
-                onChange={controls.setBassBoost}
-                disabled={!visualizer.reactive}
-                format={(v) => v.toFixed(1)}
-              />
+              {!visualizer.pluginPresent && (
+                <a
+                  href={PLUGIN_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.2em] text-muted transition-colors hover:text-signal focus-visible:outline focus-visible:outline-offset-2 focus-visible:outline-signal"
+                >
+                  <span className="text-warn/80">get</span>
+                  plugin
+                  <span aria-hidden className="text-cyan">
+                    →
+                  </span>
+                </a>
+              )}
+              {visualizer.pluginPresent && (
+                <Toggle
+                  label="reactive"
+                  checked={visualizer.reactive}
+                  onChange={visualizer.setReactive}
+                />
+              )}
+              {visualizer.reactive && (
+                <Slider
+                  label="Bass boost"
+                  value={controls.bassBoost}
+                  min={0}
+                  max={controls.bassBoostMax}
+                  step={0.5}
+                  onChange={controls.setBassBoost}
+                  format={(v) => v.toFixed(1)}
+                />
+              )}
               {visualizer.visibleBands.map((band) => (
                 <Meter
                   key={band}

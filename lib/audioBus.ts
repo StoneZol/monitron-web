@@ -1,6 +1,9 @@
 export const AUDIO_BUS_SOURCE = "monitron-extension" as const;
 export const AUDIO_PAGE_SOURCE = "monitron-page" as const;
 
+/** Chrome extension repo — shown when the plugin is offline */
+export const PLUGIN_URL = "https://github.com/StoneZol/monitron-plugin";
+
 export const AUDIO_FRAME_TYPE = "audio-frame" as const;
 export const AUDIO_HELLO_TYPE = "hello" as const;
 /** Page asks extension to start/stop feeding bands into the visualizer */
@@ -42,6 +45,8 @@ export type VizBands = {
   mid: number;
   high: number;
   beat: number;
+  /** Approx tempo from beat onsets (BPM). 0 = not locked yet */
+  bpm: number;
 };
 
 export const EMPTY_VIZ_BANDS: VizBands = {
@@ -50,6 +55,7 @@ export const EMPTY_VIZ_BANDS: VizBands = {
   mid: 0,
   high: 0,
   beat: 0,
+  bpm: 0,
 };
 
 export function isAudioFrame(data: unknown): data is AudioFrame {
@@ -124,8 +130,8 @@ export function subscribeAudioBus(handlers: {
   onFrame?: (frame: AudioFrame) => void;
 }): () => void {
   const onMessage = (event: MessageEvent) => {
-    // Same-window bus; also accept null source (some extension edge cases)
-    if (event.source != null && event.source !== window) return;
+    // Same-window bus (content script postMessage). Ignore other frames/windows.
+    if (event.source !== window && event.source != null) return;
     if (isAudioHello(event.data)) {
       handlers.onHello?.();
       return;
