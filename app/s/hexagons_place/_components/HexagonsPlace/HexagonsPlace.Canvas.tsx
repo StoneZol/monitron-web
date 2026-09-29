@@ -9,17 +9,17 @@ import { applyGlow } from "./HexagonsPlace.glow";
 import type { HexagonsPlaceLive } from "./HexagonsPlace.types";
 
 const ROTATION_SPEED = 0.00005;
-/** Spin rate at this BPM when reactive; scales linearly with estimated tempo */
-const SPIN_BPM_REF = 30;
+/** Spin rate at this BPM when reactive; lower = stronger tempo influence */
+const SPIN_BPM_REF = 20;
 const FLAT_TOP = Math.PI / 6;
 /**
  * Hex center pitch vs tight pack. 1 = touching faces; >1 opens a seam
  * so glowing edges stay visible between neighbours.
  */
 const HEX_GAP = 1;
-/** Fixed camera Z — zoom scales the scene, rotate yaws the camera in place. */
+/** Fixed orbit radius — Angle pitches in place; Zoom scales the field. */
 const CAMERA_Z = 20;
-const CAMERA_FOV = 10;
+const CAMERA_FOV = 20;
 
 /** Smooth bass → garland hue only (no beat — that drives hex height). */
 function audioColorMul(viz: VizBands, bassBoost: number) {
@@ -30,33 +30,81 @@ function audioColorMul(viz: VizBands, bassBoost: number) {
 const BEAT_EDGE = 0.06;
 const BEAT_MIN = 0.08;
 
-type BandKey = "bass" | "beat" | "mid" | "high";
+/** Hex cap / bounce groups — beat drives fog, not a hex pile */
+type CapBand = "bass" | "mid" | "high";
 
-const BAND_KEYS: BandKey[] = ["bass", "beat", "mid", "high"];
+const CAP_BANDS: CapBand[] = ["bass", "mid", "high"];
 
-/** Per-band height dance (internal — Band bounce toggle gates all of it) */
+/** Per-band height dance (Band bounce toggle) */
 const BAND_HEIGHT: Record<
-    BandKey,
+    CapBand,
     { amp: number; decay: number; follow: number; punch: number }
 > = {
     bass: { amp: 0.32, decay: 3.0, follow: 0.55, punch: 2 },
-    beat: { amp: 0.06, decay: 5.2, follow: 0.12, punch: 1.5 },
-    mid: { amp: 0.05, decay: 4.0, follow: 0.4, punch: 1 },
-    high: { amp: 0.04, decay: 6.0, follow: 0.5, punch: 1 },
+    mid: { amp: 0.24, decay: 4.0, follow: 0.4, punch: 1 },
+    high: { amp: 0.44, decay: 6.0, follow: 0.5, punch: 1 },
 };
 
-/** Interleave hexes into 4 fixed band groups across the field */
-function buildBandGroups(count: number): Record<BandKey, Uint32Array> {
-    const buckets: number[][] = [[], [], [], []];
+/** Interleave hexes into 3 fixed band groups */
+function buildBandGroups(count: number): Record<CapBand, Uint32Array> {
+    const buckets: number[][] = [[], [], []];
     for (let i = 0; i < count; i++) {
-        buckets[i % 4]!.push(i);
+        buckets[i % 3]!.push(i);
     }
     return {
         bass: new Uint32Array(buckets[0]),
-        beat: new Uint32Array(buckets[1]),
-        mid: new Uint32Array(buckets[2]),
-        high: new Uint32Array(buckets[3]),
+        mid: new Uint32Array(buckets[1]),
+        high: new Uint32Array(buckets[2]),
     };
+}
+
+/** Caps palette defaults (overridden by live prefs each frame) */
+const BAND_CAP_FALLBACK: Record<CapBand, { idle: number; peak: number }> = {
+    bass: { idle: 0x8f0070, peak: 0xff2ed2 },
+    mid: { idle: 0xccbb00, peak: 0xfef606 },
+    high: { idle: 0x0644fe, peak: 0x3496fe },
+};
+
+function cssHexToInt(hex: string, fallback: number): number {
+    const raw = hex.replace("#", "").trim();
+    if (/^[0-9a-fA-F]{6}$/.test(raw)) return parseInt(raw, 16);
+    if (/^[0-9a-fA-F]{3}$/.test(raw)) {
+        return parseInt(
+            raw
+                .split("")
+                .map((c) => c + c)
+                .join(""),
+            16,
+        );
+    }
+    return fallback;
+}
+
+const _capIdle = new THREE.Color();
+const _capPeak = new THREE.Color();
+const _capColor = new THREE.Color();
+const _fogIdle = new THREE.Color();
+const _fogPeak = new THREE.Color();
+
+type TownShared = {
+    geometry: THREE.CylinderGeometry;
+    sideMaterial: THREE.MeshStandardMaterial;
+    bottomMaterial: THREE.MeshStandardMaterial;
+    capMaterials: Record<CapBand, THREE.MeshStandardMaterial>;
+};
+
+function createCapMaterials(): Record<CapBand, THREE.MeshStandardMaterial> {
+    const out = {} as Record<CapBand, THREE.MeshStandardMaterial>;
+    for (const key of CAP_BANDS) {
+        out[key] = new THREE.MeshStandardMaterial({
+            color: BAND_CAP_FALLBACK[key].idle,
+            emissive: BAND_CAP_FALLBACK[key].idle,
+            emissiveIntensity: 0.35,
+            metalness: 0.15,
+            roughness: 0.5,
+        });
+    }
+    return out;
 }
 
 function hexPosition(iCol: number, iRow: number, origin: number, R: number) {
@@ -75,40 +123,49 @@ function buildTown(
     town: THREE.Group,
     edgeMaterial: THREE.LineBasicMaterial,
     opts: { grid: number; size: number; heightSpread: number },
-): { geometry: THREE.CylinderGeometry; bodyMaterial: THREE.MeshStandardMaterial } {
+): TownShared {
     const R = Math.max(0.2, opts.size);
     const n = Math.max(4, Math.round(opts.grid));
     const origin = (n - 1) / 2;
-    // Flat floor → tall peaks as spread grows (mountains through fog)
     const minH = 0.12 * R;
     const maxH = minH + Math.max(0.05, opts.heightSpread) * 1.6 * R;
 
     const geometry = new THREE.CylinderGeometry(R, R, 1, 6, 1, false);
-    const bodyMaterial = new THREE.MeshStandardMaterial({
+    // Cylinder groups: 0 = side, 1 = top, 2 = bottom
+    const sideMaterial = new THREE.MeshStandardMaterial({
         color: 0x000000,
         polygonOffset: true,
         polygonOffsetFactor: 1,
         polygonOffsetUnits: 1,
     });
+    const bottomMaterial = new THREE.MeshStandardMaterial({ color: 0x000000 });
+    const capMaterials = createCapMaterials();
     const edges = new THREE.EdgesGeometry(geometry);
 
+    let index = 0;
     for (let iCol = 0; iCol < n; iCol++) {
         for (let iRow = 0; iRow < n; iRow++) {
             const { x, z } = hexPosition(iCol, iRow, origin, R);
             const height = minH + Math.random() * (maxH - minH);
-            const tower = new THREE.Mesh(geometry, bodyMaterial);
+            const band = CAP_BANDS[index % 3]!;
+            const tower = new THREE.Mesh(geometry, [
+                sideMaterial,
+                capMaterials[band],
+                bottomMaterial,
+            ]);
             tower.rotation.y = FLAT_TOP;
             tower.scale.y = height;
             tower.position.set(x, height / 2, z);
             tower.userData.baseH = height;
+            tower.userData.band = band;
             const outline = new THREE.LineSegments(edges, edgeMaterial);
             outline.renderOrder = 1;
             tower.add(outline);
             town.add(tower);
+            index++;
         }
     }
 
-    // Hex column stagger shifts the bbox — pin the field center to world origin
     const box = new THREE.Box3().setFromObject(town);
     const center = box.getCenter(new THREE.Vector3());
     for (const child of town.children) {
@@ -116,7 +173,7 @@ function buildTown(
         child.position.z -= center.z;
     }
 
-    return { geometry, bodyMaterial };
+    return { geometry, sideMaterial, bottomMaterial, capMaterials };
 }
 
 function CameraRig({ live }: { live: HexagonsPlaceLive }) {
@@ -127,15 +184,26 @@ function CameraRig({ live }: { live: HexagonsPlaceLive }) {
     }, [live]);
 
     useFrame((state) => {
-        const { cameraAngle, cameraHeight, cameraRotate } = liveRef.current;
+        const {
+            cameraAngle,
+            cameraHeight,
+            cameraOffset,
+            cameraRotate,
+        } = liveRef.current;
         const cam = state.camera;
 
-        cam.position.set(0, cameraHeight, CAMERA_Z);
-        cam.rotation.order = "YXZ";
-        cam.rotation.x = -THREE.MathUtils.degToRad(
+        const pitch = THREE.MathUtils.degToRad(
             THREE.MathUtils.clamp(cameraAngle, 0, 89),
         );
-        cam.rotation.y = THREE.MathUtils.degToRad(cameraRotate);
+        const yaw = THREE.MathUtils.degToRad(cameraRotate);
+        const radius = Math.max(0.5, cameraOffset);
+
+        // Fixed seat on +Z — Offset = distance, Height = Y.
+        // Rotate yaws the camera in place (look left/right), does not spin the town.
+        cam.position.set(0, cameraHeight, radius);
+        cam.rotation.order = "YXZ";
+        cam.rotation.x = -pitch;
+        cam.rotation.y = yaw;
         cam.rotation.z = 0;
     });
 
@@ -153,7 +221,8 @@ function City({
     const cityRef = useRef<THREE.Group>(null);
     const lightBackRef = useRef<THREE.PointLight>(null);
     const hueOffset = useRef(0);
-    const prevBands = useRef({ bass: 0, beat: 0, mid: 0, high: 0 });
+    const fogHueOffset = useRef(0);
+    const prevBands = useRef({ bass: 0, mid: 0, high: 0 });
 
     useEffect(() => {
         liveRef.current = live;
@@ -185,18 +254,21 @@ function City({
         const n = group.children.length;
         group.userData.pulses = new Float32Array(n);
         group.userData.bandGroups = buildBandGroups(n);
+        group.userData.capMaterials = shared.capMaterials;
         return { town: group, shared };
     }, [edgeMaterial, hexGrid, hexSize, hexHeightSpread]);
 
     useEffect(() => {
         townRef.current = town;
-        prevBands.current = { bass: 0, beat: 0, mid: 0, high: 0 };
+        prevBands.current = { bass: 0, mid: 0, high: 0 };
     }, [town]);
 
     useEffect(() => {
         return () => {
             shared.geometry.dispose();
-            shared.bodyMaterial.dispose();
+            shared.sideMaterial.dispose();
+            shared.bottomMaterial.dispose();
+            for (const key of CAP_BANDS) shared.capMaterials[key].dispose();
             const first = town.children[0] as THREE.Mesh | undefined;
             const line = first?.children[0] as THREE.LineSegments | undefined;
             line?.geometry.dispose();
@@ -216,9 +288,18 @@ function City({
         const reactive = Boolean(viz?.enabled);
         const colorMul = viz ? audioColorMul(viz, knobs.bassBoost) : 1;
 
-        if (knobs.garland) {
-            hueOffset.current =
-                (hueOffset.current + knobs.colorSpeed * colorMul * dt) % 360;
+        if (knobs.garland && !knobs.caps) {
+            const step = knobs.colorSpeed * colorMul * dt;
+            hueOffset.current = (hueOffset.current + step) % 360;
+            if (knobs.fogParallel) {
+                const fogMul = THREE.MathUtils.clamp(
+                    knobs.fogParallelSpeed,
+                    0.1,
+                    5,
+                );
+                fogHueOffset.current =
+                    (fogHueOffset.current + step * fogMul) % 360;
+            }
         }
 
         const fog = state.scene.fog;
@@ -227,10 +308,33 @@ function City({
         const zoom = THREE.MathUtils.clamp(knobs.cameraZoom, 0.25, 3);
 
         if (fog instanceof THREE.Fog && bg instanceof THREE.Color && light) {
-            applyGlow(edgeMaterial, fog, bg, light, knobs, hueOffset.current, {
-                enabled: reactive,
-                bass: viz?.bass ?? 0,
-            });
+            applyGlow(
+                edgeMaterial,
+                fog,
+                bg,
+                light,
+                knobs,
+                hueOffset.current,
+                fogHueOffset.current,
+                {
+                    enabled: reactive && !knobs.caps,
+                    bass: viz?.bass ?? 0,
+                },
+            );
+            // Caps: beat washes the fog (idle → peak), not a 4th hex group
+            if (knobs.caps) {
+                const beat = reactive
+                    ? Math.max(0, Math.min(1, viz?.beat ?? 0))
+                    : 0;
+                _fogIdle.setHex(
+                    cssHexToInt(knobs.capBeatFogIdle, 0x1a0c14),
+                );
+                _fogPeak.setHex(
+                    cssHexToInt(knobs.capBeatFogPeak, 0x4a1830),
+                );
+                fog.color.copy(_fogIdle).lerp(_fogPeak, beat);
+                bg.copy(fog.color);
+            }
             const density = THREE.MathUtils.clamp(knobs.fogDensity, 0, 1);
             const ceil = Math.max(0.05, knobs.fogHeight) * zoom;
             fog.near = density;
@@ -242,17 +346,54 @@ function City({
         if (!city || !field) return;
         field.scale.setScalar(zoom);
 
-        // Reactive band bounce: 4 interleaved hex groups → bass/beat/mid/high
+        // Caps: solid color lerp idle → peak (no transparency)
+        const capMats = field.userData.capMaterials as
+            | Record<CapBand, THREE.MeshStandardMaterial>
+            | undefined;
+        if (capMats) {
+            const palette: Record<CapBand, { idle: string; peak: string }> = {
+                bass: { idle: knobs.capBassIdle, peak: knobs.capBassPeak },
+                mid: { idle: knobs.capMidIdle, peak: knobs.capMidPeak },
+                high: { idle: knobs.capHighIdle, peak: knobs.capHighPeak },
+            };
+            for (const key of CAP_BANDS) {
+                const mat = capMats[key];
+                if (knobs.caps) {
+                    const level = reactive
+                        ? Math.max(0, Math.min(1, viz?.[key] ?? 0))
+                        : 0;
+                    const fb = BAND_CAP_FALLBACK[key];
+                    const pal = palette[key];
+                    _capIdle.setHex(cssHexToInt(pal.idle, fb.idle));
+                    _capPeak.setHex(cssHexToInt(pal.peak, fb.peak));
+                    _capColor.copy(_capIdle).lerp(_capPeak, level);
+                    mat.color.copy(_capColor);
+                    mat.emissive.copy(_capColor);
+                    mat.emissiveIntensity = THREE.MathUtils.lerp(0.25, 0.9, level);
+                    mat.transparent = false;
+                    mat.opacity = 1;
+                    mat.depthWrite = true;
+                } else {
+                    mat.color.setHex(0x000000);
+                    mat.emissive.setHex(0x000000);
+                    mat.emissiveIntensity = 0;
+                    mat.transparent = false;
+                    mat.opacity = 1;
+                }
+            }
+        }
+
+        // Reactive band bounce: 3 groups → bass / mid / high
         const n = field.children.length;
         const pulses = field.userData.pulses as Float32Array | undefined;
         const groups = field.userData.bandGroups as
-            | Record<BandKey, Uint32Array>
+            | Record<CapBand, Uint32Array>
             | undefined;
         if (pulses && pulses.length === n && groups) {
             const bounce = reactive && knobs.bandBounce && viz;
 
             if (bounce) {
-                for (const key of BAND_KEYS) {
+                for (const key of CAP_BANDS) {
                     const cfg = BAND_HEIGHT[key];
                     const level = Math.max(0, viz[key] ?? 0);
                     const prev = prevBands.current[key];
@@ -271,7 +412,7 @@ function City({
                     prevBands.current[key] = level;
                 }
             } else {
-                prevBands.current = { bass: 0, beat: 0, mid: 0, high: 0 };
+                prevBands.current = { bass: 0, mid: 0, high: 0 };
             }
 
             for (let i = 0; i < n; i++) {
@@ -280,7 +421,7 @@ function City({
                     typeof mesh.userData.baseH === "number"
                         ? mesh.userData.baseH
                         : mesh.scale.y;
-                const band = BAND_KEYS[i % 4]!;
+                const band = CAP_BANDS[i % 3]!;
                 const decay = Math.exp(-dt * BAND_HEIGHT[band].decay);
                 pulses[i] *= bounce ? decay : Math.exp(-dt * 8);
                 if (pulses[i] < 0.008) pulses[i] = 0;
@@ -297,15 +438,16 @@ function City({
             if (reactive && viz) {
                 const bpm = viz.bpm;
                 if (bpm > 0) {
-                    tempoMul = THREE.MathUtils.clamp(bpm / SPIN_BPM_REF, 0.45, 2.4);
+                    tempoMul = THREE.MathUtils.clamp(bpm / SPIN_BPM_REF, 0.35, 5);
                 } else {
                     tempoMul =
                         1 +
-                        Math.max(0, viz.bass) * 0.55 +
-                        Math.max(0, viz.beat) * 0.35;
+                        Math.max(0, viz.bass) * 0.7 +
+                        Math.max(0, viz.beat) * 0.45;
                 }
             }
-            city.rotation.y += dir * 8 * ROTATION_SPEED * tempoMul;
+            city.rotation.y +=
+                dir * 8 * ROTATION_SPEED * knobs.spinSpeed * tempoMul;
         }
         if (city.rotation.x < -0.05) city.rotation.x = -0.05;
     });
@@ -318,7 +460,7 @@ function City({
                 position={[0, -0.01, 0]}
                 receiveShadow
             >
-                <planeGeometry args={[100, 100]} />
+                <planeGeometry args={[1000, 1000]} />
                 <meshPhongMaterial
                     color={0x000000}
                     side={THREE.DoubleSide}
@@ -333,10 +475,10 @@ function City({
                 distance={10}
                 penumbra={0.2}
                 castShadow
-                shadow-mapSize={[6000, 6000]}
+                shadow-mapSize={[1000, 1000]}
             />
-            <pointLight ref={lightBackRef} position={[0, 6, 0]} intensity={0.5} />
-            <gridHelper args={[100, 100, 0x000000, 0x000000]} />
+            <pointLight ref={lightBackRef} position={[0, 4, 0]} intensity={0.5} />
+            <gridHelper args={[1000, 1000, 0x000000, live.edgeColor]} />
         </group>
     );
 }
@@ -350,7 +492,12 @@ export default function HexagonsCanvas({ live, vizRef }: HexagonsCanvasProps) {
     return (
         <Canvas
             className="absolute inset-0 h-full w-full"
-            camera={{ fov: CAMERA_FOV, position: [0, 4, CAMERA_Z], near: 1, far: 100 }}
+            camera={{
+                fov: CAMERA_FOV,
+                position: [0, 4, CAMERA_Z],
+                near: 0.1,
+                far: 2000,
+            }}
             dpr={[1, 2]}
             gl={{ antialias: true }}
             onCreated={({ gl, camera, scene }) => {
