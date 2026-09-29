@@ -44,6 +44,13 @@ function resolveBands(mask?: VizBandMask): Record<VizBandKey, boolean> {
 
 export type AudioReactiveMeters = Record<VizBandKey, number>;
 
+const ZERO_METERS: AudioReactiveMeters = {
+  bass: 0,
+  mid: 0,
+  high: 0,
+  beat: 0,
+};
+
 /**
  * Extension handshake + band feed. Canvas reads `vizRef` in rAF;
  * meters are throttled for the control panel UI.
@@ -55,8 +62,6 @@ export function useAudioReactive({
 }: UseAudioReactiveOptions = {}) {
   const active = resolveBands(bandsMask);
   const activeRef = useRef(active);
-  activeRef.current = active;
-
   const vizRef = useRef<VizBands>({ ...EMPTY_VIZ_BANDS });
   const lastUiSync = useRef(0);
   const beatPeakRef = useRef(0);
@@ -64,29 +69,24 @@ export function useAudioReactive({
   const lastToggleRef = useRef<boolean | null>(null);
   const preferredRef = useRef(preferredReactive);
   const onReactiveChangeRef = useRef(onReactiveChange);
-  onReactiveChangeRef.current = onReactiveChange;
 
   const [pluginPresent, setPluginPresent] = useState(false);
   const [reactive, setReactiveState] = useState(false);
-  const [meters, setMeters] = useState<AudioReactiveMeters>({
-    bass: 0,
-    mid: 0,
-    high: 0,
-    beat: 0,
-  });
+  const [meters, setMeters] = useState<AudioReactiveMeters>(ZERO_METERS);
+
+  useEffect(() => {
+    activeRef.current = resolveBands(bandsMask);
+  }, [bandsMask]);
+
+  useEffect(() => {
+    onReactiveChangeRef.current = onReactiveChange;
+  }, [onReactiveChange]);
 
   const sendToggle = (enabled: boolean) => {
     if (lastToggleRef.current === enabled) return;
     lastToggleRef.current = enabled;
     postVisualizerToggle(enabled);
   };
-
-  const zeroMeters = (): AudioReactiveMeters => ({
-    bass: 0,
-    mid: 0,
-    high: 0,
-    beat: 0,
-  });
 
   const applyReactive = (enabled: boolean, notify: boolean) => {
     if (enabled && !pluginRef.current) return;
@@ -97,7 +97,7 @@ export function useAudioReactive({
       : { ...EMPTY_VIZ_BANDS, enabled: false };
     sendToggle(enabled);
     if (!enabled) {
-      setMeters(zeroMeters());
+      setMeters(ZERO_METERS);
       beatPeakRef.current = 0;
     }
     if (notify) onReactiveChangeRef.current?.(enabled);
@@ -120,29 +120,65 @@ export function useAudioReactive({
   }, [preferredReactive]);
 
   useEffect(() => {
-    if (!pluginPresent) {
-      // Pause stream — keep preferredRef so we can resume after hello
-      setReactiveState(false);
-      setMeters(zeroMeters());
-      vizRef.current = { ...EMPTY_VIZ_BANDS };
-      lastToggleRef.current = false;
-      beatPeakRef.current = 0;
-      return;
-    }
-    if (preferredRef.current) {
-      applyReactive(true, false);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pluginPresent]);
-
-  useEffect(() => {
     let lastHelloAt = 0;
+    let present = false;
+    let pollTimer: number | null = null;
 
-    const markPresent = () => {
-      lastHelloAt = performance.now();
-      pluginRef.current = true;
-      // Always set — recovers if state/ref ever desync
-      setPluginPresent(true);
+    const pauseForOffline = () => {
+      lastToggleRef.current = false;
+      setReactiveState(false);
+      setMeters(ZERO_METERS);
+      vizRef.current = { ...EMPTY_VIZ_BANDS };
+      beatPeakRef.current = 0;
+    };
+
+    const resumeIfPreferred = () => {
+      if (!preferredRef.current) return;
+      preferredRef.current = true;
+      setReactiveState(true);
+      vizRef.current = { ...vizRef.current, enabled: true };
+      if (lastToggleRef.current !== true) {
+        lastToggleRef.current = true;
+        postVisualizerToggle(true);
+      }
+    };
+
+    const syncPoll = () => {
+      if (pollTimer != null) window.clearInterval(pollTimer);
+      // Offline: poll faster so a returning extension is noticed without refresh
+      pollTimer = window.setInterval(tick, present ? 2000 : 800);
+    };
+
+    const setPresent = (next: boolean) => {
+      if (next) lastHelloAt = performance.now();
+      else lastHelloAt = 0;
+
+      pluginRef.current = next;
+      if (present === next) return;
+
+      present = next;
+      setPluginPresent(next);
+      syncPoll();
+
+      if (!next) {
+        if (lastToggleRef.current) postVisualizerToggle(false);
+        pauseForOffline();
+      } else {
+        resumeIfPreferred();
+      }
+    };
+
+    const markPresent = () => setPresent(true);
+
+    const tick = () => {
+      postHelloRequest();
+      if (
+        present &&
+        lastHelloAt > 0 &&
+        performance.now() - lastHelloAt > 6000
+      ) {
+        setPresent(false);
+      }
     };
 
     const unsubscribe = subscribeAudioBus({
@@ -177,23 +213,20 @@ export function useAudioReactive({
       },
     });
 
-    postHelloRequest();
-    const retry = window.setInterval(() => {
-      postHelloRequest();
-      if (
-        pluginRef.current &&
-        lastHelloAt > 0 &&
-        performance.now() - lastHelloAt > 6000
-      ) {
-        pluginRef.current = false;
-        setPluginPresent(false);
-        if (lastToggleRef.current) postVisualizerToggle(false);
-      }
-    }, 2000);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") tick();
+    };
+
+    tick();
+    syncPoll();
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", tick);
 
     return () => {
       unsubscribe();
-      window.clearInterval(retry);
+      if (pollTimer != null) window.clearInterval(pollTimer);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", tick);
       if (lastToggleRef.current) postVisualizerToggle(false);
       pluginRef.current = false;
       setPluginPresent(false);

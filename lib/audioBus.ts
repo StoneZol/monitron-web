@@ -124,8 +124,8 @@ export function subscribeAudioBus(handlers: {
   onFrame?: (frame: AudioFrame) => void;
 }): () => void {
   const onMessage = (event: MessageEvent) => {
-    // Same-window bus; also accept null source (some extension edge cases)
-    if (event.source != null && event.source !== window) return;
+    // Same-window bus (content script postMessage). Ignore other frames/windows.
+    if (event.source !== window && event.source != null) return;
     if (isAudioHello(event.data)) {
       handlers.onHello?.();
       return;

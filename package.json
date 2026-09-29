@@ -1,6 +1,6 @@
 {
     "name": "monitron-web",
-    "version": "0.1.0",
+    "version": "1.0.0",
     "private": true,
     "scripts": {
         "dev": "next dev",
@@ -10,18 +10,21 @@
         "convert": "auto-convert-images"
     },
     "dependencies": {
+        "@react-three/fiber": "^9.8.1",
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
         "next": "16.3.6",
         "react": "19.2.8",
         "react-dom": "19.2.8",
-        "tailwind-merge": "^3.7.0"
+        "tailwind-merge": "^3.7.0",
+        "three": "^0.186.1"
     },
     "devDependencies": {
         "@tailwindcss/postcss": "^4",
         "@types/node": "^20",
         "@types/react": "^19",
         "@types/react-dom": "^19",
+        "@types/three": "^0.186.0",
         "auto-image-converter": "^2.2.3",
         "babel-plugin-react-compiler": "1.0.0",
         "eslint": "^9",
