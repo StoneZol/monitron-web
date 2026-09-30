@@ -18,7 +18,7 @@ import { MicCapture, gateMicFrame, MIC_GATE_DEFAULT, MIC_GATE_MAX, clampMicGate,
 export { MIC_GATE_DEFAULT, MIC_GATE_MAX, normalizeMicGate };
 
 /** Peak gain stacks on bus peak for meters + vizRef (quiet tab volume) */
-export const PEAK_GAIN_DEFAULT = 1;
+export const PEAK_GAIN_DEFAULT = 1.5;
 export const PEAK_GAIN_MAX = 3;
 
 export function clampPeakGain(value: number): number {

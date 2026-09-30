@@ -67,16 +67,27 @@ function spectrumTrio(viz: VizBands): Record<CapBand, number> {
     };
 }
 
-/** Base scale — bus peak often sits ~0.02–0.1 (Peak gain lives in the audio hook) */
-const BEAT_GAIN = 10;
+/** Base scale — quieter after Peak gain so ×1…×3 stay in the linear-ish tanh zone */
+const BEAT_GAIN = 5;
+/**
+ * Unclipped beat for onset detection — hard 0..1 clip made Peak gain=×3
+ * look slower (flat line → no rising edges → no spin punches).
+ */
+function beatRaw(viz: VizBands) {
+    const crest = Math.max(0, viz.peak - viz.rms * 1.2);
+    return Math.max(viz.peak, crest * 1.35) * BEAT_GAIN;
+}
+
+/** Soft clip — Peak gain lifts beat without hard-ceiling (was killing rising edges at ×3) */
+function softPeak01(x: number) {
+    return Math.tanh(Math.max(0, x));
+}
 
 /** Fog / grid / spin channel level from spectrum + peak (beat ≈ crest). */
 function channelLevel(viz: VizBands, ch: ReactiveChannel): number {
     if (ch === "off") return 0;
     if (ch === "beat") {
-        const crest = Math.max(0, viz.peak - viz.rms * 1.2);
-        const raw = Math.max(viz.peak, crest * 1.35);
-        return Math.min(1, raw * BEAT_GAIN);
+        return softPeak01(beatRaw(viz));
     }
     return spectrumTrio(viz)[ch];
 }
@@ -407,6 +418,7 @@ function City({
     const bandEnvs = useRef(createBandEnvs());
     const spinImpulse = useRef(0);
     const prevSpinLevel = useRef(0);
+    const prevSpinRaw = useRef(0);
 
     useEffect(() => {
         liveRef.current = live;
@@ -703,22 +715,29 @@ function City({
 
         if (knobs.spin) {
             const dir = knobs.spinLeft ? 1 : -1;
-            // Reactive spin: channel punches × spinAccel (no BPM)
+            // Reactive spin: only via Spin channel select (beat = peak/Peak gain)
             let tempoMul = 1;
             if (reactive && viz && knobs.spinChannel !== "off") {
                 const level = channelLevel(viz, knobs.spinChannel);
+                // Beat: edge on unclipped raw so Peak gain ×3 still punches faster
+                const edgeSrc =
+                    knobs.spinChannel === "beat"
+                        ? beatRaw(viz)
+                        : level;
+                const edgePrev =
+                    knobs.spinChannel === "beat"
+                        ? prevSpinRaw.current
+                        : prevSpinLevel.current;
                 if (
-                    risingEdge(
-                        level,
-                        prevSpinLevel.current,
-                        SPIN_EDGE,
-                        SPIN_MIN,
-                    )
+                    risingEdge(edgeSrc, edgePrev, SPIN_EDGE, SPIN_MIN)
                 ) {
                     spinImpulse.current = Math.max(
                         spinImpulse.current,
                         Math.min(1, 0.4 + level * 0.65),
                     );
+                }
+                if (knobs.spinChannel === "beat") {
+                    prevSpinRaw.current = edgeSrc;
                 }
                 prevSpinLevel.current = level;
                 spinImpulse.current = Math.max(
@@ -731,6 +750,7 @@ function City({
             } else {
                 spinImpulse.current = 0;
                 prevSpinLevel.current = 0;
+                prevSpinRaw.current = 0;
             }
             city.rotation.y +=
                 dir * 8 * ROTATION_SPEED * knobs.spinSpeed * tempoMul;
