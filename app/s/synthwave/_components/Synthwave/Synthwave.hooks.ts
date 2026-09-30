@@ -29,7 +29,6 @@ export const SYNTHWAVE_DEFAULTS: SynthwaveLive = {
   wallOffset: 4,
   wallPerspective: 0,
   roadLength: 0,
-  terrainMode: "channel",
   skyTop: "#0d2666",
   skyHorizon: "#0d2666",
   roadChannel: "beat",
@@ -49,9 +48,15 @@ function migratePrefs(
   raw: SynthwaveLive & Record<string, unknown>,
 ): SynthwaveLive {
   const audioSource = migrateAudioSource(raw);
-  const { cityColor: _c, mountIdle: _m, ...rest } = raw as SynthwaveLive & {
+  const {
+    cityColor: _c,
+    mountIdle: _m,
+    terrainMode: legacyMode,
+    ...rest
+  } = raw as SynthwaveLive & {
     cityColor?: string;
     mountIdle?: string;
+    terrainMode?: string;
   };
 
   const next: SynthwaveLive = {
@@ -75,9 +80,6 @@ function migratePrefs(
     next.mountChannel = SYNTHWAVE_DEFAULTS.mountChannel;
   if (!CHANNELS.has(next.sunChannel))
     next.sunChannel = SYNTHWAVE_DEFAULTS.sunChannel;
-  if (next.terrainMode !== "flat" && next.terrainMode !== "channel") {
-    next.terrainMode = SYNTHWAVE_DEFAULTS.terrainMode;
-  }
   // migrate: old 20–120 from horizontal → lean from vertical (−90…+90)
   const rawRec = raw as SynthwaveLive & { mountSpeed?: number };
   if (
@@ -91,6 +93,10 @@ function migratePrefs(
   }
   if (typeof next.wallAngle !== "number" || !Number.isFinite(next.wallAngle)) {
     next.wallAngle = SYNTHWAVE_DEFAULTS.wallAngle;
+  }
+  // migrate: old "flat" shape → walls folded flat over the road
+  if (legacyMode === "flat") {
+    next.wallAngle = 90;
   }
   next.wallAngle = Math.min(90, Math.max(-90, next.wallAngle));
   if (typeof next.wallOffset !== "number" || !Number.isFinite(next.wallOffset)) {
@@ -217,8 +223,6 @@ export default function useSynthwaveHook() {
     setWallPerspective: (wallPerspective: number) =>
       commit({ wallPerspective }),
     setRoadLength: (roadLength: number) => commit({ roadLength }),
-    setTerrainMode: (terrainMode: SynthwaveLive["terrainMode"]) =>
-      commit({ terrainMode }),
     setSkyTop: (skyTop: string) => commit({ skyTop }),
     setSkyHorizon: (skyHorizon: string) => commit({ skyHorizon }),
     setRoadChannel: (roadChannel: SynthwaveLive["roadChannel"]) =>

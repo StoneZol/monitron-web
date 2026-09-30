@@ -35,8 +35,6 @@ export type SynthwaveLive = {
   wallPerspective: number;
   /** Extra road length beyond the short default (0 = ~⅓ screen, 1 = full stretch) */
   roadLength: number;
-  /** flat road | U-channel with two angled side walls */
-  terrainMode: "flat" | "channel";
   /** Sky / cloud tint */
   skyTop: string;
   /** Horizon glow tint */

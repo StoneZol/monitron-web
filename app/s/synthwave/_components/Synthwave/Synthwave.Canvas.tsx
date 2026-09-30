@@ -297,7 +297,6 @@ function NeonGrid({
     const leftRef = useRef<THREE.Mesh>(null);
     const rightRef = useRef<THREE.Mesh>(null);
 
-    const lastModeRef = useRef<"flat" | "channel" | null>(null);
     const lastAngleRef = useRef(-1);
     const lastOffsetRef = useRef(-1);
     const lastLengthRef = useRef(-1);
@@ -336,8 +335,7 @@ function NeonGrid({
         const reactive = Boolean(viz?.enabled);
         const roadLv = reactive ? channelLevel(viz!, knobs.roadChannel) : 0;
 
-        const mode = knobs.terrainMode;
-        const leanDeg = mode === "flat" ? 0 : knobs.wallAngle;
+        const leanDeg = knobs.wallAngle;
         const offsetCells = Math.max(1, Math.round(knobs.wallOffset));
         const depth = roadDepth(knobs.roadLength);
         const cellsV = depth / CELL;
@@ -346,13 +344,13 @@ function NeonGrid({
         const rate = 2 * knobs.roadSpeed * (1 + roadLv * knobs.drive * 0.5);
         scrollRef.current += Math.max(0, dt) * rate;
 
-        // Perspective: stretch near, ease far crush (channel only).
+        // Perspective: stretch near, ease far crush.
         const persp = Math.min(12, Math.max(-12, knobs.wallPerspective));
         const t = (persp + 12) / 24;
         const zNear = Z_PAD;
         const zFar = -(depth - Z_PAD);
-        const taper = mode === "flat" ? 0 : 0.08 + t * 0.72;
-        const nearWidth = mode === "flat" ? 1 : 1.22 + t * 0.5;
+        const taper = 0.08 + t * 0.72;
+        const nearWidth = 1.22 + t * 0.5;
 
         const syncUniforms = (
             mat: THREE.ShaderMaterial,
@@ -378,7 +376,6 @@ function NeonGrid({
 
         if (
             builtRef.current &&
-            mode === lastModeRef.current &&
             Math.abs(leanDeg - lastAngleRef.current) < 0.05 &&
             offsetCells === lastOffsetRef.current &&
             Math.abs(depth - lastLengthRef.current) < 0.01 &&
@@ -387,7 +384,6 @@ function NeonGrid({
         ) {
             return;
         }
-        lastModeRef.current = mode;
         lastAngleRef.current = leanDeg;
         lastOffsetRef.current = offsetCells;
         lastLengthRef.current = depth;
@@ -395,9 +391,7 @@ function NeonGrid({
         lastNearRef.current = nearWidth;
         builtRef.current = true;
 
-        // Flat: wide sheet that fills left/right. Channel: road + hinged walls.
-        const floorCellsU =
-            mode === "flat" ? 96 : Math.max(1, offsetCells) * 2;
+        const floorCellsU = Math.max(1, offsetCells) * 2;
         const floorW = floorCellsU * CELL;
         floorM.uniforms.uCellsU!.value = floorCellsU;
         floorM.uniforms.uCellsV!.value = cellsV;
@@ -420,13 +414,11 @@ function NeonGrid({
         }
         floor.visible = true;
 
-        const showWalls = mode === "channel";
         const lean = (Math.min(90, Math.max(-90, leanDeg)) * Math.PI) / 180;
         const hinge = floorW / 2;
 
         const placeWall = (mesh: THREE.Mesh, side: -1 | 1) => {
-            mesh.visible = showWalls;
-            if (!showWalls) return;
+            mesh.visible = true;
             mesh.geometry.dispose();
             // Planar wall glued to tapered floor edge (no shader X-warp on walls).
             mesh.geometry = buildWallGeometry(
@@ -530,16 +522,14 @@ function CameraRig({ liveRef }: { liveRef: RefObject<SynthwaveLive> }) {
         const cam = camera as THREE.PerspectiveCamera;
         if (!knobs) return;
 
-        const channel = knobs.terrainMode === "channel";
         const half = Math.max(1, Math.round(knobs.wallOffset)) * CELL;
         // Only pull cam in when road is narrower than ±4 cells.
-        // At 4+ keep the framing locked — no further back/up shift as offset grows.
         const refHalf = 4 * CELL;
-        const t = channel ? Math.min(1, Math.max(0.6, half / refHalf)) : 1;
+        const t = Math.min(1, Math.max(0.6, half / refHalf));
 
-        const y = channel ? 0.14 + 0.28 * t : 0.42;
-        const z = channel ? 0 + 1.2 * t : 1.55;
-        const lookY = channel ? 0.06 + 0.08 * t : 0.12;
+        const y = 0.14 + 0.28 * t;
+        const z = 0 + 1.2 * t;
+        const lookY = 0.06 + 0.08 * t;
         const lookZ = -2.2;
 
         cam.position.set(0, y, z);
