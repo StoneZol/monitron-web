@@ -1,18 +1,12 @@
 /**
- * Neon grid: UV cells + X taper on floor only.
- * Seams lock because floor & walls share `uv.y * uCellsV + uScroll`.
- * Taper coeffs (uTaper / uNearWidth / uFarFloor) come from Synthwave.constants.
+ * Neon grid: UV cells on planar meshes. No world-space X warp —
+ * foreshortening is pure camera projection.
  */
 
 export const neonGridVertexShader = /* glsl */ `
 uniform float uScroll;
 uniform float uCellsU;
 uniform float uCellsV;
-uniform float uZNear;
-uniform float uZFar;
-uniform float uTaper;
-uniform float uNearWidth;
-uniform float uFarFloor;
 
 varying vec2 vUv;
 varying vec2 vGrid;
@@ -22,19 +16,6 @@ void main() {
   vGrid = vec2(uv.x * uCellsU, uv.y * uCellsV + uScroll);
 
   vec4 worldPos = modelMatrix * vec4(position, 1.0);
-
-  // Perspective pinch on floor X only (walls: uTaper = 0).
-  if (uTaper > 1e-5) {
-    float depthT = clamp(
-      (uZNear - worldPos.z) / max(1e-4, uZNear - uZFar),
-      0.0,
-      1.0
-    );
-    float farScale = max(uNearWidth * (1.0 - uTaper), uNearWidth * uFarFloor);
-    float scale = mix(uNearWidth, farScale, depthT);
-    worldPos.x *= scale;
-  }
-
   gl_Position = projectionMatrix * viewMatrix * worldPos;
 }
 `;

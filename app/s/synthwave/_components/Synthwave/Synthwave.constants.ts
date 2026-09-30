@@ -1,17 +1,11 @@
 /**
- * Road / wall layout + perspective taper coeffs.
+ * Road / wall layout.
  *
- * Grid paint stays UV-based (floor & walls share uv.y × cellsV) so seams lock.
- * Taper only warps floor X in the vertex shader; walls are rebuilt to the
- * tapered edge in CPU geometry.
+ * Geometry is Euclidean: rectangular floor, planar hinged walls.
+ * Perspective comes from the camera (see CameraRig + wallPerspective),
+ * not from warping X along Z — that broke the ridge when walls close.
  *
- * Perspective knob (−12…+12) → t ∈ [0,1]:
- *   taper     = TAPER_MIN + t * TAPER_RANGE
- *   nearWidth = NEAR_W_BASE + t * NEAR_W_RANGE
- *   farScale  = max(nearWidth * (1 − taper), nearWidth * FAR_FLOOR)
- *   scale(z)  = mix(nearWidth, farScale, depthT)
- *
- * Tuning squares later = change these coeffs, not the UV seam contract.
+ * Grid paint is UV-based; floor & walls share `uv.y × cellsV` so seams lock.
  */
 
 /** World cell size — square on every plane (UV × cells). */
@@ -27,32 +21,16 @@ export const WALL_SEGS = Math.max(2, Math.round(WALL_LEN / CELL));
 /** Floor extends this far past the camera (+Z) so near edge goes off-screen. */
 export const Z_PAD = 1.35;
 
-/** Perspective slider maps to taper / near stretch. */
-export const TAPER_MIN = 0.08;
-export const TAPER_RANGE = 0.72;
-export const NEAR_W_BASE = 1.22;
-export const NEAR_W_RANGE = 0.5;
-/** Lower bound on farScale / nearWidth (avoids crushing far to a point). */
-export const FAR_FLOOR = 0.42;
-
 export function roadDepth(length01: number) {
     const t = Math.min(1, Math.max(0, length01));
     return DEPTH_MIN + t * (DEPTH_MAX - DEPTH_MIN);
 }
 
-/** Map wallPerspective (−12…+12) → taper + nearWidth. */
-export function perspectiveParams(wallPerspective: number) {
+/**
+ * wallPerspective (−12…+12) → how hard the camera looks into the vanishing point.
+ *  −12 = higher / flatter, +12 = lower / stronger foreshortening.
+ */
+export function cameraPerspective(wallPerspective: number) {
     const persp = Math.min(12, Math.max(-12, wallPerspective));
-    const t = (persp + 12) / 24;
-    return {
-        t,
-        taper: TAPER_MIN + t * TAPER_RANGE,
-        nearWidth: NEAR_W_BASE + t * NEAR_W_RANGE,
-    };
-}
-
-/** X-scale at a depthT (0 = near, 1 = far). Shared by shader & wall builder. */
-export function taperScale(depthT: number, taper: number, nearWidth: number) {
-    const farScale = Math.max(nearWidth * (1 - taper), nearWidth * FAR_FLOOR);
-    return nearWidth + (farScale - nearWidth) * depthT;
+    return (persp + 12) / 24; // 0…1
 }

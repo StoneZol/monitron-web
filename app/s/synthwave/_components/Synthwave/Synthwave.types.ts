@@ -31,7 +31,7 @@ export type SynthwaveLive = {
   wallAngle: number;
   /** How far walls sit from center near the camera (cells of flat road each side) */
   wallOffset: number;
-  /** Convergence angle of grid into the distance (− parallel … + steep taper) */
+  /** Camera foreshortening (− flatter … + stronger vanishing point); geometry stays planar */
   wallPerspective: number;
   /** Extra road length beyond the short default (0 = ~⅓ screen, 1 = full stretch) */
   roadLength: number;

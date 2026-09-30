@@ -12,10 +12,7 @@ import { channelLevel, hexToVec3 } from "./Synthwave.audio";
 import {
     CELL,
     DEPTH_MIN,
-    FAR_FLOOR,
-    perspectiveParams,
     roadDepth,
-    taperScale,
     WALL_LEN,
     WALL_SEGS,
     Z_PAD,
@@ -34,11 +31,6 @@ function makeGridMaterial(cellsU: number, cellsV: number) {
             uScroll: { value: 0 },
             uCellsU: { value: cellsU },
             uCellsV: { value: cellsV },
-            uZNear: { value: Z_PAD },
-            uZFar: { value: -(DEPTH_MIN - Z_PAD) },
-            uTaper: { value: 0.55 },
-            uNearWidth: { value: 1.35 },
-            uFarFloor: { value: FAR_FLOOR },
             uColorGridNear: { value: new THREE.Color(1, 0, 0.2) },
             uColorGridFar: { value: new THREE.Color(0, 0, 1) },
             uColorGridBackground: { value: new THREE.Color(0.1, 0, 0.1) },
@@ -46,14 +38,15 @@ function makeGridMaterial(cellsU: number, cellsV: number) {
     });
 }
 
-/** Planar wall glued to tapered floor edge (no shader X-warp). */
+/**
+ * True planar wall: constant hinge X along Z.
+ * When sin(lean)*WALL_LEN === hinge, left+right tips meet as one straight ridge.
+ */
 function buildWallGeometry(
     side: -1 | 1,
     hinge: number,
     zNear: number,
     zFar: number,
-    taper: number,
-    nearWidth: number,
     lean: number,
     segsU: number,
     segsV: number,
@@ -65,14 +58,12 @@ function buildWallGeometry(
     const tipIn = Math.sin(lean) * WALL_LEN;
     const tipUp = Math.cos(lean) * WALL_LEN;
     const cols = segsU + 1;
+    const xBot = side * hinge;
+    const xTop = xBot - side * tipIn;
 
     for (let iv = 0; iv <= segsV; iv++) {
         const v = iv / segsV;
         const z = zNear + (zFar - zNear) * v;
-        const depthT = (zNear - z) / Math.max(1e-4, zNear - zFar);
-        const s = taperScale(depthT, taper, nearWidth);
-        const xBot = side * hinge * s;
-        const xTop = xBot - side * tipIn;
 
         for (let iu = 0; iu <= segsU; iu++) {
             const u = iu / segsU;
@@ -114,8 +105,6 @@ export function NeonGrid({
     const lastAngleRef = useRef(-1);
     const lastOffsetRef = useRef(-1);
     const lastLengthRef = useRef(-1);
-    const lastTaperRef = useRef(-1);
-    const lastNearRef = useRef(-1);
     const builtRef = useRef(false);
 
     const wallCellsU = WALL_LEN / CELL;
@@ -158,28 +147,14 @@ export function NeonGrid({
         const rate = 2 * knobs.roadSpeed * (1 + roadLv * knobs.drive * 0.5);
         scrollRef.current += Math.max(0, dt) * rate;
 
-        const { taper, nearWidth } = perspectiveParams(knobs.wallPerspective);
-        const zNear = Z_PAD;
-        const zFar = -(depth - Z_PAD);
-
-        const syncUniforms = (
-            mat: THREE.ShaderMaterial,
-            taperAmt: number,
-            nearW: number,
-        ) => {
+        const syncUniforms = (mat: THREE.ShaderMaterial) => {
             mat.uniforms.uScroll!.value = scrollRef.current;
-            mat.uniforms.uZNear!.value = zNear;
-            mat.uniforms.uZFar!.value = zFar;
-            mat.uniforms.uTaper!.value = taperAmt;
-            mat.uniforms.uNearWidth!.value = nearW;
-            mat.uniforms.uFarFloor!.value = FAR_FLOOR;
             hexToVec3(knobs.roadColor, mat.uniforms.uColorGridNear!.value);
             hexToVec3(knobs.roadFar, mat.uniforms.uColorGridFar!.value);
             hexToVec3(knobs.roadFloor, mat.uniforms.uColorGridBackground!.value);
         };
-        // Floor: UV grid + X taper. Walls: UV only (geometry already tapered).
-        syncUniforms(floorM, taper, nearWidth);
-        syncUniforms(wallM, 0, 1);
+        syncUniforms(floorM);
+        syncUniforms(wallM);
 
         const floor = floorRef.current;
         const left = leftRef.current;
@@ -190,20 +165,15 @@ export function NeonGrid({
             builtRef.current &&
             Math.abs(leanDeg - lastAngleRef.current) < 0.05 &&
             offsetCells === lastOffsetRef.current &&
-            Math.abs(depth - lastLengthRef.current) < 0.01 &&
-            Math.abs(taper - lastTaperRef.current) < 0.005 &&
-            Math.abs(nearWidth - lastNearRef.current) < 0.005
+            Math.abs(depth - lastLengthRef.current) < 0.01
         ) {
             return;
         }
         lastAngleRef.current = leanDeg;
         lastOffsetRef.current = offsetCells;
         lastLengthRef.current = depth;
-        lastTaperRef.current = taper;
-        lastNearRef.current = nearWidth;
         builtRef.current = true;
 
-        // Same cellsV on floor & walls → depth lines meet at the hinge.
         const floorCellsU = Math.max(1, offsetCells) * 2;
         const floorW = floorCellsU * CELL;
         floorM.uniforms.uCellsU!.value = floorCellsU;
@@ -211,7 +181,10 @@ export function NeonGrid({
         wallM.uniforms.uCellsU!.value = wallCellsU;
         wallM.uniforms.uCellsV!.value = cellsV;
 
-        const zCenter = (Z_PAD - (depth - Z_PAD)) / 2;
+        const zNear = Z_PAD;
+        const zFar = -(depth - Z_PAD);
+        const zCenter = (zNear + zFar) / 2;
+
         floor.geometry.dispose();
         {
             const g = new THREE.PlaneGeometry(
@@ -237,8 +210,6 @@ export function NeonGrid({
                 hinge,
                 zNear,
                 zFar,
-                taper,
-                nearWidth,
                 lean,
                 WALL_SEGS,
                 depthSegs,

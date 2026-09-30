@@ -38,7 +38,7 @@ const INFO = {
         "Lean from vertical: −90 = flat outward, 0 = vertical, +60 = max lean inward",
     wallOffset: "Road half-width near the camera (cells from center).",
     wallPerspective:
-        "Convergence angle of the grid into the distance: − almost parallel, + steeper taper toward the sun.",
+        "Camera foreshortening: − higher / flatter view, + lower / stronger vanishing point. Geometry stays planar.",
     roadLength:
         "How far the neon road runs toward the sun. Default is short (~⅓ of the view); slide up to extend.",
     motion: "Scroll speed of the neon grid (WE time×2 base).",
