@@ -226,6 +226,60 @@ function makeGridMaterial(cellsU: number, cellsV: number) {
   });
 }
 
+/** Planar wall quad that follows the tapered floor edge (no vertex X-warp). */
+function buildWallGeometry(
+  side: -1 | 1,
+  hinge: number,
+  zNear: number,
+  zFar: number,
+  taper: number,
+  lean: number,
+  segsU: number,
+  segsV: number,
+) {
+  const positions: number[] = [];
+  const uvs: number[] = [];
+  const indices: number[] = [];
+
+  const tipIn = Math.sin(lean) * WALL_LEN;
+  const tipUp = Math.cos(lean) * WALL_LEN;
+  const cols = segsU + 1;
+
+  for (let iv = 0; iv <= segsV; iv++) {
+    const v = iv / segsV;
+    const z = zNear + (zFar - zNear) * v;
+    const depthT = (zNear - z) / Math.max(1e-4, zNear - zFar);
+    const s = Math.max(1 - taper * depthT, 0.02);
+    const xBot = side * hinge * s;
+    const xTop = xBot - side * tipIn;
+
+    for (let iu = 0; iu <= segsU; iu++) {
+      const u = iu / segsU;
+      positions.push(
+        xBot + (xTop - xBot) * u,
+        tipUp * u,
+        z,
+      );
+      uvs.push(u, v);
+    }
+  }
+
+  for (let iv = 0; iv < segsV; iv++) {
+    for (let iu = 0; iu < segsU; iu++) {
+      const a = iv * cols + iu;
+      const b = a + cols;
+      indices.push(a, b, a + 1, a + 1, b, b + 1);
+    }
+  }
+
+  const g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+  g.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
+  g.setIndex(indices);
+  g.computeVertexNormals();
+  return g;
+}
+
 function NeonGrid({
   liveRef,
   vizRef,
@@ -244,6 +298,7 @@ function NeonGrid({
   const lastAngleRef = useRef(-1);
   const lastOffsetRef = useRef(-1);
   const lastLengthRef = useRef(-1);
+  const lastTaperRef = useRef(-1);
   const builtRef = useRef(false);
 
   const wallCellsU = WALL_LEN / CELL;
@@ -294,17 +349,18 @@ function NeonGrid({
     const zFar = -(depth - Z_PAD);
     const taper = mode === "flat" ? 0 : 0.08 + t * 0.92;
 
-    const syncUniforms = (mat: THREE.ShaderMaterial) => {
+    const syncUniforms = (mat: THREE.ShaderMaterial, taperAmt: number) => {
       mat.uniforms.uScroll!.value = scrollRef.current;
       mat.uniforms.uZNear!.value = zNear;
       mat.uniforms.uZFar!.value = zFar;
-      mat.uniforms.uTaper!.value = taper;
+      mat.uniforms.uTaper!.value = taperAmt;
       hexToVec3(knobs.roadColor, mat.uniforms.uColorGridNear!.value);
       hexToVec3(knobs.roadFar, mat.uniforms.uColorGridFar!.value);
       hexToVec3(knobs.roadFloor, mat.uniforms.uColorGridBackground!.value);
     };
-    syncUniforms(floorM);
-    syncUniforms(wallM);
+    // Taper only the floor — warping walls with the same pinch curves them.
+    syncUniforms(floorM, taper);
+    syncUniforms(wallM, 0);
 
     const floor = floorRef.current;
     const left = leftRef.current;
@@ -316,7 +372,8 @@ function NeonGrid({
       mode === lastModeRef.current &&
       Math.abs(leanDeg - lastAngleRef.current) < 0.05 &&
       offsetCells === lastOffsetRef.current &&
-      Math.abs(depth - lastLengthRef.current) < 0.01
+      Math.abs(depth - lastLengthRef.current) < 0.01 &&
+      Math.abs(taper - lastTaperRef.current) < 0.005
     ) {
       return;
     }
@@ -324,6 +381,7 @@ function NeonGrid({
     lastAngleRef.current = leanDeg;
     lastOffsetRef.current = offsetCells;
     lastLengthRef.current = depth;
+    lastTaperRef.current = taper;
     builtRef.current = true;
 
     // Flat: wide sheet that fills left/right. Channel: road + hinged walls.
@@ -352,7 +410,6 @@ function NeonGrid({
     floor.visible = true;
 
     const showWalls = mode === "channel";
-    // Lean from vertical: 0 upright, + tips inward (closes), − opens out.
     const lean = (Math.min(90, Math.max(-70, leanDeg)) * Math.PI) / 180;
     const hinge = floorW / 2;
 
@@ -360,19 +417,20 @@ function NeonGrid({
       mesh.visible = showWalls;
       if (!showWalls) return;
       mesh.geometry.dispose();
-      const g = new THREE.PlaneGeometry(WALL_LEN, depth, WALL_SEGS, depthSegs);
-      g.rotateX(-Math.PI / 2);
-      g.translate(WALL_LEN / 2, 0, zCenter);
-      mesh.geometry = g;
-      mesh.position.set(side * hinge, 0, 0);
-      // Left: +90° = vertical; +lean tips toward center. Right mirrored.
-      if (side === 1) {
-        mesh.rotation.set(0, 0, -(Math.PI / 2 + lean));
-        mesh.scale.set(-1, 1, 1);
-      } else {
-        mesh.rotation.set(0, 0, Math.PI / 2 + lean);
-        mesh.scale.set(1, 1, 1);
-      }
+      // Planar wall glued to tapered floor edge (no shader X-warp on walls).
+      mesh.geometry = buildWallGeometry(
+        side,
+        hinge,
+        zNear,
+        zFar,
+        taper,
+        lean,
+        WALL_SEGS,
+        depthSegs,
+      );
+      mesh.position.set(0, 0, 0);
+      mesh.rotation.set(0, 0, 0);
+      mesh.scale.set(1, 1, 1);
     };
 
     placeWall(left, -1);

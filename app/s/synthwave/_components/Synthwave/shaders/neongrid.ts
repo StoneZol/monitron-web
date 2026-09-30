@@ -1,4 +1,4 @@
-/** Neon grid: square UV cells + linear X taper (convergence angle into the distance). */
+/** Neon grid: square UV cells + linear X taper (floor only — walls stay planar). */
 
 export const neonGridVertexShader = /* glsl */ `
 uniform float uScroll;
@@ -16,16 +16,19 @@ void main() {
   // Plus scroll → we move forward along the road (lines come toward the camera).
   vGrid = vec2(uv.x * uCellsU, uv.y * uCellsV + uScroll);
 
-  // Linear X taper with depth → constant convergence angle of grid lines.
-  // uTaper 0 = parallel, 1 = meet at the far edge.
   vec4 worldPos = modelMatrix * vec4(position, 1.0);
-  float depthT = clamp(
-    (uZNear - worldPos.z) / max(1e-4, uZNear - uZFar),
-    0.0,
-    1.0
-  );
-  float scale = max(1.0 - uTaper * depthT, 0.02);
-  worldPos.x *= scale;
+
+  // Pinch world X only when uTaper > 0 (floor). Walls keep uTaper = 0 so they
+  // stay flat planes — camera perspective already converges them on screen.
+  if (uTaper > 1e-5) {
+    float depthT = clamp(
+      (uZNear - worldPos.z) / max(1e-4, uZNear - uZFar),
+      0.0,
+      1.0
+    );
+    float scale = max(1.0 - uTaper * depthT, 0.02);
+    worldPos.x *= scale;
+  }
 
   gl_Position = projectionMatrix * viewMatrix * worldPos;
 }
