@@ -16,6 +16,9 @@ import {
 } from "./Synthwave.audio";
 import type { SynthwaveLive } from "./Synthwave.types";
 
+/** WE-ish UV units per second at skySpeed = 1 */
+const SKY_DRIFT_BASE = 0.0017;
+
 export function Sky({
     liveRef,
     vizRef,
@@ -34,7 +37,8 @@ export function Sky({
                 depthTest: false,
                 uniforms: {
                     uTime: { value: 0 },
-                    uCloudSpeeds: { value: new THREE.Vector2(0.0014, -0.002) },
+                    uSkyOffset: { value: new THREE.Vector2(0, 0) },
+                    uSkyPhase: { value: 0 },
                     uCloudScales: {
                         value: new THREE.Vector4(1.1, 1.1, 0.7, 0.7),
                     },
@@ -48,6 +52,8 @@ export function Sky({
     const matRef = useRef(mat);
     const hueOffset = useRef(0);
     const skyHold = useRef(0);
+    const skyOffset = useRef(new THREE.Vector2(0, 0));
+    const skyPhase = useRef(0);
 
     const { size } = useThree();
     useEffect(() => {
@@ -64,30 +70,38 @@ export function Sky({
         m.uniforms.uTime!.value = clock.elapsedTime;
         if (!knobs) return;
 
+        const step = Math.max(0, dt);
+        const rad = (knobs.skyDirection * Math.PI) / 180;
+        const rate = SKY_DRIFT_BASE * knobs.skySpeed;
+        skyOffset.current.x += Math.cos(rad) * rate * step;
+        skyOffset.current.y += Math.sin(rad) * rate * step;
+        skyPhase.current += knobs.skySpeed * step;
+        (m.uniforms.uSkyOffset!.value as THREE.Vector2).copy(skyOffset.current);
+        m.uniforms.uSkyPhase!.value = skyPhase.current;
+
         const clouds = m.uniforms.uColorClouds!.value as THREE.Color;
         const horizon = m.uniforms.uColorHorizon!.value as THREE.Color;
+        // Horizon is decorative — always idle, never twinkle / beat lerp
+        hexToVec3(knobs.skyHorizon, horizon);
+
         const reactive = Boolean(viz?.enabled);
 
         if (knobs.skyTwinkle) {
             hueOffset.current =
-                (hueOffset.current + knobs.colorSpeed * Math.max(0, dt)) % 360;
-            const off = hueOffset.current;
-            hueWalkHex(knobs.skyTop, off, clouds);
-            hueWalkHex(knobs.skyHorizon, off, horizon);
+                (hueOffset.current + knobs.colorSpeed * step) % 360;
+            hueWalkHex(knobs.skyTop, hueOffset.current, clouds);
             skyHold.current = 0;
         } else {
             hueOffset.current = 0;
             if (reactive) {
                 const raw = channelLevel(viz!, "beat");
-                const decay = Math.exp(-Math.max(0, dt) * 5.5);
+                const decay = Math.exp(-step * 5.5);
                 skyHold.current = Math.max(raw, skyHold.current * decay);
                 const level = Math.min(1, skyHold.current);
                 lerpHex(knobs.skyTop, knobs.skyTopPeak, level, clouds);
-                lerpHex(knobs.skyHorizon, knobs.skyHorizonPeak, level, horizon);
             } else {
                 skyHold.current = 0;
                 hexToVec3(knobs.skyTop, clouds);
-                hexToVec3(knobs.skyHorizon, horizon);
             }
         }
     });

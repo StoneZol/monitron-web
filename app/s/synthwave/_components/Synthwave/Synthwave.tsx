@@ -28,7 +28,12 @@ const REACTIVE_CHANNEL_OPTIONS = [
 const INFO = {
     look: "Wallpaper Engine neon_sunset materials — grid, sun, sky.",
     skyPalette:
-        "Idle = rest. Peak = beat target (locked while garland is on or audio is off).",
+        "Idle = rest. Peak = beat target (locked while garland is on or audio is off). Horizon is separate.",
+    skyHorizon:
+        "Decorative glow blob — static tint, excluded from sky twinkle and beat lerp.",
+    skySpeed: "Cloud drift speed. 1 ≈ classic WE scroll rate.",
+    skyDirection:
+        "Cloud drift angle in degrees. 0 = right, −90 = down, ±180 = left.",
     sunPalette:
         "Idle = rest. Peak = sun-channel target (locked while garland is on or audio is off).",
     gridPalette:
@@ -62,7 +67,7 @@ const INFO = {
     gridTwinkle:
         "Garland hue walk from grid idle colors. Peak column locked while on.",
     skyTwinkle:
-        "Garland hue walk from sky idle colors. Peak column locked while on.",
+        "Garland hue walk on sky clouds only — horizon stays put. Peak locked while on.",
     colorSpeed: "Hue walk rate while any twinkle (garland) is on.",
     visualizer: {
         section: "Audio in → bus meters → peak gain for reactive screens.",
@@ -138,20 +143,33 @@ const Synthwave = ({ showOverlay = true }: SynthwaveProps) => {
                                             },
                                         ],
                                     },
-                                    {
-                                        label: "horizon",
-                                        cells: [
-                                            {
-                                                value: controls.skyHorizon,
-                                                onChange: controls.setSkyHorizon,
-                                            },
-                                            {
-                                                value: controls.skyHorizonPeak,
-                                                onChange: controls.setSkyHorizonPeak,
-                                            },
-                                        ],
-                                    },
                                 ]}
+                            />
+                            <ColorField
+                                label="Horizon"
+                                value={controls.skyHorizon}
+                                onChange={controls.setSkyHorizon}
+                                info={INFO.skyHorizon}
+                            />
+                            <Slider
+                                label="Sky speed"
+                                value={controls.skySpeed}
+                                min={0}
+                                max={10}
+                                step={0.05}
+                                onChange={controls.setSkySpeed}
+                                format={(v) => `×${v.toFixed(2)}`}
+                                info={INFO.skySpeed}
+                            />
+                            <Slider
+                                label="Sky direction"
+                                value={controls.skyDirection}
+                                min={0}
+                                max={180}
+                                step={1}
+                                onChange={controls.setSkyDirection}
+                                format={(v) => `${Math.round(v)}°`}
+                                info={INFO.skyDirection}
                             />
                             <Toggle
                                 label="Sun twinkle"

@@ -57,10 +57,14 @@ export type SynthwaveLive = {
   skyTop: string;
   /** Sky / cloud peak (beat) */
   skyTopPeak: string;
-  /** Horizon idle */
+  /** Decorative horizon glow (static — not twinkled / not beat-lerped) */
   skyHorizon: string;
-  /** Horizon peak (beat) */
+  /** Legacy prefs only; horizon is decorative and ignores peak */
   skyHorizonPeak: string;
+  /** Cloud drift speed (1 = WE-ish base) */
+  skySpeed: number;
+  /** Cloud drift direction in degrees (0 = +X, −90 = −Y) */
+  skyDirection: number;
   /** Band that accelerates road scroll */
   roadChannel: ReactiveChannel;
   /** Band that flashes grid glow / line brightness */
@@ -73,7 +77,7 @@ export type SynthwaveLive = {
   sunGlowTwinkle: boolean;
   /** Garland hue walk on grid (from idle) */
   gridTwinkle: boolean;
-  /** Garland hue walk on sky (from idle) */
+  /** Garland hue walk on sky clouds only (horizon excluded) */
   skyTwinkle: boolean;
   /** Hue degrees per second while any twinkle is on */
   colorSpeed: number;

@@ -4,8 +4,7 @@ export const neonSkyVertexShader = /* glsl */ `
 varying vec4 vTexCoord;
 varying vec4 vTexCoordClouds;
 
-uniform float uTime;
-uniform vec2 uCloudSpeeds;
+uniform vec2 uSkyOffset;
 uniform vec4 uCloudScales;
 uniform float uAspect;
 
@@ -14,8 +13,9 @@ void main() {
   vec2 aTexCoord = uv;
 
   vTexCoord.xy = aTexCoord;
-  vTexCoordClouds.xy = (aTexCoord + uTime * uCloudSpeeds.x) * uCloudScales.xy;
-  vTexCoordClouds.zw = (aTexCoord + uTime * uCloudSpeeds.y) * uCloudScales.zw;
+  // Accumulated UV offset (JS integrates velocity × dt — no seek on speed change)
+  vTexCoordClouds.xy = (aTexCoord + uSkyOffset) * uCloudScales.xy;
+  vTexCoordClouds.zw = (aTexCoord - uSkyOffset * 1.43) * uCloudScales.zw;
   vTexCoordClouds.xz *= uAspect;
   vTexCoordClouds.zw = vec2(-vTexCoordClouds.w, vTexCoordClouds.z);
 
@@ -29,6 +29,7 @@ varying vec4 vTexCoord;
 varying vec4 vTexCoordClouds;
 
 uniform float uTime;
+uniform float uSkyPhase;
 uniform vec3 uColorClouds;
 uniform vec3 uColorHorizon;
 
@@ -64,19 +65,19 @@ void main() {
   float cloud1 = fbm(vTexCoordClouds.zw * 3.0);
   float cloudBlend = cloud0 * cloud1;
 
-  // Slow extra fog sheet over the WE cloud stack
+  // Fog sheet phase also integrated in JS (same seek-free idea)
   float fogSheet = fbm(
-    vec2(vTexCoord.x * 1.8 + uTime * 0.04, vTexCoord.y * 2.4 - uTime * 0.018)
+    vec2(vTexCoord.x * 1.8 + uSkyPhase * 0.04, vTexCoord.y * 2.4 - uSkyPhase * 0.018)
   );
   fogSheet *= fbm(
-    vec2(vTexCoord.x * 3.2 - uTime * 0.025, vTexCoord.y * 1.6 + uTime * 0.012)
+    vec2(vTexCoord.x * 3.2 - uSkyPhase * 0.025, vTexCoord.y * 1.6 + uSkyPhase * 0.012)
   );
 
   vec3 albedo = uColorClouds * cloudBlend;
   albedo += uColorClouds * fogSheet * 0.35 * smoothstep(1.0, 0.25, vTexCoord.y);
   albedo += (uColorClouds * 0.5 + albedo) * pow(smoothstep(0.5, 0.0, vTexCoord.y), 2.0) * 2.0;
 
-  // Horizon glow (WE-style blob) — user-tinted, slightly alive
+  // Decorative horizon blob — static tint, soft breath only (no hue-walk / beat)
   float breath = 0.92 + 0.08 * sin(uTime * 0.35);
   float horizonBend = 1.0 - cos(clamp(vTexCoord.x * 2.0 - 0.5, 0.0, 1.0) * 2.0 * 3.14159265);
   float hx = 0.5 + 0.03 * sin(uTime * 0.22);
