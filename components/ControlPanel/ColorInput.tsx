@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { FieldLabel } from "./FieldInfo";
 import {
   fieldControlRow,
   fieldLabelRow,
@@ -12,6 +13,8 @@ export type ColorInputProps = {
   /** With label → full panel field; without → compact swatch for tables */
   label?: string;
   disabled?: boolean;
+  /** Optional help text — shows a "?" tip next to the title */
+  info?: string;
   className?: string;
   "aria-label"?: string;
 };
@@ -26,6 +29,7 @@ export function ColorInput({
   onChange,
   label,
   disabled = false,
+  info,
   className,
   "aria-label": ariaLabel,
 }: ColorInputProps) {
@@ -52,7 +56,7 @@ export function ColorInput({
         )}
       >
         <span className={fieldLabelRow}>
-          <span>{label}</span>
+          <FieldLabel label={label} info={info} />
           <span className="tabular-nums text-cyan">{value}</span>
         </span>
         <span className={fieldControlRow}>{swatch}</span>

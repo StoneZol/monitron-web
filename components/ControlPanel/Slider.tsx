@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { FieldLabel } from "./FieldInfo";
 import { fieldControlRow, fieldLabelRow, fieldRoot } from "./field";
 
 type SliderProps = {
@@ -10,6 +11,8 @@ type SliderProps = {
   onChange: (value: number) => void;
   disabled?: boolean;
   format?: (value: number) => string;
+  /** Optional help text — shows a "?" tip next to the title */
+  info?: string;
   className?: string;
 };
 
@@ -22,6 +25,7 @@ export function Slider({
   onChange,
   disabled = false,
   format = (v) => String(v),
+  info,
   className,
 }: SliderProps) {
   return (
@@ -33,7 +37,7 @@ export function Slider({
       )}
     >
       <span className={fieldLabelRow}>
-        <span>{label}</span>
+        <FieldLabel label={label} info={info} />
         <span className="tabular-nums text-cyan">{format(value)}</span>
       </span>
       <span className={fieldControlRow}>
@@ -46,7 +50,6 @@ export function Slider({
           disabled={disabled}
           onChange={(e) => onChange(Number(e.target.value))}
           onWheel={(e) => {
-            // Keep wheel for panel scroll, not accidental slider nudges
             e.currentTarget.blur();
           }}
           className={cn(

@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { FieldLabel } from "./FieldInfo";
 import { fieldControlRow, fieldRoot } from "./field";
 
 type ToggleProps = {
@@ -7,6 +8,8 @@ type ToggleProps = {
   onChange: (value: boolean) => void;
   disabled?: boolean;
   readOnly?: boolean;
+  /** Optional help text — shows a "?" tip next to the title */
+  info?: string;
   className?: string;
 };
 
@@ -16,6 +19,7 @@ export function Toggle({
   onChange,
   disabled = false,
   readOnly = false,
+  info,
   className,
 }: ToggleProps) {
   const inert = disabled || readOnly;
@@ -30,7 +34,7 @@ export function Toggle({
       )}
     >
       <span className={cn(fieldControlRow, "justify-between gap-3")}>
-        <span className="leading-none">{label}</span>
+        <FieldLabel label={label} info={info} />
         <button
           type="button"
           role="switch"

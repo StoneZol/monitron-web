@@ -1,5 +1,5 @@
 export { ControlPanel, ControlSection } from "./ControlPanel";
-export { PanelButton } from "./PanelButton";
+export { PanelButton, panelButtonClassName } from "./PanelButton";
 export { Toggle } from "./Toggle";
 export { Slider } from "./Slider";
 export { Select } from "./Select";
@@ -10,3 +10,4 @@ export { ColorField } from "./ColorField";
 export { ColorTable } from "./ColorTable";
 export type { ColorTableCell, ColorTableRow } from "./ColorTable";
 export { Meter } from "./Meter";
+export { FieldInfo, FieldLabel } from "./FieldInfo";

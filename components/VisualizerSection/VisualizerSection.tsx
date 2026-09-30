@@ -16,10 +16,19 @@ import { PLUGIN_URL } from "@/lib/audioBus";
 
 export type VisualizerApi = ReturnType<typeof useAudioReactive>;
 
+export type VisualizerInfo = {
+  section?: string;
+  source?: string;
+  noiseGate?: string;
+  peakGain?: string;
+};
+
 type VisualizerSectionProps = {
   visualizer: VisualizerApi;
   /** Screen-specific knobs (channels, drive, bounce…) — between source and bus */
   children?: ReactNode;
+  /** Optional help tips — omit on most screens; Matrix wires these for debug */
+  info?: VisualizerInfo;
 };
 
 /**
@@ -29,9 +38,10 @@ type VisualizerSectionProps = {
 export function VisualizerSection({
   visualizer,
   children,
+  info,
 }: VisualizerSectionProps) {
   return (
-    <ControlSection label="visualizer">
+    <ControlSection label="visualizer" info={info?.section}>
       <div className="flex items-center justify-between gap-3 text-[10px] uppercase tracking-[0.2em]">
         <span className="text-muted">extension</span>
         <span
@@ -64,6 +74,7 @@ export function VisualizerSection({
           disabled: opt.value === "plugin" && !visualizer.pluginPresent,
         }))}
         onChange={(value: AudioSource) => visualizer.setSource(value)}
+        info={info?.source}
       />
       {visualizer.source === "mic" && (
         <Slider
@@ -74,6 +85,7 @@ export function VisualizerSection({
           step={0.001}
           onChange={visualizer.setMicGate}
           format={(v) => (v <= 0.0005 ? "off" : v.toFixed(3))}
+          info={info?.noiseGate}
         />
       )}
       {visualizer.micNeedsGesture && (
@@ -96,6 +108,7 @@ export function VisualizerSection({
           step={0.1}
           onChange={visualizer.setPeakGain}
           format={(v) => `×${v.toFixed(1)}`}
+          info={info?.peakGain}
         />
       )}
     </ControlSection>

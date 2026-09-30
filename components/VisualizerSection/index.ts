@@ -1,2 +1,2 @@
 export { VisualizerSection } from "./VisualizerSection";
-export type { VisualizerApi } from "./VisualizerSection";
+export type { VisualizerApi, VisualizerInfo } from "./VisualizerSection";

@@ -13,6 +13,24 @@ import {
 } from "@/components/ControlPanel";
 import useMatrixHook from "./Matrix.hooks";
 
+/** Debug tips — exercise optional `info` on the kit; other screens stay bare. */
+const INFO = {
+  look: "Glyph look: color mode + how fast columns fall.",
+  twinkle: "Hue walks over time instead of a fixed rain color.",
+  colorSpeed: "Hue walk rate while Twinkle is on.",
+  color: "Fixed glyph color when Twinkle is off.",
+  fallSpeed: "Base column drop speed (higher = faster rain).",
+  drive: "How hard the audio bus pushes fall speed when reactive.",
+  visualizer: {
+    section: "Audio in → bus meters → peak gain for reactive screens.",
+    source:
+      "off disables audio. mic needs a gesture. plugin needs the Monitron extension online.",
+    noiseGate: "Ignore mic levels below this floor (room hiss).",
+    peakGain:
+      "Multiplies bus peak (and the peak meter). Soft-clipped so ×3 still moves.",
+  },
+} as const;
+
 const Matrix = ({ showOverlay = true }: { showOverlay?: boolean }) => {
   const { canvasRef, controls, visualizer } = useMatrixHook();
 
@@ -36,11 +54,12 @@ const Matrix = ({ showOverlay = true }: { showOverlay?: boolean }) => {
               </div>
             }
           >
-            <ControlSection label="look">
+            <ControlSection label="look" info={INFO.look}>
               <Toggle
                 label="Twinkle"
                 checked={controls.twinkle}
                 onChange={controls.setTwinkle}
+                info={INFO.twinkle}
               />
               {controls.twinkle ? (
                 <Slider
@@ -50,12 +69,14 @@ const Matrix = ({ showOverlay = true }: { showOverlay?: boolean }) => {
                   max={180}
                   step={1}
                   onChange={controls.setColorSpeed}
+                  info={INFO.colorSpeed}
                 />
               ) : (
                 <ColorField
                   label="Color"
                   value={controls.color}
                   onChange={controls.setColor}
+                  info={INFO.color}
                 />
               )}
               <Slider
@@ -65,10 +86,14 @@ const Matrix = ({ showOverlay = true }: { showOverlay?: boolean }) => {
                 max={60}
                 step={1}
                 onChange={controls.setFallSpeed}
+                info={INFO.fallSpeed}
               />
             </ControlSection>
 
-            <VisualizerSection visualizer={visualizer}>
+            <VisualizerSection
+              visualizer={visualizer}
+              info={INFO.visualizer}
+            >
               {visualizer.reactive && (
                 <Slider
                   label="Drive"
@@ -78,6 +103,7 @@ const Matrix = ({ showOverlay = true }: { showOverlay?: boolean }) => {
                   step={0.5}
                   onChange={controls.setDrive}
                   format={(v) => v.toFixed(1)}
+                  info={INFO.drive}
                 />
               )}
             </VisualizerSection>
