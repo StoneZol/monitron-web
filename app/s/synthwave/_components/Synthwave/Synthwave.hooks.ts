@@ -12,6 +12,11 @@ import {
 import { toggleFullscreen } from "@/lib/fullscreen";
 import { loadScreenPrefs, saveScreenPrefs } from "@/lib/screenPrefs";
 import type { SynthwaveLive } from "./Synthwave.types";
+import {
+  PERSPECTIVE_DEFAULT,
+  PERSPECTIVE_MAX,
+  PERSPECTIVE_MIN,
+} from "./Synthwave.constants";
 
 /** Defaults match Wallpaper Engine neon_sunset material values */
 export const SYNTHWAVE_DEFAULTS: SynthwaveLive = {
@@ -27,7 +32,8 @@ export const SYNTHWAVE_DEFAULTS: SynthwaveLive = {
   mountPeak: "#3a1470",
   wallAngle: 0,
   wallOffset: 4,
-  wallPerspective: 0,
+  wallPerspective: PERSPECTIVE_DEFAULT,
+  perspV2: true,
   roadLength: 0,
   skyTop: "#0d2666",
   skyHorizon: "#0d2666",
@@ -108,8 +114,18 @@ function migratePrefs(
     !Number.isFinite(next.wallPerspective)
   ) {
     next.wallPerspective = SYNTHWAVE_DEFAULTS.wallPerspective;
+  } else if (!raw.perspV2) {
+    // Old signed −12…+12 (UI −10…10) → 0…40; mid 0 → 20
+    const old = Math.min(12, Math.max(-12, next.wallPerspective));
+    next.wallPerspective =
+      ((old + 12) / 24) * (PERSPECTIVE_MAX - PERSPECTIVE_MIN) +
+      PERSPECTIVE_MIN;
   }
-  next.wallPerspective = Math.min(12, Math.max(-12, next.wallPerspective));
+  next.wallPerspective = Math.min(
+    PERSPECTIVE_MAX,
+    Math.max(PERSPECTIVE_MIN, next.wallPerspective),
+  );
+  next.perspV2 = true;
   if (typeof next.roadLength !== "number" || !Number.isFinite(next.roadLength)) {
     next.roadLength = SYNTHWAVE_DEFAULTS.roadLength;
   }

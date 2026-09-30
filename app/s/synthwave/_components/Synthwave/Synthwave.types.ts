@@ -31,8 +31,10 @@ export type SynthwaveLive = {
   wallAngle: number;
   /** How far walls sit from center near the camera (cells of flat road each side) */
   wallOffset: number;
-  /** Camera foreshortening (− flatter … + stronger vanishing point); geometry stays planar */
+  /** Camera foreshortening (0 flat … 40 strong vanishing point); geometry stays planar */
   wallPerspective: number;
+  /** Marks 0…40 perspective scale (migrates old signed −12…+12). */
+  perspV2?: boolean;
   /** Extra road length beyond the short default (0 = ~⅓ screen, 1 = full stretch) */
   roadLength: number;
   /** Sky / cloud tint */

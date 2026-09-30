@@ -27,10 +27,14 @@ export function roadDepth(length01: number) {
 }
 
 /**
- * wallPerspective (−12…+12) → how hard the camera looks into the vanishing point.
- *  −12 = higher / flatter, +12 = lower / stronger foreshortening.
+ * wallPerspective (0…40) → how hard the camera looks into the vanishing point.
+ *  0 = higher / flatter, 40 = lower / stronger foreshortening.
  */
+export const PERSPECTIVE_MIN = 0;
+export const PERSPECTIVE_MAX = 40;
+export const PERSPECTIVE_DEFAULT = 20;
+
 export function cameraPerspective(wallPerspective: number) {
-    const persp = Math.min(12, Math.max(-12, wallPerspective));
-    return (persp + 12) / 24; // 0…1
+    const p = Math.min(PERSPECTIVE_MAX, Math.max(PERSPECTIVE_MIN, wallPerspective));
+    return (p - PERSPECTIVE_MIN) / (PERSPECTIVE_MAX - PERSPECTIVE_MIN); // 0…1
 }
