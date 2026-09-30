@@ -2,6 +2,9 @@ export type HexagonsPlaceProps = {
   showOverlay?: boolean;
 };
 
+/** Shared reactive driver for fog / grid / spin */
+export type ReactiveChannel = "off" | "bass" | "mid" | "high" | "beat";
+
 /** Live knobs read each frame by the Three scene */
 export type HexagonsPlaceLive = {
   edgeColor: string;
@@ -26,7 +29,7 @@ export type HexagonsPlaceLive = {
   capGridIdle: string;
   capGridPeak: string;
   /** Reactive: which audio band drives grid idle→peak; off = static idle */
-  gridChannel: "off" | "bass" | "mid" | "high" | "beat";
+  gridChannel: ReactiveChannel;
   /** Scales the aux ground grid helper */
   gridScale: number;
   garland: boolean;
@@ -46,7 +49,7 @@ export type HexagonsPlaceLive = {
   capFogIdle: string;
   capFogPeak: string;
   /** Reactive: which audio band drives caps/non-fixed fog idle→peak; off = static idle */
-  fogChannel: "off" | "bass" | "mid" | "high" | "beat";
+  fogChannel: ReactiveChannel;
   /** Hue degrees per second when garland is on */
   colorSpeed: number;
   /** Pitch down in degrees — tips the view, does not move the camera */
@@ -63,8 +66,12 @@ export type HexagonsPlaceLive = {
   spin: boolean;
   /** true = left (CCW), false = right (CW) */
   spinLeft: boolean;
-  /** Base spin rate multiplier (BPM still scales on top when reactive) */
+  /** Base spin rate multiplier */
   spinSpeed: number;
+  /** Reactive: which band punches spin speed; off = constant spinSpeed */
+  spinChannel: ReactiveChannel;
+  /** Multiplies spin channel punches (acceleration feel) */
+  spinAccel: number;
   /** How high the fog layer sits above the grid (world Y at zoom=1) */
   fogHeight: number;
   /** 0 = clear, 1 = opaque haze inside the fog layer */
@@ -79,8 +86,10 @@ export type HexagonsPlaceLive = {
   hexHeightSpread: number;
   /** Prefer extension reactive when plugin is online */
   reactive: boolean;
-  /** When reactive: bounce hex groups on bass/mid/high/beat */
+  /** When reactive: bounce hex groups on spectrum lows/mids/highs */
   bandBounce: boolean;
-  /** Multiplies bass → color/spin speed punch */
+  /** When reactive: caps / fog / grid color flicker from spectrum */
+  bandFlicker: boolean;
+  /** Multiplies low-slice → color/spin speed punch */
   bassBoost: number;
 };

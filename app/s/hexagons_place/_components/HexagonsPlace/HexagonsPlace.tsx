@@ -19,10 +19,10 @@ import type { HexagonsPlaceProps } from "./HexagonsPlace.types";
 
 const REACTIVE_CHANNEL_OPTIONS = [
     { value: "off", label: "off" },
-    { value: "bass", label: "bass" },
-    { value: "mid", label: "mid" },
-    { value: "high", label: "high" },
-    { value: "beat", label: "beat" },
+    { value: "bass", label: "bass (30–180 Hz)" },
+    { value: "mid", label: "mid (200 Hz–2 kHz)" },
+    { value: "high", label: "high (2–10 kHz)" },
+    { value: "beat", label: "beat (peak punches)" },
 ] as const;
 
 const HexagonsCanvas = dynamic(() => import("./HexagonsPlace.Canvas"), {
@@ -416,17 +416,25 @@ const HexagonsPlace = ({ showOverlay = true }: HexagonsPlaceProps) => {
                                     </span>
                                 </a>
                             )}
-                            <div className="flex gap-2 py-2">
+                            <div className='flex'>
                                 <Toggle
                                     label="reactive"
                                     checked={visualizer.reactive}
                                     onChange={visualizer.setReactive}
                                     disabled={!visualizer.pluginPresent}
                                 />
+                            </div>
+                            <div className="flex flex-wrap gap-2">
                                 <Toggle
                                     label="Band bounce"
                                     checked={controls.bandBounce}
                                     onChange={controls.setBandBounce}
+                                    disabled={!visualizer.reactive}
+                                />
+                                <Toggle
+                                    label="Flicker"
+                                    checked={controls.bandFlicker}
+                                    onChange={controls.setBandFlicker}
                                     disabled={!visualizer.reactive}
                                 />
                             </div>
@@ -444,22 +452,26 @@ const HexagonsPlace = ({ showOverlay = true }: HexagonsPlaceProps) => {
                                         options={[...REACTIVE_CHANNEL_OPTIONS]}
                                         onChange={controls.setFogChannel}
                                     />
+                                    <Select
+                                        label="Spin channel"
+                                        value={controls.spinChannel}
+                                        options={[...REACTIVE_CHANNEL_OPTIONS]}
+                                        onChange={controls.setSpinChannel}
+                                    />
+                                    {controls.spin &&
+                                        controls.spinChannel !== "off" && (
+                                            <Slider
+                                                label="Spin accel"
+                                                value={controls.spinAccel}
+                                                min={0}
+                                                max={8}
+                                                step={0.1}
+                                                onChange={controls.setSpinAccel}
+                                                format={(v) => `×${v.toFixed(1)}`}
+                                            />
+                                        )}
                                 </>
                             )}
-                            <div className="flex items-center justify-between gap-3 text-[10px] uppercase tracking-[0.2em]">
-                                <span className="text-muted">bpm</span>
-                                <span
-                                    className={
-                                        visualizer.reactive && visualizer.bpm > 0
-                                            ? "text-signal"
-                                            : "text-muted"
-                                    }
-                                >
-                                    {visualizer.reactive && visualizer.bpm > 0
-                                        ? Math.round(visualizer.bpm)
-                                        : "—"}
-                                </span>
-                            </div>
                             <AudioBusPanel
                                 bus={visualizer.bus}
                                 busAgeMs={visualizer.busAgeMs}

@@ -39,6 +39,8 @@ export const HEXAGONS_DEFAULTS: HexagonsPlaceLive = {
     spin: true,
     spinLeft: true,
     spinSpeed: 1,
+    spinChannel: "beat",
+    spinAccel: 2,
     fogHeight: 2,
     fogDensity: 0.7,
     lightIntensity: 1,
@@ -47,6 +49,7 @@ export const HEXAGONS_DEFAULTS: HexagonsPlaceLive = {
     hexHeightSpread: 1,
     reactive: false,
     bandBounce: true,
+    bandFlicker: true,
     bassBoost: 2,
 };
 
@@ -54,7 +57,7 @@ const BASS_BOOST_MAX = 8;
 
 const SCREEN_ID = "hexagons_place";
 
-/** All bands drive hex groups; bass also colors fog / garland speed */
+/** Spectrum feeds hex groups; page derives lows/mids/highs from bands[] */
 const HEX_VIZ_BANDS = {
     bass: true,
     mid: true,
@@ -136,6 +139,15 @@ function readPrefs(): HexagonsPlaceLive {
         cached.fogChannel !== "beat"
     ) {
         cached.fogChannel = HEXAGONS_DEFAULTS.fogChannel;
+    }
+    if (
+        cached.spinChannel !== "off" &&
+        cached.spinChannel !== "bass" &&
+        cached.spinChannel !== "mid" &&
+        cached.spinChannel !== "high" &&
+        cached.spinChannel !== "beat"
+    ) {
+        cached.spinChannel = HEXAGONS_DEFAULTS.spinChannel;
     }
     // Legacy dolly zoom was ~6–40; scene scale lives in 0.25–2.5
     if (cached.cameraZoom > 3) cached.cameraZoom = HEXAGONS_DEFAULTS.cameraZoom;
@@ -255,6 +267,11 @@ export default function useHexagonsPlaceHook() {
             setSpinLeft: (spinLeft: boolean) => commit({ spinLeft }),
             spinSpeed: live.spinSpeed,
             setSpinSpeed: (spinSpeed: number) => commit({ spinSpeed }),
+            spinChannel: live.spinChannel,
+            setSpinChannel: (spinChannel: HexagonsPlaceLive["spinChannel"]) =>
+                commit({ spinChannel }),
+            spinAccel: live.spinAccel,
+            setSpinAccel: (spinAccel: number) => commit({ spinAccel }),
             fogHeight: live.fogHeight,
             setFogHeight: (fogHeight: number) => commit({ fogHeight }),
             fogDensity: live.fogDensity,
@@ -271,6 +288,8 @@ export default function useHexagonsPlaceHook() {
                 commit({ hexHeightSpread }),
             bandBounce: live.bandBounce,
             setBandBounce: (bandBounce: boolean) => commit({ bandBounce }),
+            bandFlicker: live.bandFlicker,
+            setBandFlicker: (bandFlicker: boolean) => commit({ bandFlicker }),
             bassBoost: live.bassBoost,
             setBassBoost: (bassBoost: number) => commit({ bassBoost }),
             bassBoostMax: BASS_BOOST_MAX,

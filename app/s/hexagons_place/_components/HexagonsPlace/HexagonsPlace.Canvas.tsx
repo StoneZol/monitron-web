@@ -4,13 +4,18 @@ import { useEffect, useMemo, useRef, type RefObject } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import type { VizBands } from "@/lib/audioBus";
+import { sliceBands, risingEdge } from "@/lib/audioDerive";
 import { injectGroundFogShader, FOG_NEUTRAL } from "./HexagonsPlace.fog";
 import { applyGlow } from "./HexagonsPlace.glow";
-import type { HexagonsPlaceLive } from "./HexagonsPlace.types";
+import type {
+    HexagonsPlaceLive,
+    ReactiveChannel,
+} from "./HexagonsPlace.types";
 
 const ROTATION_SPEED = 0.00005;
-/** Spin rate at this BPM when reactive; lower = stronger tempo influence */
-const SPIN_BPM_REF = 20;
+const SPIN_IMPULSE_DECAY = 3.2;
+const SPIN_EDGE = 0.05;
+const SPIN_MIN = 0.06;
 const FLAT_TOP = Math.PI / 6;
 /**
  * Hex center pitch vs tight pack. 1 = touching faces; >1 opens a seam
@@ -41,19 +46,43 @@ function resolveAuxGrid(scale: number) {
 const CAMERA_Z = 20;
 const CAMERA_FOV = 20;
 
-/** Smooth bass → garland hue only (no beat — that drives hex height). */
-function audioColorMul(viz: VizBands, bassBoost: number) {
-    if (!viz.enabled) return 1;
-    return 1 + Math.max(0, bassBoost) * Math.max(0, viz.bass) * 0.45;
-}
-
-const BEAT_EDGE = 0.06;
-const BEAT_MIN = 0.08;
-
 /** Hex cap / bounce groups — beat is not a hex pile (fog uses fogChannel) */
 type CapBand = "bass" | "mid" | "high";
 
 const CAP_BANDS: CapBand[] = ["bass", "mid", "high"];
+
+/** Smooth low-slice → garland hue (spectrum API, not named bass). */
+function audioColorMul(low: number, bassBoost: number) {
+    if (low <= 0) return 1;
+    return 1 + Math.max(0, bassBoost) * low * 0.45;
+}
+
+/** Map bus spectrum → classic low / mid / high energy (Hz slices). */
+function spectrumTrio(viz: VizBands): Record<CapBand, number> {
+    const bands = viz.bands;
+    return {
+        bass: sliceBands(bands, 30, 180),
+        mid: sliceBands(bands, 200, 2000),
+        high: sliceBands(bands, 2000, 10000),
+    };
+}
+
+/** Peak on the bus often sits ~0.02–0.1 — scale beat so channel selects actually move */
+const BEAT_GAIN = 10;
+
+/** Fog / grid / spin channel level from spectrum + peak (beat ≈ crest). */
+function channelLevel(viz: VizBands, ch: ReactiveChannel): number {
+    if (ch === "off") return 0;
+    if (ch === "beat") {
+        const crest = Math.max(0, viz.peak - viz.rms * 1.2);
+        const raw = Math.max(viz.peak, crest * 1.35);
+        return Math.min(1, raw * BEAT_GAIN);
+    }
+    return spectrumTrio(viz)[ch];
+}
+
+const BEAT_EDGE = 0.06;
+const BEAT_MIN = 0.08;
 
 /**
  * Per-band height dance (Band bounce toggle).
@@ -376,6 +405,8 @@ function City({
     const fogHueOffset = useRef(0);
     const prevBands = useRef({ bass: 0, mid: 0, high: 0 });
     const bandEnvs = useRef(createBandEnvs());
+    const spinImpulse = useRef(0);
+    const prevSpinLevel = useRef(0);
 
     useEffect(() => {
         liveRef.current = live;
@@ -440,7 +471,12 @@ function City({
         const knobs = liveRef.current;
         const viz = vizRef.current;
         const reactive = Boolean(viz?.enabled);
-        const colorMul = viz ? audioColorMul(viz, knobs.bassBoost) : 1;
+        const flicker = reactive && knobs.bandFlicker;
+        const trio = reactive && viz ? spectrumTrio(viz) : null;
+        const low = trio?.bass ?? 0;
+        const colorMul = reactive
+            ? audioColorMul(low, knobs.bassBoost)
+            : 1;
 
         if (knobs.garland && !knobs.caps) {
             const step = knobs.colorSpeed * colorMul * dt;
@@ -471,11 +507,11 @@ function City({
                 hueOffset.current,
                 fogHueOffset.current,
                 {
-                    enabled: reactive && !knobs.caps,
-                    bass: viz?.bass ?? 0,
-                    mid: viz?.mid ?? 0,
-                    high: viz?.high ?? 0,
-                    beat: viz?.beat ?? 0,
+                    enabled: flicker && !knobs.caps && Boolean(viz),
+                    bass: trio?.bass ?? 0,
+                    mid: trio?.mid ?? 0,
+                    high: trio?.high ?? 0,
+                    beat: viz ? channelLevel(viz, "beat") : 0,
                 },
             );
             // Aux grid: fixed | reactive jumps on capGridIdle→Peak via channel | edge
@@ -484,15 +520,8 @@ function City({
                 let c: THREE.Color;
                 if (knobs.gridFixed) {
                     c = _gridColor.set(knobs.gridColor);
-                } else if (reactive && knobs.gridChannel !== "off") {
-                    const ch = knobs.gridChannel;
-                    const level = Math.max(
-                        0,
-                        Math.min(
-                            1,
-                            ch === "beat" ? (viz?.beat ?? 0) : (viz?.[ch] ?? 0),
-                        ),
-                    );
+                } else if (flicker && viz && knobs.gridChannel !== "off") {
+                    const level = channelLevel(viz, knobs.gridChannel);
                     _fogIdle.setHex(
                         cssHexToInt(knobs.capGridIdle, 0x1a4a20),
                     );
@@ -518,19 +547,12 @@ function City({
                     attr.needsUpdate = true;
                 }
             }
-            // Caps / reactive fog: palette idle→peak via fogChannel (not hard-wired to beat)
+            // Caps fog: palette idle→peak via fogChannel (spectrum)
             if (knobs.caps) {
                 _fogIdle.setHex(cssHexToInt(knobs.capFogIdle, 0x0c1a2e));
                 _fogPeak.setHex(cssHexToInt(knobs.capFogPeak, 0x1a4a9e));
-                if (reactive && knobs.fogChannel !== "off") {
-                    const ch = knobs.fogChannel;
-                    const level = Math.max(
-                        0,
-                        Math.min(
-                            1,
-                            ch === "beat" ? (viz?.beat ?? 0) : (viz?.[ch] ?? 0),
-                        ),
-                    );
+                if (flicker && viz && knobs.fogChannel !== "off") {
+                    const level = channelLevel(viz, knobs.fogChannel);
                     fog.color.copy(_fogIdle).lerp(_fogPeak, level);
                 } else {
                     fog.color.copy(_fogIdle);
@@ -558,18 +580,23 @@ function City({
         if (!city || !field) return;
         field.scale.setScalar(zoom);
 
-        // One sample per band per frame — mid is relative (spikes over flat floor)
+        // Sample spectrum slices once — bounce and/or flicker both consume hits
         const bandHits: Record<CapBand, number> = {
             bass: 0,
             mid: 0,
             high: 0,
         };
-        if (reactive && viz) {
+        const needHits =
+            reactive &&
+            viz &&
+            trio &&
+            (knobs.bandBounce || knobs.bandFlicker);
+        if (needHits) {
             for (const key of CAP_BANDS) {
                 const cfg = BAND_HEIGHT[key];
                 bandHits[key] = sampleBandHit(
                     bandEnvs.current[key],
-                    Math.max(0, viz[key] ?? 0),
+                    Math.max(0, trio[key]),
                     dt,
                     cfg.drive,
                     cfg.gain,
@@ -583,7 +610,7 @@ function City({
             bandEnvs.current = createBandEnvs();
         }
 
-        // Caps: solid color lerp idle → peak (no transparency)
+        // Caps: solid color lerp idle → peak (Flicker toggle)
         const capMats = field.userData.capMaterials as
             | Record<CapBand, THREE.MeshStandardMaterial>
             | undefined;
@@ -596,7 +623,7 @@ function City({
             for (const key of CAP_BANDS) {
                 const mat = capMats[key];
                 if (knobs.caps) {
-                    const level = bandHits[key];
+                    const level = knobs.bandFlicker ? bandHits[key] : 0;
                     const fb = BAND_CAP_FALLBACK[key];
                     const pal = palette[key];
                     _capIdle.setHex(cssHexToInt(pal.idle, fb.idle));
@@ -604,7 +631,11 @@ function City({
                     _capColor.copy(_capIdle).lerp(_capPeak, level);
                     mat.color.copy(_capColor);
                     mat.emissive.copy(_capColor);
-                    mat.emissiveIntensity = THREE.MathUtils.lerp(0.25, 0.9, level);
+                    mat.emissiveIntensity = THREE.MathUtils.lerp(
+                        0.25,
+                        0.9,
+                        level,
+                    );
                     mat.transparent = false;
                     mat.opacity = 1;
                     mat.depthWrite = true;
@@ -618,7 +649,7 @@ function City({
             }
         }
 
-        // Reactive band bounce: 3 groups → bass / mid / high
+        // Reactive band bounce: 3 groups → spectrum lows / mids / highs
         const n = field.children.length;
         const pulses = field.userData.pulses as Float32Array | undefined;
         const groups = field.userData.bandGroups as
@@ -672,18 +703,34 @@ function City({
 
         if (knobs.spin) {
             const dir = knobs.spinLeft ? 1 : -1;
-            // Reactive: follow locked BPM; until lock, nudge from live energy
+            // Reactive spin: channel punches × spinAccel (no BPM)
             let tempoMul = 1;
-            if (reactive && viz) {
-                const bpm = viz.bpm;
-                if (bpm > 0) {
-                    tempoMul = THREE.MathUtils.clamp(bpm / SPIN_BPM_REF, 0.35, 5);
-                } else {
-                    tempoMul =
-                        1 +
-                        Math.max(0, viz.bass) * 0.7 +
-                        Math.max(0, viz.beat) * 0.45;
+            if (reactive && viz && knobs.spinChannel !== "off") {
+                const level = channelLevel(viz, knobs.spinChannel);
+                if (
+                    risingEdge(
+                        level,
+                        prevSpinLevel.current,
+                        SPIN_EDGE,
+                        SPIN_MIN,
+                    )
+                ) {
+                    spinImpulse.current = Math.max(
+                        spinImpulse.current,
+                        Math.min(1, 0.4 + level * 0.65),
+                    );
                 }
+                prevSpinLevel.current = level;
+                spinImpulse.current = Math.max(
+                    spinImpulse.current * Math.exp(-dt * SPIN_IMPULSE_DECAY),
+                    Math.pow(level, 1.45) * 0.55,
+                );
+                const accel = Math.max(0, knobs.spinAccel);
+                tempoMul =
+                    1 + Math.pow(spinImpulse.current, 1.55) * accel;
+            } else {
+                spinImpulse.current = 0;
+                prevSpinLevel.current = 0;
             }
             city.rotation.y +=
                 dir * 8 * ROTATION_SPEED * knobs.spinSpeed * tempoMul;
