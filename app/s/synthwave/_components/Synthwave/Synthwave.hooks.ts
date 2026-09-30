@@ -26,7 +26,7 @@ export const SYNTHWAVE_DEFAULTS: SynthwaveLive = {
     roadFloor: "#000000",
     roadGlow: 25,
     roadThickness: 1,
-    roadSpeed: 1,
+    roadSpeed: 2,
     sunRim: "#e69100",
     sunRimPeak: "#ff7b00",
     sunMid: "#aa00cc",
@@ -41,14 +41,14 @@ export const SYNTHWAVE_DEFAULTS: SynthwaveLive = {
     wallOffset: 6,
     wallPerspective: 40,
     perspV2: true,
-    roadLength: 0.17,
+    roadLength: 0.2,
     skyTop: "#a202f7",
     skyTopPeak: "#ee00ff",
     skyHorizon: "#330028",
     skyHorizonPeak: "#5f006b",
-    skySpeed: 1,
+    skySpeed: 2,
     skyDirection: 0,
-    roadChannel: "beat",
+    roadChannel: "bass",
     glowChannel: "bass",
     sunChannel: "bass",
     sunTwinkle: false,
@@ -111,7 +111,7 @@ function migratePrefs(
     // migrate: fogTwinkle → skyTwinkle (no fog layer — sky + horizon)
     next.skyTwinkle = Boolean(
         next.skyTwinkle ||
-            (legacy.fogTwinkle !== undefined ? legacy.fogTwinkle : false),
+        (legacy.fogTwinkle !== undefined ? legacy.fogTwinkle : false),
     );
     delete (next as { fogTwinkle?: boolean }).fogTwinkle;
     if (typeof next.colorSpeed !== "number" || !Number.isFinite(next.colorSpeed)) {

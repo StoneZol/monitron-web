@@ -36,6 +36,7 @@ function makeGridMaterial(cellsU: number, cellsV: number) {
             uLineWidth: { value: 1 },
             uGlow: { value: 0.35 },
             uPerspective: { value: 0.5 },
+            uHorizReach: { value: 0 },
             uColorGridNear: { value: new THREE.Color(1, 0, 0.2) },
             uColorGridFar: { value: new THREE.Color(0, 0, 1) },
             uColorGridBackground: { value: new THREE.Color(0.1, 0, 0.1) },
@@ -188,13 +189,17 @@ export function NeonGrid({
             knobs.roadGlow * (glowArmed ? 0.7 + flash * 0.3 : 1) + flash * 8,
         );
 
-        const syncUniforms = (mat: THREE.ShaderMaterial) => {
+        const syncUniforms = (
+            mat: THREE.ShaderMaterial,
+            horizReach: number,
+        ) => {
             mat.uniforms.uScroll!.value = scrollRef.current;
             mat.uniforms.uLineWidth!.value = knobs.roadThickness;
             mat.uniforms.uGlow!.value = Math.min(1, Math.max(0, glowUi / 40));
             mat.uniforms.uPerspective!.value = cameraPerspective(
                 knobs.wallPerspective,
             );
+            mat.uniforms.uHorizReach!.value = horizReach;
             const near = mat.uniforms.uColorGridNear!.value as THREE.Color;
             const far = mat.uniforms.uColorGridFar!.value as THREE.Color;
             if (knobs.gridTwinkle) {
@@ -212,8 +217,13 @@ export function NeonGrid({
             }
             hexToVec3(knobs.roadFloor, mat.uniforms.uColorGridBackground!.value);
         };
-        syncUniforms(floorM);
-        syncUniforms(wallM);
+        // Flat floor keeps aggressive far-kill; walls open up past −85° lean.
+        const wallReach =
+            leanDeg <= -85
+                ? 0
+                : Math.min(1, Math.max(0, (leanDeg + 85) / 50));
+        syncUniforms(floorM, 0);
+        syncUniforms(wallM, wallReach);
 
         const floor = floorRef.current;
         const left = leftRef.current;

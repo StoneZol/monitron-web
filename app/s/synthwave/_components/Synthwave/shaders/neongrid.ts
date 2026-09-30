@@ -5,6 +5,7 @@
  * uLineWidth — core stroke scale (1 = default)
  * uGlow — 0…1 soft halo + line boost
  * uPerspective — 0…1 foreshortening: thickens horizon bar; kills far horizontals earlier
+ * uHorizReach — 0…1 (raised walls): relax far-horizontal kill so lines draw farther
  */
 
 export const neonGridVertexShader = /* glsl */ `
@@ -34,6 +35,7 @@ uniform vec3 uColorGridBackground;
 uniform float uLineWidth;
 uniform float uGlow;
 uniform float uPerspective;
+uniform float uHorizReach;
 
 void main() {
   vec2 dist = abs(fract(vGrid) - 0.5);
@@ -50,12 +52,18 @@ void main() {
   float keepY = 1.0 - smoothstep(0.18, 0.50, fw.y);
 
   float persp = clamp(uPerspective, 0.0, 1.0);
+  float reach = clamp(uHorizReach, 0.0, 1.0);
   float far = smoothstep(0.68, 0.97, vUv.y);
 
-  // Horizontals: full from the near edge at low persp; at high persp stop
-  // earlier so the vanish doesn't AA-flicker (dead zone before horizon bar)
-  float farKill0 = mix(0.9, 0.28, persp);
-  float farKill1 = mix(0.99, 0.52, persp);
+  // Floor / flat-out: high persp kills horizontals early (AA flicker at vanish).
+  // +~4% toward horizon — still room before shimmer on the floor.
+  // Raised walls face camera more → can keep horizontals farther before the bar.
+  float flat0 = mix(0.94, 0.32, persp);
+  float flat1 = mix(0.995, 0.56, persp);
+  float wall0 = mix(0.94, 0.72, persp);
+  float wall1 = mix(0.995, 0.94, persp);
+  float farKill0 = mix(flat0, wall0, reach);
+  float farKill1 = mix(flat1, wall1, reach);
   float horizKeep = 1.0 - smoothstep(farKill0, farKill1, vUv.y);
 
   float horiz = line.y * keepY * horizKeep;
