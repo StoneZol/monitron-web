@@ -41,15 +41,16 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ```
 ┌─────────────────────┐         window.postMessage            ┌──────────────────────┐
-│  Chrome extension   │  hello / audio-frame (bands 0..1)     │  Monitron page       │
-│  tabCapture → FFT   │ ───────────────────────────────────►  │  subscribeAudioBus   │
-│                     │ ◄───────────────────────────────────  │  visualizer-toggle   │
-└─────────────────────┘                                       └──────────┬───────────┘
-                                                                         │
-                                                                         ▼
-                                                                useAudioReactive
-                                                                ├─ meters (UI, throttled)
-                                                                └─ vizRef (rAF-safe)
+│  Chrome extension   │  hello / audio-frame (bands[32], rms, peak)│  Monitron page       │
+│  tabCapture → FFT   │ ─────────────────────────────────────────► │  subscribeAudioBus   │
+│  (raw spectrum)     │ ◄───────────────────────────────────────── │  visualizer-toggle   │
+└─────────────────────┘                                            └──────────┬───────────┘
+                                                                              │
+                                                                              ▼
+                                                                     useAudioReactive
+                                                                     ├─ AudioDeriver (EQ/onset)
+                                                                     ├─ meters (UI, throttled)
+                                                                     └─ vizRef (rAF-safe)
                                                                          │
                                                                          ▼
                                                                 screen draw loop
@@ -173,7 +174,7 @@ if (viz.enabled) {
 
 ## Audio bus API
 
-Authoritative types live in [`lib/audioBus.ts`](lib/audioBus.ts). Short reference:
+Authoritative types live in [`lib/audioBus.ts`](lib/audioBus.ts). Derivation (bass/mid/high/beat/BPM) lives in [`lib/audioDerive.ts`](lib/audioDerive.ts) — the plugin only ships raw spectrum.
 
 ### Extension → page
 
@@ -185,21 +186,21 @@ Authoritative types live in [`lib/audioBus.ts`](lib/audioBus.ts). Short referenc
 
 Shows the ControlPanel visualizer section (sets **extension** = true).
 
-**Frame** (normalized bands `0..1`)
+**Frame** (raw analyser dump)
 
 ```ts
 {
   source: "monitron-extension",
   type: "audio-frame",
-  t: number,       // timestamp
-  bass: number,
-  mid: number,
-  high: number,
-  beat: number     // transient / kick emphasis
+  t: number,            // ms since capture start
+  sampleRate: number,
+  bands: number[],      // length 32, log-spaced 20Hz→16kHz, each 0..1
+  rms: number,          // time-domain RMS 0..1
+  peak: number,         // time-domain peak 0..1
 }
 ```
 
-A frame also implies the extension is present.
+A frame also implies the extension is present. The page derives `bass` / `mid` / `high` / `beat` / `bpm` for screens.
 
 ### Page → extension
 
@@ -226,36 +227,44 @@ Sent when the user flips **reactive** in the ControlPanel. Extension should star
 ### Dev console smoke test
 
 ```js
-postMessage(
-    { source: "monitron-extension", type: "hello" },
-    "*",
+const bands = Array.from({ length: 32 }, (_, i) =>
+  i < 8 ? 0.9 : i < 16 ? 0.4 : 0.15,
 );
 
 postMessage(
-    {
-        source: "monitron-extension",
-        type: "audio-frame",
-        t: performance.now(),
-        bass: 1,
-        mid: 0.4,
-        high: 0.2,
-        beat: 1,
-    },
-    "*",
+  { source: "monitron-extension", type: "hello" },
+  "*",
+);
+
+postMessage(
+  {
+    source: "monitron-extension",
+    type: "audio-frame",
+    t: performance.now(),
+    sampleRate: 48000,
+    bands,
+    rms: 0.4,
+    peak: 0.7,
+  },
+  "*",
 );
 ```
 
-Then enable **reactive** under **visualizer** on `/s/matrix` — rain should react.
+Then enable **reactive** under **visualizer** on `/s/matrix` — rain should react (columns follow spectrum left→lows / right→highs).
 
 ### `VizBands` (what screens read)
 
 ```ts
 type VizBands = {
-    enabled: boolean;
-    bass: number;
-    mid: number;
-    high: number;
-    beat: number;
+  enabled: boolean;
+  bands: number[]; // live spectrum
+  bass: number;    // derived
+  mid: number;
+  high: number;
+  beat: number;
+  rms: number;
+  peak: number;
+  bpm: number;
 };
 ```
 

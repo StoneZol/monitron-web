@@ -32,7 +32,8 @@ import { PlaceholderCard } from "@/components/PlaceholderCard";
 ## Layout hierarchy
 
 ```
-ScreensOverlay          full-screen HUD (idle-fade + back)
+ScreensOverlay          full-screen HUD (idle-fade + back + ::bus spectrum)
+  ├─ AudioSpectrum      bottom deck — live bands[32] + rms/peak (always when plugin streams)
   └─ ControlPanel       titled box, scrollable body
        └─ ControlSection   labeled group (look / fog / camera / …)
             └─ Slider | Toggle | Select | ColorInput / ColorField | ColorTable | Meter | PanelButton
@@ -43,7 +44,10 @@ Typical screen:
 ```tsx
 <div className="relative h-screen w-screen overflow-hidden bg-black">
   {/* canvas / R3F */}
-  <ScreensOverlay>
+  <ScreensOverlay
+    spectrumRef={visualizer.spectrumRef}
+    pluginPresent={visualizer.pluginPresent}
+  >
     <ControlPanel title="my_screen">
       <ControlSection label="look">{/* knobs */}</ControlSection>
       <ControlSection label="actions">

@@ -15,6 +15,13 @@ const FONT_SIZE = 11;
 /** Glyphs until trail ≈ gone — keeps rain from flooding the screen */
 const TRAIL_LEN = 50;
 const TRAIL_FADE = 1 - Math.pow(0.05, 1 / TRAIL_LEN);
+/** Per-column fall multipliers — breaks the “marching row” look */
+const COL_SPEED_MIN = 0.4;
+const COL_SPEED_MAX = 1.65;
+/** Cap steps one column can take in a frame (bass dump / huge fallSpeed) */
+const COL_STEP_CAP = 12;
+/** Reactive: spectrum energy boosts that column's fall rate */
+const SPECTRUM_DRIVE = 1.35;
 const DEFAULT_COLOR = "#36ff00";
 
 /** Bass → fall speed (slider multiplies the punch) */
@@ -98,20 +105,6 @@ function hexToHsl(hex: string): HslColor {
         s: Math.round(s * 100),
         l: Math.round(l * 100),
     };
-}
-
-function hslToHex({ h, s, l }: HslColor): string {
-    const sN = s / 100;
-    const lN = l / 100;
-    const a = sN * Math.min(lN, 1 - lN);
-    const f = (n: number) => {
-        const k = (n + h / 30) % 12;
-        const color = lN - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
-        return Math.round(255 * color)
-            .toString(16)
-            .padStart(2, "0");
-    };
-    return `#${f(0)}${f(8)}${f(4)}`;
 }
 
 function useWakeLock() {
@@ -222,8 +215,11 @@ const useMatrixHook = () => {
 
     const setTwinkle = (on: boolean) => {
         if (!on && twinkleRef.current) {
-            const live = { ...colorRef.current, s: 100 };
-            commitPrefs({ twinkle: false, color: hslToHex(live) });
+            // Restore the picker color — don't bake the live rainbow stop into prefs
+            const restored = prefsRef.current.color;
+            colorRef.current = hexToHsl(restored);
+            setColorState(restored);
+            commitPrefs({ twinkle: false });
             return;
         }
         commitPrefs({ twinkle: on });
@@ -249,13 +245,17 @@ const useMatrixHook = () => {
         let height = window.innerHeight;
         let columns = Math.floor(width / FONT_SIZE);
         let drops: number[] = [];
+        let speeds: number[] = [];
+        let dropAcc: number[] = [];
         let raf = 0;
         let last = performance.now();
-        let fallAcc = 0;
         let bassImpulse = 0;
         let beatHold = 0;
         let prevBassSample = 0;
         const vizRef = visualizer.vizRef;
+
+        const randSpeed = () =>
+            COL_SPEED_MIN + Math.random() * (COL_SPEED_MAX - COL_SPEED_MIN);
 
         const seedDrops = () => {
             const rows = Math.max(1, Math.ceil(height / FONT_SIZE));
@@ -265,6 +265,8 @@ const useMatrixHook = () => {
                     Math.floor(Math.random() * rows) -
                     Math.floor(Math.random() * rows * 0.4),
             );
+            speeds = Array.from({ length: columns }, randSpeed);
+            dropAcc = new Array(columns).fill(0);
         };
 
         const resize = () => {
@@ -278,16 +280,16 @@ const useMatrixHook = () => {
             context.fillRect(0, 0, width, height);
         };
 
-        const drawGlyphs = () => {
-            for (let i = 0; i < drops.length; i++) {
-                const char = chars[Math.floor(Math.random() * chars.length)] ?? "0";
-                context.fillText(char, i * FONT_SIZE, drops[i]! * FONT_SIZE);
+        const advanceColumn = (i: number) => {
+            const char =
+                chars[Math.floor(Math.random() * chars.length)] ?? "0";
+            context.fillText(char, i * FONT_SIZE, drops[i]! * FONT_SIZE);
 
-                if (drops[i]! * FONT_SIZE > height && Math.random() > 0.985) {
-                    drops[i] = 0;
-                }
-                drops[i]!++;
+            if (drops[i]! * FONT_SIZE > height && Math.random() > 0.975) {
+                drops[i] = 0;
+                speeds[i] = randSpeed();
             }
+            drops[i]!++;
         };
 
         const tick = (now: number) => {
@@ -300,8 +302,10 @@ const useMatrixHook = () => {
             }
 
             const viz = vizRef.current;
-            const bass = viz.enabled ? Math.max(0, viz.bass) : 0;
-            const beat = viz.enabled ? Math.max(0, viz.beat) : 0;
+            const reactiveOn = Boolean(viz.enabled);
+            const bass = reactiveOn ? Math.max(0, viz.bass) : 0;
+            const beat = reactiveOn ? Math.max(0, viz.beat) : 0;
+            const spectrum = reactiveOn ? viz.bands : null;
             const boost = bassBoostRef.current;
 
             // beat → brightness (peak-hold)
@@ -315,7 +319,10 @@ const useMatrixHook = () => {
                     bassImpulse,
                     Math.min(1, 0.35 + bass * 0.35),
                 );
-                fallAcc += (1 + boost) * BASS_FALL_DUMP * bass;
+                const dump = (1 + boost) * BASS_FALL_DUMP * bass;
+                for (let i = 0; i < dropAcc.length; i++) {
+                    dropAcc[i]! += dump;
+                }
                 if (twinkleRef.current) {
                     const hop =
                         HUE_HOP_BASE +
@@ -334,9 +341,9 @@ const useMatrixHook = () => {
                 colorRef.current.h =
                     (colorRef.current.h +
                         dt *
-                        colorSpeedRef.current *
-                        bassImpulse *
-                        HUE_BASS_SPIN) %
+                            colorSpeedRef.current *
+                            bassImpulse *
+                            HUE_BASS_SPIN) %
                     360;
             }
 
@@ -344,7 +351,7 @@ const useMatrixHook = () => {
             const flash = Math.min(1, bassImpulse);
             const current = colorRef.current;
             const twinkleOn = twinkleRef.current;
-            const reactive = viz.enabled;
+            const reactive = reactiveOn;
 
             let s: number;
             let l: number;
@@ -369,27 +376,49 @@ const useMatrixHook = () => {
 
             // Bass punches multiply Fall speed
             const speedMul = 1 + flash * boost;
-            // Trail: a bit longer when glowing at speed
+            // Trail length ≈ TRAIL_LEN steps at current Fall speed (frame-based fade)
+            const trailScale = 1 - (reactive ? flash : punch) * 0.25;
+            const stepsPerSec = fallSpeedRef.current * speedMul;
             const fade = Math.min(
-                0.09,
+                0.14,
                 Math.max(
-                    0.045,
-                    TRAIL_FADE * (1 - (reactive ? flash : punch) * 0.25),
+                    0.02,
+                    1 -
+                        Math.pow(
+                            1 - TRAIL_FADE * trailScale,
+                            Math.max(0.5, stepsPerSec) * dt,
+                        ),
                 ),
             );
 
-            fallAcc += dt * fallSpeedRef.current * speedMul;
-            let steps = 0;
-            while (fallAcc >= 1 && steps < 28) {
-                fallAcc -= 1;
-                steps += 1;
-                context.fillStyle = `rgba(0,0,0,${fade})`;
-                context.fillRect(0, 0, width, height);
-                context.fillStyle = glyphColor;
-                context.font = `${FONT_SIZE}px system-ui`;
-                drawGlyphs();
+            // One trail fade per frame — columns advance on their own clocks
+            context.fillStyle = `rgba(0,0,0,${fade})`;
+            context.fillRect(0, 0, width, height);
+            context.fillStyle = glyphColor;
+            context.font = `${FONT_SIZE}px system-ui`;
+
+            const baseStep = dt * stepsPerSec;
+            const bandCount = spectrum?.length ?? 0;
+            for (let i = 0; i < drops.length; i++) {
+                let colMul = speeds[i] ?? 1;
+                if (spectrum && bandCount > 0 && columns > 0) {
+                    // Left → lows, right → highs across the log spectrum
+                    const bi = Math.min(
+                        bandCount - 1,
+                        Math.floor((i / columns) * bandCount),
+                    );
+                    const energy = Math.max(0, spectrum[bi] ?? 0);
+                    colMul *= 1 + energy * SPECTRUM_DRIVE;
+                }
+                dropAcc[i]! += baseStep * colMul;
+                if (dropAcc[i]! > COL_STEP_CAP) dropAcc[i] = COL_STEP_CAP;
+                let steps = 0;
+                while (dropAcc[i]! >= 1 && steps < COL_STEP_CAP) {
+                    dropAcc[i]! -= 1;
+                    steps += 1;
+                    advanceColumn(i);
+                }
             }
-            if (fallAcc > 8) fallAcc = 8;
 
             raf = requestAnimationFrame(tick);
         };

@@ -41,7 +41,10 @@ const HexagonsPlace = ({ showOverlay = true }: HexagonsPlaceProps) => {
             <HexagonsCanvas live={live} vizRef={visualizer.vizRef} />
 
             {showOverlay && (
-                <ScreensOverlay>
+                <ScreensOverlay
+                    spectrumRef={visualizer.spectrumRef}
+                    pluginPresent={visualizer.pluginPresent}
+                >
                     <ControlPanel title="hexagons">
                         <ControlSection label="look">
                             <div className="flex gap-2">

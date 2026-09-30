@@ -12,15 +12,27 @@ export const AUDIO_VIZ_TYPE = "visualizer-toggle" as const;
 export const AUDIO_EQ_TYPE_LEGACY = "eq-toggle" as const;
 export const AUDIO_HELLO_REQUEST_TYPE = "hello-request" as const;
 
-/** Normalized 0..1 bands from the extension analyser */
+/**
+ * Fixed log-spaced spectrum from the plugin.
+ * Plugin packs FFT → these bins; site derives bass/mid/high/beat/BPM.
+ */
+export const AUDIO_BAND_COUNT = 32;
+export const AUDIO_BAND_FMIN = 20;
+export const AUDIO_BAND_FMAX = 16000;
+
+/** Raw frame from the extension — no named EQ / beat logic */
 export type AudioFrame = {
   source: typeof AUDIO_BUS_SOURCE;
   type: typeof AUDIO_FRAME_TYPE;
+  /** ms since capture start */
   t: number;
-  bass: number;
-  mid: number;
-  high: number;
-  beat: number;
+  sampleRate: number;
+  /** length AUDIO_BAND_COUNT, each 0..1 */
+  bands: number[];
+  /** Time-domain RMS 0..1 */
+  rms: number;
+  /** Time-domain peak 0..1 */
+  peak: number;
 };
 
 export type AudioHello = {
@@ -39,36 +51,72 @@ export type AudioVisualizerToggle = {
   enabled: boolean;
 };
 
+/** What screens read each frame (derived on the page) */
 export type VizBands = {
   enabled: boolean;
+  /** Live spectrum (same layout as AudioFrame.bands) */
+  bands: number[];
   bass: number;
   mid: number;
   high: number;
   beat: number;
-  /** Approx tempo from beat onsets (BPM). 0 = not locked yet */
+  rms: number;
+  peak: number;
+  /** Approx tempo from onsets (BPM). 0 = not locked yet */
   bpm: number;
 };
 
-export const EMPTY_VIZ_BANDS: VizBands = {
-  enabled: false,
-  bass: 0,
-  mid: 0,
-  high: 0,
-  beat: 0,
-  bpm: 0,
-};
+export function emptyVizBands(enabled = false): VizBands {
+  return {
+    enabled,
+    bands: new Array(AUDIO_BAND_COUNT).fill(0),
+    bass: 0,
+    mid: 0,
+    high: 0,
+    beat: 0,
+    rms: 0,
+    peak: 0,
+    bpm: 0,
+  };
+}
+
+/** @deprecated use emptyVizBands() — kept for call-site familiarity */
+export const EMPTY_VIZ_BANDS: VizBands = emptyVizBands(false);
+
+export function bandHzRange(
+  index: number,
+  count = AUDIO_BAND_COUNT,
+  fmin = AUDIO_BAND_FMIN,
+  fmax = AUDIO_BAND_FMAX,
+): { lo: number; hi: number } {
+  const i = Math.max(0, Math.min(count - 1, index));
+  const logMin = Math.log(fmin);
+  const logMax = Math.log(fmax);
+  const lo = Math.exp(logMin + (i / count) * (logMax - logMin));
+  const hi = Math.exp(logMin + ((i + 1) / count) * (logMax - logMin));
+  return { lo, hi };
+}
 
 export function isAudioFrame(data: unknown): data is AudioFrame {
   if (!data || typeof data !== "object") return false;
   const frame = data as Record<string, unknown>;
-  return (
-    frame.source === AUDIO_BUS_SOURCE &&
-    frame.type === AUDIO_FRAME_TYPE &&
-    typeof frame.bass === "number" &&
-    typeof frame.mid === "number" &&
-    typeof frame.high === "number" &&
-    typeof frame.beat === "number"
-  );
+  if (
+    frame.source !== AUDIO_BUS_SOURCE ||
+    frame.type !== AUDIO_FRAME_TYPE ||
+    typeof frame.t !== "number" ||
+    typeof frame.sampleRate !== "number" ||
+    typeof frame.rms !== "number" ||
+    typeof frame.peak !== "number" ||
+    !Array.isArray(frame.bands)
+  ) {
+    return false;
+  }
+  const bands = frame.bands as unknown[];
+  if (bands.length < 8) return false;
+  for (let i = 0; i < bands.length; i++) {
+    if (typeof bands[i] !== "number") return false;
+  }
+  return true;
 }
 
 export function isAudioHello(data: unknown): data is AudioHello {
@@ -104,7 +152,6 @@ export function postVisualizerToggle(enabled: boolean) {
     type: AUDIO_VIZ_TYPE,
     enabled,
   };
-  // "*" so content script always receives it (origin matching can be flaky)
   window.postMessage(message, "*");
 }
 
@@ -120,7 +167,7 @@ export function postHelloRequest() {
 /**
  * Extension → page:
  *   { source: 'monitron-extension', type: 'hello' }
- *   { source: 'monitron-extension', type: 'audio-frame', bass, mid, high, beat, t }
+ *   { source: 'monitron-extension', type: 'audio-frame', t, sampleRate, bands[], rms, peak }
  * Page → extension:
  *   { source: 'monitron-page', type: 'hello-request' }
  *   { source: 'monitron-page', type: 'visualizer-toggle', enabled }
@@ -130,7 +177,6 @@ export function subscribeAudioBus(handlers: {
   onFrame?: (frame: AudioFrame) => void;
 }): () => void {
   const onMessage = (event: MessageEvent) => {
-    // Same-window bus (content script postMessage). Ignore other frames/windows.
     if (event.source !== window && event.source != null) return;
     if (isAudioHello(event.data)) {
       handlers.onHello?.();

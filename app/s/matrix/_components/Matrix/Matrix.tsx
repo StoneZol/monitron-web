@@ -21,7 +21,10 @@ const Matrix = ({ showOverlay = true }: { showOverlay?: boolean }) => {
       <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" />
 
       {showOverlay && (
-        <ScreensOverlay>
+        <ScreensOverlay
+          spectrumRef={visualizer.spectrumRef}
+          pluginPresent={visualizer.pluginPresent}
+        >
           <ControlPanel title="matrix">
             <ControlSection label="look">
               <Toggle

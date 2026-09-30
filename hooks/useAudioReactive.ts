@@ -2,12 +2,17 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
-  EMPTY_VIZ_BANDS,
+  emptySpectrumSnap,
+  type SpectrumSnap,
+} from "@/components/AudioSpectrum";
+import {
+  emptyVizBands,
   postHelloRequest,
   postVisualizerToggle,
   subscribeAudioBus,
   type VizBands,
 } from "@/lib/audioBus";
+import { AudioDeriver } from "@/lib/audioDerive";
 import { BpmEstimator } from "@/lib/bpmEstimate";
 
 export type VizBandKey = "bass" | "mid" | "high" | "beat";
@@ -53,8 +58,9 @@ const ZERO_METERS: AudioReactiveMeters = {
 };
 
 /**
- * Extension handshake + band feed. Canvas reads `vizRef` in rAF;
- * meters are throttled for the control panel UI.
+ * Extension handshake + raw spectrum feed.
+ * Analysis stays on whenever the plugin is present (HUD spectrum).
+ * `reactive` only gates whether the screen reads vizRef.
  */
 export function useAudioReactive({
   bands: bandsMask,
@@ -63,9 +69,11 @@ export function useAudioReactive({
 }: UseAudioReactiveOptions = {}) {
   const active = resolveBands(bandsMask);
   const activeRef = useRef(active);
-  const vizRef = useRef<VizBands>({ ...EMPTY_VIZ_BANDS });
+  const vizRef = useRef<VizBands>(emptyVizBands(false));
+  const spectrumRef = useRef<SpectrumSnap>(emptySpectrumSnap());
   const lastUiSync = useRef(0);
   const beatPeakRef = useRef(0);
+  const deriverRef = useRef(new AudioDeriver());
   const bpmEstimatorRef = useRef(new BpmEstimator());
   const pluginRef = useRef(false);
   const lastToggleRef = useRef<boolean | null>(null);
@@ -91,19 +99,26 @@ export function useAudioReactive({
     postVisualizerToggle(enabled);
   };
 
+  /** Keep analyser on while plugin is present — HUD needs the stream */
+  const ensureAnalysing = () => {
+    if (!pluginRef.current) return;
+    sendToggle(true);
+  };
+
   const applyReactive = (enabled: boolean, notify: boolean) => {
     if (enabled && !pluginRef.current) return;
     preferredRef.current = enabled;
     setReactiveState(enabled);
-    vizRef.current = enabled
-      ? { ...vizRef.current, enabled: true }
-      : { ...EMPTY_VIZ_BANDS, enabled: false };
-    sendToggle(enabled);
-    if (!enabled) {
+    if (enabled) {
+      vizRef.current = { ...vizRef.current, enabled: true };
+      ensureAnalysing();
+    } else {
+      vizRef.current = emptyVizBands(false);
       setMeters(ZERO_METERS);
       setBpm(0);
       beatPeakRef.current = 0;
       bpmEstimatorRef.current.reset();
+      // keep deriver + analyser for overlay spectrum
     }
     if (notify) onReactiveChangeRef.current?.(enabled);
   };
@@ -112,7 +127,6 @@ export function useAudioReactive({
     applyReactive(enabled, true);
   };
 
-  // Keep preference from screen prefs in sync
   useEffect(() => {
     preferredRef.current = preferredReactive;
     if (!pluginRef.current) return;
@@ -128,6 +142,7 @@ export function useAudioReactive({
     let lastHelloAt = 0;
     let present = false;
     let pollTimer: number | null = null;
+    const deriver = deriverRef.current;
     const bpmEstimator = bpmEstimatorRef.current;
 
     const pauseForOffline = () => {
@@ -135,25 +150,23 @@ export function useAudioReactive({
       setReactiveState(false);
       setMeters(ZERO_METERS);
       setBpm(0);
-      vizRef.current = { ...EMPTY_VIZ_BANDS };
+      vizRef.current = emptyVizBands(false);
+      spectrumRef.current = emptySpectrumSnap();
       beatPeakRef.current = 0;
+      deriver.reset();
       bpmEstimator.reset();
     };
 
-    const resumeIfPreferred = () => {
+    const onPluginOnline = () => {
+      ensureAnalysing();
       if (!preferredRef.current) return;
       preferredRef.current = true;
       setReactiveState(true);
       vizRef.current = { ...vizRef.current, enabled: true };
-      if (lastToggleRef.current !== true) {
-        lastToggleRef.current = true;
-        postVisualizerToggle(true);
-      }
     };
 
     const syncPoll = () => {
       if (pollTimer != null) window.clearInterval(pollTimer);
-      // Offline: poll faster so a returning extension is noticed without refresh
       pollTimer = window.setInterval(tick, present ? 2000 : 800);
     };
 
@@ -170,9 +183,10 @@ export function useAudioReactive({
 
       if (!next) {
         if (lastToggleRef.current) postVisualizerToggle(false);
+        lastToggleRef.current = false;
         pauseForOffline();
       } else {
-        resumeIfPreferred();
+        onPluginOnline();
       }
     };
 
@@ -193,24 +207,37 @@ export function useAudioReactive({
       onHello: markPresent,
       onFrame: (frame) => {
         markPresent();
+        const derived = deriver.push(frame);
+        const now = performance.now();
+
+        // HUD spectrum — always, even when screen reactive is off
+        spectrumRef.current = {
+          bands: derived.bands,
+          rms: derived.rms,
+          peak: derived.peak,
+          at: now,
+        };
+
         if (!vizRef.current.enabled) return;
 
-        const bands = activeRef.current;
-        const nextBeat = bands.beat ? frame.beat : 0;
-        const nextBass = bands.bass ? frame.bass : 0;
-        // Peak-hold so short kicks stay visible in the panel
-        beatPeakRef.current = Math.max(nextBeat, beatPeakRef.current * 0.88);
+        const mask = activeRef.current;
+        const nextBeat = mask.beat ? derived.beat : 0;
+        const nextBass = mask.bass ? derived.bass : 0;
+        const nextMid = mask.mid ? derived.mid : 0;
+        const nextHigh = mask.high ? derived.high : 0;
 
-        const now = performance.now();
-        // BPM from beat onsets first; bass only if beat is weak
+        beatPeakRef.current = Math.max(nextBeat, beatPeakRef.current * 0.88);
         const nextBpm = bpmEstimator.push(nextBeat, nextBass, now);
 
         vizRef.current = {
           enabled: true,
+          bands: derived.bands,
           bass: nextBass,
-          mid: bands.mid ? frame.mid : 0,
-          high: bands.high ? frame.high : 0,
+          mid: nextMid,
+          high: nextHigh,
           beat: nextBeat,
+          rms: derived.rms,
+          peak: derived.peak,
           bpm: nextBpm,
         };
 
@@ -218,8 +245,8 @@ export function useAudioReactive({
           lastUiSync.current = now;
           setMeters({
             bass: nextBass,
-            mid: bands.mid ? frame.mid : 0,
-            high: bands.high ? frame.high : 0,
+            mid: nextMid,
+            high: nextHigh,
             beat: beatPeakRef.current,
           });
           setBpm(nextBpm > 0 ? nextBpm : 0);
@@ -245,12 +272,15 @@ export function useAudioReactive({
       pluginRef.current = false;
       setPluginPresent(false);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const visibleBands = ALL_BANDS.filter((key) => active[key]);
 
   return {
     vizRef,
+    /** Live spectrum for overlay HUD (always fed while plugin streams) */
+    spectrumRef,
     pluginPresent,
     reactive,
     setReactive,
