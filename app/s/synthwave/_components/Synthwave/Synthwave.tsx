@@ -28,9 +28,12 @@ const INFO = {
     look: "Wallpaper Engine neon_sunset materials — grid, sun, sky.",
     skyTop: "Cloud / upper sky tint (WE clouds).",
     skyHorizon: "Horizon glow tint.",
-    sunRim: "Sun top color (WE colorsuntop).",
-    sunCore: "Sun bottom + glow (WE colorsunbottom).",
+    sunRim: "Sun disk top of the gradient.",
+    sunMid: "Sun disk bottom of the gradient.",
+    sunCore: "Soft glow / halo around the sun.",
     sunSize: "Scale × WE sun size.",
+    sunBrightness: "Brightness of the sun disk.",
+    sunGlowBrightness: "Brightness of the soft glow around the sun.",
     roadColor: "Near grid neon (WE gridnear).",
     roadFar: "Far grid neon (WE gridfar).",
     roadFloor: "Opaque terrain fill (WE gridbackground).",
@@ -47,9 +50,12 @@ const INFO = {
         "How far the neon road runs toward the sun. Default is short (~⅓ of the view); slide up to extend.",
     motion: "Scroll speed of the neon grid.",
     roadSpeed: "Multiplies base scroll speed.",
-    drive: "How strongly audio accelerates road scroll.",
-    roadChannel: "Band that accelerates scroll.",
-    sunTwinkle: "Hue walks over time from sun top/bottom colors.",
+    drive: "How hard peaks punch road scroll (idle dips a bit when channel is on).",
+    roadChannel: "Band that punches scroll speed.",
+    glowChannel: "Band that flashes grid glow / line brightness (bass kicks).",
+    sunChannel: "Band that punches sun / glow brightness (idle dips a bit).",
+    sunTwinkle: "Hue walks over time from sun top/bottom disk colors.",
+    sunGlowTwinkle: "Hue walks over time from the sun glow color.",
     gridTwinkle: "Hue walks over time from grid near/far colors.",
     skyTwinkle: "Hue walks over time from sky / horizon colors.",
     colorSpeed: "Hue walk rate while any twinkle is on.",
@@ -117,6 +123,12 @@ const Synthwave = ({ showOverlay = true }: SynthwaveProps) => {
                             />
                             <ColorField
                                 label="Sun bottom"
+                                value={controls.sunMid}
+                                onChange={controls.setSunMid}
+                                info={INFO.sunMid}
+                            />
+                            <ColorField
+                                label="Sun glow"
                                 value={controls.sunCore}
                                 onChange={controls.setSunCore}
                                 info={INFO.sunCore}
@@ -124,18 +136,44 @@ const Synthwave = ({ showOverlay = true }: SynthwaveProps) => {
                             <Slider
                                 label="Sun size"
                                 value={controls.sunSize}
-                                min={0.4}
-                                max={2}
+                                min={0.5}
+                                max={5}
                                 step={0.1}
                                 onChange={controls.setSunSize}
                                 format={(v) => `×${v.toFixed(2)}`}
                                 info={INFO.sunSize}
+                            />
+                            <Slider
+                                label="Sun brightness"
+                                value={controls.sunBrightness}
+                                min={0}
+                                max={3}
+                                step={0.05}
+                                onChange={controls.setSunBrightness}
+                                format={(v) => `×${v.toFixed(2)}`}
+                                info={INFO.sunBrightness}
+                            />
+                            <Slider
+                                label="Sun glow brightness"
+                                value={controls.sunGlowBrightness}
+                                min={0}
+                                max={3}
+                                step={0.05}
+                                onChange={controls.setSunGlowBrightness}
+                                format={(v) => `×${v.toFixed(2)}`}
+                                info={INFO.sunGlowBrightness}
                             />
                             <Toggle
                                 label="Sun twinkle"
                                 checked={controls.sunTwinkle}
                                 onChange={controls.setSunTwinkle}
                                 info={INFO.sunTwinkle}
+                            />
+                            <Toggle
+                                label="Sun glow twinkle"
+                                checked={controls.sunGlowTwinkle}
+                                onChange={controls.setSunGlowTwinkle}
+                                info={INFO.sunGlowTwinkle}
                             />
                             <ColorField
                                 label="Grid near"
@@ -183,6 +221,7 @@ const Synthwave = ({ showOverlay = true }: SynthwaveProps) => {
                             />
                             {(controls.skyTwinkle ||
                                 controls.sunTwinkle ||
+                                controls.sunGlowTwinkle ||
                                 controls.gridTwinkle) && (
                                     <Slider
                                         label="Color speed"
@@ -279,6 +318,20 @@ const Synthwave = ({ showOverlay = true }: SynthwaveProps) => {
                                         options={[...REACTIVE_CHANNEL_OPTIONS]}
                                         onChange={controls.setRoadChannel}
                                         info={INFO.roadChannel}
+                                    />
+                                    <Select
+                                        label="Glow channel"
+                                        value={controls.glowChannel}
+                                        options={[...REACTIVE_CHANNEL_OPTIONS]}
+                                        onChange={controls.setGlowChannel}
+                                        info={INFO.glowChannel}
+                                    />
+                                    <Select
+                                        label="Sun channel"
+                                        value={controls.sunChannel}
+                                        options={[...REACTIVE_CHANNEL_OPTIONS]}
+                                        onChange={controls.setSunChannel}
+                                        info={INFO.sunChannel}
                                     />
                                 </>
                             )}

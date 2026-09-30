@@ -19,14 +19,18 @@ export type SynthwaveLive = {
   roadThickness: number;
   /** Scroll multiplier (WE base ≈ 1 → uScrollSpeed 2) */
   roadSpeed: number;
-  /** Sun top — WE colorsuntop */
+  /** Sun top / disk — WE colorsuntop */
   sunRim: string;
-  /** Unused mid stop in WE sun (kept for prefs) */
+  /** Sun disk bottom of the gradient */
   sunMid: string;
-  /** Sun bottom — WE colorsunbottom */
+  /** Sun glow / halo tint */
   sunCore: string;
   /** Multiplier on WE sun scale */
   sunSize: number;
+  /** Disk brightness (1 = default) */
+  sunBrightness: number;
+  /** Glow / halo brightness (1 = default) */
+  sunGlowBrightness: number;
   /** Unused legacy tint */
   mountPeak: string;
   /** Wall lean from vertical (−90 flat outward … 0 vertical … +90 flat over the road) */
@@ -45,8 +49,14 @@ export type SynthwaveLive = {
   skyHorizon: string;
   /** Band that accelerates road scroll */
   roadChannel: ReactiveChannel;
-  /** Hue walk on sun top/bottom from picked colors */
+  /** Band that flashes grid glow / line brightness */
+  glowChannel: ReactiveChannel;
+  /** Band that punches sun / glow brightness */
+  sunChannel: ReactiveChannel;
+  /** Hue walk on sun disk (top) color */
   sunTwinkle: boolean;
+  /** Hue walk on sun glow (halo) color */
+  sunGlowTwinkle: boolean;
   /** Hue walk on grid near/far from picked colors */
   gridTwinkle: boolean;
   /** Hue walk on sky / horizon from picked colors */

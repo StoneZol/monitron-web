@@ -16,14 +16,21 @@ export const neonSunFragmentShader = /* glsl */ `
 varying vec2 vTexCoord;
 
 uniform float uTime;
-uniform float uBrightness;
+uniform float uDiskBrightness;
+uniform float uGlowBrightness;
 uniform vec3 uColorSunTop;
 uniform vec3 uColorSunBottom;
+uniform vec3 uColorSunGlow;
 
 void main() {
   float sunSize = 0.05;
   float sunSizeSqrt = sqrt(sunSize);
-  float blendSunColor = (vTexCoord.y + sunSize * 2.5) / sunSizeSqrt;
+  // WE formula can leave 0…1 — clamp or top overshoots and blows out
+  float blendSunColor = clamp(
+    (vTexCoord.y + sunSize * 2.5) / sunSizeSqrt,
+    0.0,
+    1.0
+  );
   vec4 colorSun = vec4(mix(uColorSunTop, uColorSunBottom, blendSunColor), 0.0);
   float sunRadius = dot(vTexCoord.xy, vTexCoord.xy);
   colorSun.a = 1.0 - step(0.05, sunRadius);
@@ -44,10 +51,15 @@ void main() {
     1.0
   );
 
-  float bright = max(uBrightness, 0.0);
-  vec3 rgb = uColorSunBottom * bright;
-  rgb = mix(rgb, colorSun.rgb * bright, colorSun.a * sunCutOut);
-  float alpha = max(glowAlpha * sunCutOutSmooth, colorSun.a * sunCutOut);
+  float diskB = max(uDiskBrightness, 0.0);
+  float glowB = max(uGlowBrightness, 0.0);
+
+  vec3 rgb = uColorSunGlow * glowB;
+  rgb = mix(rgb, colorSun.rgb * diskB, colorSun.a * sunCutOut);
+  float alpha = max(
+    glowAlpha * sunCutOutSmooth * min(glowB, 1.0),
+    colorSun.a * sunCutOut * step(0.001, diskB)
+  );
 
   gl_FragColor = vec4(rgb, alpha);
 }

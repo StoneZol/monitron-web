@@ -123,6 +123,9 @@ export function NeonGrid({
     const floorMatRef = useRef(floorMat);
     const wallMatRef = useRef(wallMat);
     const hueOffset = useRef(0);
+    /** Peak-hold so bass kicks flash like Hexagons band flicker */
+    const glowHold = useRef(0);
+    const roadHold = useRef(0);
 
     useEffect(
         () => () => {
@@ -140,7 +143,13 @@ export function NeonGrid({
         if (!knobs) return;
 
         const reactive = Boolean(viz?.enabled);
-        const roadLv = reactive ? channelLevel(viz!, knobs.roadChannel) : 0;
+        const roadRaw = reactive ? channelLevel(viz!, knobs.roadChannel) : 0;
+        const glowRaw = reactive ? channelLevel(viz!, knobs.glowChannel) : 0;
+        const decay = Math.exp(-Math.max(0, dt) * 5.5);
+        roadHold.current = Math.max(roadRaw, roadHold.current * decay);
+        glowHold.current = Math.max(glowRaw, glowHold.current * decay);
+        const roadPunch = Math.min(1, roadHold.current);
+        const flash = Math.min(1, glowHold.current);
 
         if (knobs.gridTwinkle) {
             hueOffset.current =
@@ -158,19 +167,38 @@ export function NeonGrid({
         const depthSegs = Math.max(2, Math.round(depth / CELL));
         const cellU = CELL * CELL_SQUASH;
 
-        const rate = 2 * knobs.roadSpeed * (1 + roadLv * knobs.drive * 0.5);
+        // Idle a bit slower when road channel is armed; peaks punch with Drive
+        const roadArmed = reactive && knobs.roadChannel !== "off";
+        const speedMul = roadArmed
+            ? 0.7 + roadPunch * (0.3 + knobs.drive * 0.9)
+            : 1;
+        const rate = 2 * knobs.roadSpeed * speedMul;
         scrollRef.current += Math.max(0, dt) * rate;
+
+        // Idle dim when glow channel is armed so peaks read as a flash
+        const glowArmed = reactive && knobs.glowChannel !== "off";
+        const glowUi = Math.min(
+            40,
+            knobs.roadGlow * (glowArmed ? 0.7 + flash * 0.3 : 1) + flash * 8,
+        );
+        const bright = glowArmed ? 0.58 + flash * 1.55 : 1;
 
         const syncUniforms = (mat: THREE.ShaderMaterial) => {
             mat.uniforms.uScroll!.value = scrollRef.current;
             mat.uniforms.uLineWidth!.value = knobs.roadThickness;
-            mat.uniforms.uGlow!.value = Math.min(1, Math.max(0, knobs.roadGlow / 40));
+            mat.uniforms.uGlow!.value = Math.min(1, Math.max(0, glowUi / 40));
+            const near = mat.uniforms.uColorGridNear!.value as THREE.Color;
+            const far = mat.uniforms.uColorGridFar!.value as THREE.Color;
             if (hueOff) {
-                hueWalkHex(knobs.roadColor, hueOff, mat.uniforms.uColorGridNear!.value);
-                hueWalkHex(knobs.roadFar, hueOff, mat.uniforms.uColorGridFar!.value);
+                hueWalkHex(knobs.roadColor, hueOff, near);
+                hueWalkHex(knobs.roadFar, hueOff, far);
             } else {
-                hexToVec3(knobs.roadColor, mat.uniforms.uColorGridNear!.value);
-                hexToVec3(knobs.roadFar, mat.uniforms.uColorGridFar!.value);
+                hexToVec3(knobs.roadColor, near);
+                hexToVec3(knobs.roadFar, far);
+            }
+            if (glowArmed) {
+                near.multiplyScalar(bright);
+                far.multiplyScalar(bright);
             }
             hexToVec3(knobs.roadFloor, mat.uniforms.uColorGridBackground!.value);
         };

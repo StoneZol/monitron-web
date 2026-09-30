@@ -3,19 +3,22 @@
 import { useEffect, useMemo, useRef, type RefObject } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
+import type { VizBands } from "@/lib/audioBus";
 import {
     neonSunFragmentShader,
     neonSunVertexShader,
 } from "./shaders/neonsun";
-import { hexToVec3, hueWalkHex } from "./Synthwave.audio";
+import { channelLevel, hexToVec3, hueWalkHex } from "./Synthwave.audio";
 import { DEPTH_MIN, roadDepth, Z_PAD } from "./Synthwave.constants";
 import type { SynthwaveLive } from "./Synthwave.types";
 
 export function NeonSun({
     liveRef,
+    vizRef,
     groupRef,
 }: {
     liveRef: RefObject<SynthwaveLive>;
+    vizRef: RefObject<VizBands>;
     groupRef: RefObject<THREE.Group | null>;
 }) {
     const mat = useMemo(
@@ -29,36 +32,65 @@ export function NeonSun({
                 blending: THREE.NormalBlending,
                 uniforms: {
                     uTime: { value: 0 },
-                    uBrightness: { value: 1 },
+                    uDiskBrightness: { value: 1 },
+                    uGlowBrightness: { value: 1 },
                     uColorSunTop: { value: new THREE.Color(1, 0.85, 0.05) },
-                    uColorSunBottom: { value: new THREE.Color(1, 0, 0.35) },
+                    uColorSunBottom: { value: new THREE.Color(1, 0.3, 0.64) },
+                    uColorSunGlow: { value: new THREE.Color(1, 0, 0.35) },
                 },
             }),
         [],
     );
     const matRef = useRef(mat);
     const scaleRef = useRef<THREE.Group>(null);
-    const hueOffset = useRef(0);
+    const diskHue = useRef(0);
+    const glowHue = useRef(0);
+    const sunHold = useRef(0);
 
     useEffect(() => () => mat.dispose(), [mat]);
 
     useFrame(({ clock }, dt) => {
         const m = matRef.current;
         const knobs = liveRef.current;
+        const viz = vizRef.current;
         m.uniforms.uTime!.value = clock.elapsedTime;
-        m.uniforms.uBrightness!.value = 1;
         if (!knobs) return;
 
+        const reactive = Boolean(viz?.enabled);
+        const sunRaw = reactive ? channelLevel(viz!, knobs.sunChannel) : 0;
+        const decay = Math.exp(-Math.max(0, dt) * 5.5);
+        sunHold.current = Math.max(sunRaw, sunHold.current * decay);
+        const punch = Math.min(1, sunHold.current);
+
+        // Idle dim when channel armed; peaks restore slider brightness
+        const sunArmed = reactive && knobs.sunChannel !== "off";
+        const brightMul = sunArmed ? 0.58 + punch * 0.42 : 1;
+        m.uniforms.uDiskBrightness!.value = knobs.sunBrightness * brightMul;
+        m.uniforms.uGlowBrightness!.value = knobs.sunGlowBrightness * brightMul;
+
+        const step = knobs.colorSpeed * Math.max(0, dt);
+
         if (knobs.sunTwinkle) {
-            hueOffset.current =
-                (hueOffset.current + knobs.colorSpeed * Math.max(0, dt)) % 360;
-            const off = hueOffset.current;
+            diskHue.current = (diskHue.current + step) % 360;
+            const off = diskHue.current;
             hueWalkHex(knobs.sunRim, off, m.uniforms.uColorSunTop!.value);
-            hueWalkHex(knobs.sunCore, off, m.uniforms.uColorSunBottom!.value);
+            hueWalkHex(knobs.sunMid, off, m.uniforms.uColorSunBottom!.value);
         } else {
-            hueOffset.current = 0;
+            diskHue.current = 0;
             hexToVec3(knobs.sunRim, m.uniforms.uColorSunTop!.value);
-            hexToVec3(knobs.sunCore, m.uniforms.uColorSunBottom!.value);
+            hexToVec3(knobs.sunMid, m.uniforms.uColorSunBottom!.value);
+        }
+
+        if (knobs.sunGlowTwinkle) {
+            glowHue.current = (glowHue.current + step) % 360;
+            hueWalkHex(
+                knobs.sunCore,
+                glowHue.current,
+                m.uniforms.uColorSunGlow!.value,
+            );
+        } else {
+            glowHue.current = 0;
+            hexToVec3(knobs.sunCore, m.uniforms.uColorSunGlow!.value);
         }
 
         const base = 2.4;

@@ -30,6 +30,8 @@ export const SYNTHWAVE_DEFAULTS: SynthwaveLive = {
   sunMid: "#ff4fa3",
   sunCore: "#ff0059",
   sunSize: 1,
+  sunBrightness: 1,
+  sunGlowBrightness: 1,
   mountPeak: "#3a1470",
   wallAngle: 0,
   wallOffset: 4,
@@ -39,7 +41,10 @@ export const SYNTHWAVE_DEFAULTS: SynthwaveLive = {
   skyTop: "#0d2666",
   skyHorizon: "#0d2666",
   roadChannel: "beat",
+  glowChannel: "bass",
+  sunChannel: "bass",
   sunTwinkle: false,
+  sunGlowTwinkle: false,
   gridTwinkle: false,
   skyTwinkle: false,
   colorSpeed: 40,
@@ -85,7 +90,13 @@ function migratePrefs(
   };
   if (!CHANNELS.has(next.roadChannel))
     next.roadChannel = SYNTHWAVE_DEFAULTS.roadChannel;
+  if (!CHANNELS.has(next.glowChannel))
+    next.glowChannel = SYNTHWAVE_DEFAULTS.glowChannel;
+  if (!CHANNELS.has(next.sunChannel))
+    next.sunChannel = SYNTHWAVE_DEFAULTS.sunChannel;
   next.sunTwinkle = Boolean(next.sunTwinkle);
+  next.sunGlowTwinkle = Boolean(next.sunGlowTwinkle);
+  delete (next as { sunGlow?: boolean }).sunGlow;
   next.gridTwinkle = Boolean(next.gridTwinkle);
   // migrate: fogTwinkle → skyTwinkle (no fog layer — sky + horizon)
   const rawFog = (raw as { fogTwinkle?: boolean }).fogTwinkle;
@@ -152,6 +163,20 @@ function migratePrefs(
     next.roadThickness = SYNTHWAVE_DEFAULTS.roadThickness;
   }
   next.roadThickness = Math.min(3, Math.max(0.5, next.roadThickness));
+  if (
+    typeof next.sunBrightness !== "number" ||
+    !Number.isFinite(next.sunBrightness)
+  ) {
+    next.sunBrightness = SYNTHWAVE_DEFAULTS.sunBrightness;
+  }
+  next.sunBrightness = Math.min(3, Math.max(0, next.sunBrightness));
+  if (
+    typeof next.sunGlowBrightness !== "number" ||
+    !Number.isFinite(next.sunGlowBrightness)
+  ) {
+    next.sunGlowBrightness = SYNTHWAVE_DEFAULTS.sunGlowBrightness;
+  }
+  next.sunGlowBrightness = Math.min(3, Math.max(0, next.sunGlowBrightness));
   return next;
 }
 
@@ -256,6 +281,9 @@ export default function useSynthwaveHook() {
     setSunMid: (sunMid: string) => commit({ sunMid }),
     setSunCore: (sunCore: string) => commit({ sunCore }),
     setSunSize: (sunSize: number) => commit({ sunSize }),
+    setSunBrightness: (sunBrightness: number) => commit({ sunBrightness }),
+    setSunGlowBrightness: (sunGlowBrightness: number) =>
+      commit({ sunGlowBrightness }),
     setMountPeak: (mountPeak: string) => commit({ mountPeak }),
     setWallAngle: (wallAngle: number) => commit({ wallAngle }),
     setWallOffset: (wallOffset: number) => commit({ wallOffset }),
@@ -266,7 +294,12 @@ export default function useSynthwaveHook() {
     setSkyHorizon: (skyHorizon: string) => commit({ skyHorizon }),
     setRoadChannel: (roadChannel: SynthwaveLive["roadChannel"]) =>
       commit({ roadChannel }),
+    setGlowChannel: (glowChannel: SynthwaveLive["glowChannel"]) =>
+      commit({ glowChannel }),
+    setSunChannel: (sunChannel: SynthwaveLive["sunChannel"]) =>
+      commit({ sunChannel }),
     setSunTwinkle: (sunTwinkle: boolean) => commit({ sunTwinkle }),
+    setSunGlowTwinkle: (sunGlowTwinkle: boolean) => commit({ sunGlowTwinkle }),
     setGridTwinkle: (gridTwinkle: boolean) => commit({ gridTwinkle }),
     setSkyTwinkle: (skyTwinkle: boolean) => commit({ skyTwinkle }),
     setColorSpeed: (colorSpeed: number) => commit({ colorSpeed }),
