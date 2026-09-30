@@ -51,6 +51,8 @@ export type SynthwaveLive = {
   gridTwinkle: boolean;
   /** Hue walk on sky / horizon from picked colors */
   skyTwinkle: boolean;
+  /** Hue degrees per second while any twinkle is on */
+  colorSpeed: number;
   drive: number;
   audioSource: AudioSource;
   micGate: number;

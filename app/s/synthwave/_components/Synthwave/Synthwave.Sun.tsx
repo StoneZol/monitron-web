@@ -7,7 +7,7 @@ import {
     neonSunFragmentShader,
     neonSunVertexShader,
 } from "./shaders/neonsun";
-import { hexToVec3, hueWalkHex, TWINKLE_HUE_SPEED } from "./Synthwave.audio";
+import { hexToVec3, hueWalkHex } from "./Synthwave.audio";
 import { DEPTH_MIN, roadDepth, Z_PAD } from "./Synthwave.constants";
 import type { SynthwaveLive } from "./Synthwave.types";
 
@@ -51,7 +51,7 @@ export function NeonSun({
 
         if (knobs.sunTwinkle) {
             hueOffset.current =
-                (hueOffset.current + TWINKLE_HUE_SPEED * Math.max(0, dt)) % 360;
+                (hueOffset.current + knobs.colorSpeed * Math.max(0, dt)) % 360;
             const off = hueOffset.current;
             hueWalkHex(knobs.sunRim, off, m.uniforms.uColorSunTop!.value);
             hueWalkHex(knobs.sunCore, off, m.uniforms.uColorSunBottom!.value);

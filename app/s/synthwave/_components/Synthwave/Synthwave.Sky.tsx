@@ -7,7 +7,7 @@ import {
     neonSkyFragmentShader,
     neonSkyVertexShader,
 } from "./shaders/neonsky";
-import { hexToVec3, hueWalkHex, TWINKLE_HUE_SPEED } from "./Synthwave.audio";
+import { hexToVec3, hueWalkHex } from "./Synthwave.audio";
 import type { SynthwaveLive } from "./Synthwave.types";
 
 export function Sky({
@@ -56,7 +56,7 @@ export function Sky({
 
         if (knobs.skyTwinkle) {
             hueOffset.current =
-                (hueOffset.current + TWINKLE_HUE_SPEED * Math.max(0, dt)) % 360;
+                (hueOffset.current + knobs.colorSpeed * Math.max(0, dt)) % 360;
             const off = hueOffset.current;
             hueWalkHex(knobs.skyTop, off, m.uniforms.uColorClouds!.value);
             hueWalkHex(knobs.skyHorizon, off, m.uniforms.uColorHorizon!.value);

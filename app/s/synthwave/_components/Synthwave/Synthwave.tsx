@@ -52,6 +52,7 @@ const INFO = {
     sunTwinkle: "Hue walks over time from sun top/bottom colors.",
     gridTwinkle: "Hue walks over time from grid near/far colors.",
     skyTwinkle: "Hue walks over time from sky / horizon colors.",
+    colorSpeed: "Hue walk rate while any twinkle is on.",
     visualizer: {
         section: "Audio in → bus meters → peak gain for reactive screens.",
         source:
@@ -180,6 +181,19 @@ const Synthwave = ({ showOverlay = true }: SynthwaveProps) => {
                                 onChange={controls.setGridTwinkle}
                                 info={INFO.gridTwinkle}
                             />
+                            {(controls.skyTwinkle ||
+                                controls.sunTwinkle ||
+                                controls.gridTwinkle) && (
+                                    <Slider
+                                        label="Color speed"
+                                        value={controls.colorSpeed}
+                                        min={1}
+                                        max={180}
+                                        step={1}
+                                        onChange={controls.setColorSpeed}
+                                        info={INFO.colorSpeed}
+                                    />
+                                )}
                         </ControlSection>
 
                         <ControlSection label="terrain" info={INFO.mountains}>

@@ -42,6 +42,7 @@ export const SYNTHWAVE_DEFAULTS: SynthwaveLive = {
   sunTwinkle: false,
   gridTwinkle: false,
   skyTwinkle: false,
+  colorSpeed: 40,
   drive: 2,
   audioSource: "off",
   micGate: MIC_GATE_DEFAULT,
@@ -92,6 +93,10 @@ function migratePrefs(
     next.skyTwinkle || (rawFog !== undefined ? rawFog : false),
   );
   delete (next as { fogTwinkle?: boolean }).fogTwinkle;
+  if (typeof next.colorSpeed !== "number" || !Number.isFinite(next.colorSpeed)) {
+    next.colorSpeed = SYNTHWAVE_DEFAULTS.colorSpeed;
+  }
+  next.colorSpeed = Math.min(180, Math.max(0, next.colorSpeed));
   // migrate: old 20–120 from horizontal → lean from vertical (−90…+90)
   const rawRec = raw as SynthwaveLive & { mountSpeed?: number };
   if (
@@ -264,6 +269,7 @@ export default function useSynthwaveHook() {
     setSunTwinkle: (sunTwinkle: boolean) => commit({ sunTwinkle }),
     setGridTwinkle: (gridTwinkle: boolean) => commit({ gridTwinkle }),
     setSkyTwinkle: (skyTwinkle: boolean) => commit({ skyTwinkle }),
+    setColorSpeed: (colorSpeed: number) => commit({ colorSpeed }),
     setDrive: (drive: number) => commit({ drive }),
     reset: () => commit({ ...SYNTHWAVE_DEFAULTS }),
     fullscreen: () => void toggleFullscreen(),

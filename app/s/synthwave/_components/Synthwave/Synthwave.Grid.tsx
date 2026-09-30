@@ -8,7 +8,7 @@ import {
     neonGridFragmentShader,
     neonGridVertexShader,
 } from "./shaders/neongrid";
-import { channelLevel, hexToVec3, hueWalkHex, TWINKLE_HUE_SPEED } from "./Synthwave.audio";
+import { channelLevel, hexToVec3, hueWalkHex } from "./Synthwave.audio";
 import {
     CELL,
     CELL_SQUASH,
@@ -144,7 +144,7 @@ export function NeonGrid({
 
         if (knobs.gridTwinkle) {
             hueOffset.current =
-                (hueOffset.current + TWINKLE_HUE_SPEED * Math.max(0, dt)) % 360;
+                (hueOffset.current + knobs.colorSpeed * Math.max(0, dt)) % 360;
         } else {
             hueOffset.current = 0;
         }

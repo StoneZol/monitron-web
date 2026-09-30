@@ -46,6 +46,3 @@ export function hueWalkHex(
     const l = achromatic ? 0.5 : Math.max(_hsl.l, 0.12);
     return target.setHSL(h, s, l);
 }
-
-/** Degrees per second while a twinkle toggle is on. */
-export const TWINKLE_HUE_SPEED = 40;
