@@ -35,12 +35,12 @@ const INFO = {
     roadFloor: "Opaque terrain fill (WE gridbackground).",
     mountains: "Terrain shape — flat grid or a U-channel with two side walls.",
     terrainMode:
-      "flat = wide plane (wall knobs off). channel = road between two walls.",
+        "flat = wide plane (wall knobs off). channel = road between two walls.",
     wallAngle:
-      "Lean from vertical: − opens outward, 0 = vertical, + folds inward (90° = flat over the road).",
+        "Lean from vertical: − opens outward, 0 = vertical, + folds inward (90° = flat over the road).",
     wallOffset: "Flat road half-width near the camera (cells from center).",
     wallPerspective:
-      "Convergence angle of the grid into the distance: − almost parallel, + steeper taper toward the sun.",
+        "Convergence angle of the grid into the distance: − almost parallel, + steeper taper toward the sun.",
     roadLength:
         "How far the neon road runs toward the sun. Default is short (~⅓ of the view); slide up to extend.",
     motion: "Scroll speed of the neon grid (WE time×2 base).",
@@ -115,8 +115,8 @@ const Synthwave = ({ showOverlay = true }: SynthwaveProps) => {
                                 label="Sun size"
                                 value={controls.sunSize}
                                 min={0.4}
-                                max={1.8}
-                                step={0.01}
+                                max={2}
+                                step={0.1}
                                 onChange={controls.setSunSize}
                                 format={(v) => `×${v.toFixed(2)}`}
                                 info={INFO.sunSize}
@@ -155,15 +155,15 @@ const Synthwave = ({ showOverlay = true }: SynthwaveProps) => {
                             <Slider
                                 label="Wall lean"
                                 value={controls.wallAngle}
-                                min={-70}
-                                max={90}
+                                min={-90}
+                                max={60}
                                 step={1}
                                 onChange={controls.setWallAngle}
                                 disabled={controls.terrainMode === "flat"}
                                 format={(v) =>
-                                  v >= 90
-                                    ? "flat"
-                                    : `${v > 0 ? "+" : ""}${Math.round(v)}°`
+                                    v >= 90
+                                        ? "flat"
+                                        : `${v > 0 ? "+" : ""}${Math.round(v)}°`
                                 }
                                 info={INFO.wallAngle}
                             />
