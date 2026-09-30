@@ -213,7 +213,7 @@ Atomic color control — one implementation, two layouts.
 | `aria-label`  | `string?`                 | —       | Falls back to `label` / `value`                    |
 | `className`   | `string?`                 | —       |                                                    |
 
-**With label** (panel field — hex beside title, swatch below):
+**With label** (panel field — title above, swatch + hex as one control):
 
 ```tsx
 <ColorInput label="Edge" value={edgeColor} onChange={setEdgeColor} />

@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
 import { ColorInput } from "./ColorInput";
+import { FieldInfo } from "./FieldInfo";
 
 export type ColorTableCell = {
   value: string;
@@ -26,6 +27,8 @@ type ColorTableProps = {
    * when the plugin is offline and peak needs reactive.
    */
   columnStamps?: Partial<Record<string, string>>;
+  /** Optional help text — "?" tip next to the table title (or alone) */
+  info?: string;
   className?: string;
 };
 
@@ -36,6 +39,7 @@ export function ColorTable({
   disabled = false,
   lockedColumns = [],
   columnStamps,
+  info,
   className,
 }: ColorTableProps) {
   const locked = new Set(lockedColumns);
@@ -48,9 +52,10 @@ export function ColorTable({
         className,
       )}
     >
-      {label ? (
-        <div className="mb-2 text-[9px] uppercase tracking-[0.24em] text-muted">
-          {label}
+      {label || info ? (
+        <div className="mb-2 flex items-center gap-1.5 text-[9px] uppercase tracking-[0.24em] text-muted">
+          {label ? <span>{label}</span> : null}
+          {info ? <FieldInfo text={info} /> : null}
         </div>
       ) : null}
       <table className="w-full border-collapse font-mono text-[9px] uppercase tracking-[0.2em] text-signal">

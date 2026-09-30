@@ -21,8 +21,11 @@ export type ColorInputProps = {
 
 /**
  * Shared color control.
- * - `label` set → described field (hex beside title, swatch below)
+ * - `label` set → described field (title above, swatch + hex as one control)
  * - no `label` → compact stack (hex above swatch) for ColorTable cells
+ *
+ * Not a `<label>` wrap — native color pickers open on any label click,
+ * including empty space next to the swatch / title / info tip.
  */
 export function ColorInput({
   value,
@@ -46,7 +49,7 @@ export function ColorInput({
 
   if (label) {
     return (
-      <label
+      <div
         className={cn(
           fieldRoot,
           disabled
@@ -55,12 +58,14 @@ export function ColorInput({
           className,
         )}
       >
-        <span className={fieldLabelRow}>
+        <div className={fieldLabelRow}>
           <FieldLabel label={label} info={info} />
+        </div>
+        <div className={cn(fieldControlRow, "w-auto gap-2")}>
+          {swatch}
           <span className="tabular-nums text-cyan">{value}</span>
-        </span>
-        <span className={fieldControlRow}>{swatch}</span>
-      </label>
+        </div>
+      </div>
     );
   }
 
