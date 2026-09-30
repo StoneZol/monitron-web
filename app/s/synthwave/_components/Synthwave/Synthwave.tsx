@@ -37,7 +37,7 @@ const INFO = {
     terrainMode:
         "flat = wide plane (wall knobs off). channel = road between two walls.",
     wallAngle:
-        "Lean from vertical: − opens outward, 0 = vertical, + folds inward (90° = flat over the road).",
+        "Lean from vertical: −90 = flat outward, 0 = vertical, +90 = flat over the road.",
     wallOffset: "Flat road half-width near the camera (cells from center).",
     wallPerspective:
         "Convergence angle of the grid into the distance: − almost parallel, + steeper taper toward the sun.",

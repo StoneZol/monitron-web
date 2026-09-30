@@ -78,7 +78,7 @@ function migratePrefs(
   if (next.terrainMode !== "flat" && next.terrainMode !== "channel") {
     next.terrainMode = SYNTHWAVE_DEFAULTS.terrainMode;
   }
-  // migrate: old 20–120 from horizontal → lean from vertical (−70…+90)
+  // migrate: old 20–120 from horizontal → lean from vertical (−90…+90)
   const rawRec = raw as SynthwaveLive & { mountSpeed?: number };
   if (
     (typeof next.wallAngle !== "number" || !Number.isFinite(next.wallAngle)) &&
@@ -86,13 +86,13 @@ function migratePrefs(
   ) {
     next.wallAngle = Math.min(
       90,
-      Math.max(-70, 25 + rawRec.mountSpeed * 15 - 90),
+      Math.max(-90, 25 + rawRec.mountSpeed * 15 - 90),
     );
   }
   if (typeof next.wallAngle !== "number" || !Number.isFinite(next.wallAngle)) {
     next.wallAngle = SYNTHWAVE_DEFAULTS.wallAngle;
   }
-  next.wallAngle = Math.min(90, Math.max(-70, next.wallAngle));
+  next.wallAngle = Math.min(90, Math.max(-90, next.wallAngle));
   if (typeof next.wallOffset !== "number" || !Number.isFinite(next.wallOffset)) {
     next.wallOffset = SYNTHWAVE_DEFAULTS.wallOffset;
   }

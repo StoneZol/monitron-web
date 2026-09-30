@@ -421,7 +421,7 @@ function NeonGrid({
         floor.visible = true;
 
         const showWalls = mode === "channel";
-        const lean = (Math.min(90, Math.max(-70, leanDeg)) * Math.PI) / 180;
+        const lean = (Math.min(90, Math.max(-90, leanDeg)) * Math.PI) / 180;
         const hinge = floorW / 2;
 
         const placeWall = (mesh: THREE.Mesh, side: -1 | 1) => {
