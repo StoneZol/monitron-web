@@ -25,7 +25,7 @@ export const SYNTHWAVE_DEFAULTS: SynthwaveLive = {
     roadFarPeak: "#66aaff",
     roadFloor: "#000000",
     roadGlow: 25,
-    roadThickness: 1,
+    roadThickness: 1.5,
     roadSpeed: 2,
     sunRim: "#e69100",
     sunRimPeak: "#ff7b00",
