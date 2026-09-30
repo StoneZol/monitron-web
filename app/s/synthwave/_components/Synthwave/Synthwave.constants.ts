@@ -6,10 +6,18 @@
  * not from warping X along Z — that broke the ridge when walls close.
  *
  * Grid paint is UV-based; floor & walls share `uv.y × cellsV` so seams lock.
+ * CELL_SQUASH densifies lateral/height axes to counter foreshortening on screen.
  */
 
-/** World cell size — square on every plane (UV × cells). */
+/** World cell size along depth (shared floor↔wall, keeps seams locked). */
 export const CELL = 0.2;
+
+/**
+ * Squash the non-foreshortened axis so tiles read closer to square on screen.
+ * Floor: denser in X. Walls: denser in height. Depth (cellsV) stays on CELL.
+ * 1 = true world squares; ~0.5 ≈ compensate typical corridor foreshortening.
+ */
+export const CELL_SQUASH = 2;
 
 /** Short default (~⅓ of the view); slider only extends from here. */
 export const DEPTH_MIN = 2.35;

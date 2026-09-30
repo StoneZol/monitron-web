@@ -11,6 +11,7 @@ import {
 import { channelLevel, hexToVec3 } from "./Synthwave.audio";
 import {
     CELL,
+    CELL_SQUASH,
     DEPTH_MIN,
     roadDepth,
     WALL_LEN,
@@ -141,8 +142,10 @@ export function NeonGrid({
         const leanDeg = knobs.wallAngle;
         const offsetCells = Math.max(1, Math.round(knobs.wallOffset));
         const depth = roadDepth(knobs.roadLength);
+        // Shared depth axis (seams). Squash only U — counters foreshortening.
         const cellsV = depth / CELL;
         const depthSegs = Math.max(2, Math.round(depth / CELL));
+        const cellU = CELL * CELL_SQUASH;
 
         const rate = 2 * knobs.roadSpeed * (1 + roadLv * knobs.drive * 0.5);
         scrollRef.current += Math.max(0, dt) * rate;
@@ -176,9 +179,10 @@ export function NeonGrid({
 
         const floorCellsU = Math.max(1, offsetCells) * 2;
         const floorW = floorCellsU * CELL;
-        floorM.uniforms.uCellsU!.value = floorCellsU;
+        // Denser U than world-square: floor X and wall height compressed for screen.
+        floorM.uniforms.uCellsU!.value = floorW / cellU;
         floorM.uniforms.uCellsV!.value = cellsV;
-        wallM.uniforms.uCellsU!.value = wallCellsU;
+        wallM.uniforms.uCellsU!.value = WALL_LEN / cellU;
         wallM.uniforms.uCellsV!.value = cellsV;
 
         const zNear = Z_PAD;

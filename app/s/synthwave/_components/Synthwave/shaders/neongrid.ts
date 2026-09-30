@@ -34,12 +34,13 @@ void main() {
   vec2 halfWidth = min(fw * 1.0, vec2(0.07));
   vec2 line = smoothstep(0.5 - halfWidth, vec2(0.5), dist);
 
-  float a = 1.0 - smoothstep(0.22, 0.55, fw.x);
-  float b = 1.0 - smoothstep(0.10, 0.26, fw.y);
+  // Keep both axes alive under foreshortening (was killing depth lines too early).
+  float a = 1.0 - smoothstep(0.18, 0.50, fw.x);
+  float b = 1.0 - smoothstep(0.18, 0.50, fw.y);
 
-  float far = smoothstep(0.62, 0.96, vUv.y);
-  float horiz = line.y * b * (1.0 - far);
-  float vert = line.x * a * mix(1.0, 0.55, far);
+  float far = smoothstep(0.68, 0.97, vUv.y);
+  float horiz = line.y * b * (1.0 - far * 0.85);
+  float vert = line.x * a * mix(1.0, 0.6, far);
   float gridAlpha = min(max(vert, horiz), 0.92);
 
   float colorDistanceBlend = pow(max(vUv.y, 0.0), 0.8);
