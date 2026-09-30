@@ -1,26 +1,38 @@
 "use client";
 
-import { ScreensOverlayProps } from "./ScreensOverlay.types";
 import useScreensOverlayHook from "./ScreensOverlay.hooks";
-import { NavBackButton } from "@/components/NavBackButton";
-import { cn } from "@/lib/utils";
+import { ScreensOverlayContext } from "./ScreensOverlay.context";
+import type { ScreensOverlayProps } from "./ScreensOverlay.types";
 
+/**
+ * HUD shell. Hide lives in ControlPanel title row; tap empty screen to wake.
+ * Back / reset / fullscreen live in ControlPanel.actions (fixed under the title).
+ */
 const ScreensOverlay = ({ children }: ScreensOverlayProps) => {
-    const { hideHud } = useScreensOverlayHook();
+  const { hideHud, hide, show } = useScreensOverlayHook();
 
+  if (hideHud) {
     return (
-        <div
-            className={cn(
-                "absolute inset-0 z-10 flex h-screen w-screen items-center justify-center",
-                hideHud && "pointer-events-none opacity-0",
-            )}
-            aria-hidden={hideHud}
-        >
-            <NavBackButton className="absolute top-4 left-4 z-20" />
-
-            <div className="relative z-20 w-80">{children}</div>
-        </div>
+      <div
+        className="absolute inset-0 z-10"
+        onPointerDown={show}
+        role="button"
+        tabIndex={0}
+        aria-label="Show controls"
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") show();
+        }}
+      />
     );
+  }
+
+  return (
+    <ScreensOverlayContext.Provider value={{ hide }}>
+      <div className="absolute inset-0 z-10 flex h-screen w-screen items-center justify-center">
+        <div className="relative z-20 w-80">{children}</div>
+      </div>
+    </ScreensOverlayContext.Provider>
+  );
 };
 
 export default ScreensOverlay;

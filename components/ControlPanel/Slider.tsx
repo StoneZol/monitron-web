@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { FieldLabel } from "./FieldInfo";
 import { fieldControlRow, fieldLabelRow, fieldRoot } from "./field";
 
 type SliderProps = {
@@ -10,9 +11,12 @@ type SliderProps = {
   onChange: (value: number) => void;
   disabled?: boolean;
   format?: (value: number) => string;
+  /** Optional help text — shows a "?" tip next to the title */
+  info?: string;
   className?: string;
 };
 
+/** Not a `<label>` wrap — that steals clicks from the "?" info button. */
 export function Slider({
   label,
   value,
@@ -22,21 +26,22 @@ export function Slider({
   onChange,
   disabled = false,
   format = (v) => String(v),
+  info,
   className,
 }: SliderProps) {
   return (
-    <label
+    <div
       className={cn(
         fieldRoot,
         disabled ? "pointer-events-none text-muted opacity-40" : "text-signal",
         className,
       )}
     >
-      <span className={fieldLabelRow}>
-        <span>{label}</span>
+      <div className={fieldLabelRow}>
+        <FieldLabel label={label} info={info} />
         <span className="tabular-nums text-cyan">{format(value)}</span>
-      </span>
-      <span className={fieldControlRow}>
+      </div>
+      <div className={fieldControlRow}>
         <input
           type="range"
           min={min}
@@ -44,9 +49,9 @@ export function Slider({
           step={step}
           value={value}
           disabled={disabled}
+          aria-label={label}
           onChange={(e) => onChange(Number(e.target.value))}
           onWheel={(e) => {
-            // Keep wheel for panel scroll, not accidental slider nudges
             e.currentTarget.blur();
           }}
           className={cn(
@@ -55,7 +60,7 @@ export function Slider({
             "[&::-moz-range-thumb]:h-3 [&::-moz-range-thumb]:w-3 [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-signal",
           )}
         />
-      </span>
-    </label>
+      </div>
+    </div>
   );
 }

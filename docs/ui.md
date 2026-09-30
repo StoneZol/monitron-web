@@ -32,11 +32,17 @@ import { PlaceholderCard } from "@/components/PlaceholderCard";
 ## Layout hierarchy
 
 ```
-ScreensOverlay          full-screen HUD (idle-fade + back)
-  └─ ControlPanel       titled box, scrollable body
-       └─ ControlSection   labeled group (look / fog / camera / …)
-            └─ Slider | Toggle | Select | ColorInput / ColorField | ColorTable | Meter | PanelButton
+ScreensOverlay          full-screen HUD (hide button / tap to wake)
+  └─ ControlPanel       titled box
+       ├─ title
+       ├─ actions*      fixed: back / reset / fullscreen (outside scroll)
+       └─ scroll body
+            └─ ControlSection …
+            └─ VisualizerSection   shared bus chrome + Peak gain
+                 └─ children       screen-only knobs (drive / channels…)
 ```
+
+`AudioSpectrum` (`components/AudioSpectrum`) is a separate canvas deck module — not mounted in the HUD; reserved for a future saver.
 
 Typical screen:
 
@@ -44,11 +50,20 @@ Typical screen:
 <div className="relative h-screen w-screen overflow-hidden bg-black">
   {/* canvas / R3F */}
   <ScreensOverlay>
-    <ControlPanel title="my_screen">
+    <ControlPanel
+      title="my_screen"
+      actions={
+        <div className="flex gap-2">
+          <NavBackButton className="flex-1" />
+          <PanelButton onClick={reset} className="flex-1">reset</PanelButton>
+          <PanelButton onClick={fullscreen} className="flex-1">fullscreen</PanelButton>
+        </div>
+      }
+    >
       <ControlSection label="look">{/* knobs */}</ControlSection>
-      <ControlSection label="actions">
-        <PanelButton onClick={reset}>reset</PanelButton>
-      </ControlSection>
+      <VisualizerSection visualizer={visualizer}>
+        {/* optional screen-specific reactive knobs */}
+      </VisualizerSection>
     </ControlPanel>
   </ScreensOverlay>
 </div>
@@ -67,7 +82,8 @@ Shell for screen knobs. Fixed max height + internal scroll.
 | Prop        | Type        | Default | Notes                          |
 | ----------- | ----------- | ------- | ------------------------------ |
 | `title`     | `string`    | —       | Header label (usually screen id) |
-| `children`  | `ReactNode` | —       | Sections / controls            |
+| `actions`   | `ReactNode?`| —       | Fixed under title (back / reset / fullscreen) |
+| `children`  | `ReactNode` | —       | Scrollable sections / controls |
 | `className` | `string?`   | —       | Optional layout override       |
 
 ```tsx
@@ -84,6 +100,7 @@ One job per section. Label is muted uppercase.
 | ----------- | ----------- | ------- | -------------------- |
 | `label`     | `string`    | —       | e.g. `look`, `fog`   |
 | `children`  | `ReactNode` | —       | Stack of controls    |
+| `info`      | `string?`   | —       | Optional "?" tip     |
 | `className` | `string?`   | —       |                      |
 
 ```tsx
@@ -108,6 +125,7 @@ Numeric range. Wheel blurs the input so the panel keeps scrolling.
 | `onChange`  | `(value: number) => void`    | —              |                          |
 | `disabled`  | `boolean?`                   | `false`        | Dim + non-interactive    |
 | `format`    | `(value: number) => string?` | `String(v)`    | Cyan value on the right  |
+| `info`      | `string?`                    | —              | Optional "?" tip         |
 | `className` | `string?`                    | —              |                          |
 
 ```tsx
@@ -135,6 +153,7 @@ Boolean switch (`role="switch"`).
 | `onChange`  | `(value: boolean) => void`| —       | Toggles to `!checked`                      |
 | `disabled`  | `boolean?`                | `false` | Non-interactive + faded                    |
 | `readOnly`  | `boolean?`                | `false` | Looks on, doesn’t toggle (status display)  |
+| `info`      | `string?`                 | —       | Optional "?" tip                           |
 | `className` | `string?`                 | —       |                                            |
 
 ```tsx
@@ -163,6 +182,7 @@ Custom combobox in panel rhythm (label row + control).
 | `options`   | `{ value: T; label: string }[]` | —    |                      |
 | `onChange`  | `(value: T) => void`         | —       |                      |
 | `disabled`  | `boolean?`                   | `false` |                      |
+| `info`      | `string?`                    | —       | Optional "?" tip     |
 | `className` | `string?`                    | —       |                      |
 
 ```tsx
@@ -189,10 +209,11 @@ Atomic color control — one implementation, two layouts.
 | `onChange`    | `(value: string) => void` | —       |                                                    |
 | `label`       | `string?`                 | —       | Set → described field; omit → compact table cell   |
 | `disabled`    | `boolean?`                | `false` |                                                    |
+| `info`        | `string?`                 | —       | Optional "?" tip (labeled variant only)            |
 | `aria-label`  | `string?`                 | —       | Falls back to `label` / `value`                    |
 | `className`   | `string?`                 | —       |                                                    |
 
-**With label** (panel field — hex beside title, swatch below):
+**With label** (panel field — title above, swatch + hex as one control):
 
 ```tsx
 <ColorInput label="Edge" value={edgeColor} onChange={setEdgeColor} />
@@ -269,6 +290,7 @@ Read-only `0..1` level bar (audio bands, etc.).
 | ----------- | -------- | ------- | ------------------ |
 | `label`     | `string` | —       |                    |
 | `value`     | `number` | —       | Clamped to `0..1`  |
+| `info`      | `string?`| —       | Optional "?" tip   |
 | `className` | `string?`| —       |                    |
 
 ```tsx
@@ -300,7 +322,7 @@ Action button inside the panel (reset, fullscreen, …).
 
 ## `ScreensOverlay`
 
-Fullscreen HUD wrapper for a screen. Centers the panel, adds back nav, fades after idle (~6s without pointer).
+Fullscreen HUD wrapper for a screen. Centers the panel. **hide** sits in the `ControlPanel` title row (opposite the name); tap anywhere to wake (no idle timer).
 
 | Prop       | Type        | Default | Notes                          |
 | ---------- | ----------- | ------- | ------------------------------ |
@@ -308,11 +330,17 @@ Fullscreen HUD wrapper for a screen. Centers the panel, adds back nav, fades aft
 
 ```tsx
 <ScreensOverlay>
-  <ControlPanel title="matrix">{/* … */}</ControlPanel>
+  <ControlPanel title="matrix" actions={/* back / reset / fullscreen */}>
+    {/* … */}
+  </ControlPanel>
 </ScreensOverlay>
 ```
 
-Already includes `NavBackButton` top-left. Don’t nest another back control unless you need a custom target.
+Put `NavBackButton` in `ControlPanel.actions` (fixed under the title) — not as a floating corner control.
+
+### Optional `info` tips
+
+`Slider` / `Toggle` / `Select` / `ColorInput` / `ColorField` / `Meter` / `ControlSection` accept optional `info?: string`. When set, a small **?** opens a tip popover. Wire copy only where useful (Matrix is the debug surface for now).
 
 ---
 
@@ -320,17 +348,17 @@ Already includes `NavBackButton` top-left. Don’t nest another back control unl
 
 Link back to the library (or elsewhere).
 
-| Prop        | Type     | Default     | Notes        |
-| ----------- | -------- | ----------- | ------------ |
-| `href`      | `string?`| `"/"`       |              |
-| `label`     | `string?`| `"library"` |              |
-| `className` | `string?`| —           | Positioning  |
+| Prop        | Type     | Default  | Notes        |
+| ----------- | -------- | -------- | ------------ |
+| `href`      | `string?`| `"/"`    |              |
+| `label`     | `string?`| `"back"` |              |
+| `className` | `string?`| —        | Layout       |
 
 ```tsx
-<NavBackButton className="absolute top-4 left-4 z-20" />
+<NavBackButton className="flex-1 justify-center shadow-none" />
 ```
 
-Usually you get this for free via `ScreensOverlay`.
+Pass it via `ControlPanel.actions` alongside reset / fullscreen.
 
 ---
 

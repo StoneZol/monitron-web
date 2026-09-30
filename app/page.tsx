@@ -1,6 +1,8 @@
 import { PlaceholderCard } from "@/components/PlaceholderCard";
+import { panelButtonClassName } from "@/components/ControlPanel/PanelButton";
 import { PLUGIN_URL } from "@/lib/audioBus";
 import { placeholders } from "@/lib/placeholders";
+import { cn } from "@/lib/utils";
 
 export default function Home() {
     return (
@@ -53,7 +55,10 @@ export default function Home() {
                                 href={PLUGIN_URL}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="group inline-flex items-center gap-2 border border-signal/35 bg-screen/60 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.22em] text-signal transition-[border-color,color,background-color] hover:border-signal hover:bg-signal/10 hover:text-ink focus-visible:outline focus-visible:outline-offset-2 focus-visible:outline-signal"
+                                className={cn(
+                                    panelButtonClassName,
+                                    "group gap-2",
+                                )}
                             >
                                 <span className="text-muted group-hover:text-magenta">
                                     src://

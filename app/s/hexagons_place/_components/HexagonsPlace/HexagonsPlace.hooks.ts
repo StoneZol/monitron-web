@@ -1,7 +1,14 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { useAudioReactive } from "@/hooks/useAudioReactive";
+import {
+    MIC_GATE_DEFAULT,
+    migrateAudioSource,
+    normalizeMicGate,
+    normalizePeakGain,
+    PEAK_GAIN_DEFAULT,
+    useAudioReactive,
+} from "@/hooks/useAudioReactive";
 import { toggleFullscreen } from "@/lib/fullscreen";
 import { loadScreenPrefs, saveScreenPrefs } from "@/lib/screenPrefs";
 import type { HexagonsPlaceLive } from "./HexagonsPlace.types";
@@ -39,28 +46,25 @@ export const HEXAGONS_DEFAULTS: HexagonsPlaceLive = {
     spin: true,
     spinLeft: true,
     spinSpeed: 1,
+    spinChannel: "beat",
+    spinAccel: 2,
     fogHeight: 2,
     fogDensity: 0.7,
     lightIntensity: 1,
     hexGrid: 81,
     hexSize: 0.5,
     hexHeightSpread: 1,
-    reactive: false,
+    audioSource: "off",
+    micGate: MIC_GATE_DEFAULT,
+    peakGain: PEAK_GAIN_DEFAULT,
     bandBounce: true,
+    bandFlicker: true,
     bassBoost: 2,
 };
 
 const BASS_BOOST_MAX = 8;
 
 const SCREEN_ID = "hexagons_place";
-
-/** All bands drive hex groups; bass also colors fog / garland speed */
-const HEX_VIZ_BANDS = {
-    bass: true,
-    mid: true,
-    high: true,
-    beat: true,
-} as const;
 
 const listeners = new Set<() => void>();
 
@@ -88,6 +92,7 @@ function readPrefs(): HexagonsPlaceLive {
         coloredFog: _coloredFog,
         capBeatFogIdle: legacyBeatFogIdle,
         capBeatFogPeak: legacyBeatFogPeak,
+        reactive: legacyReactive,
         ...rest
     } = loaded as HexagonsPlaceLive & {
         cameraRotation?: number;
@@ -97,8 +102,18 @@ function readPrefs(): HexagonsPlaceLive {
         coloredFog?: boolean;
         capBeatFogIdle?: string;
         capBeatFogPeak?: string;
+        reactive?: boolean;
     };
-    cached = { ...HEXAGONS_DEFAULTS, ...rest };
+    cached = {
+        ...HEXAGONS_DEFAULTS,
+        ...rest,
+        audioSource: migrateAudioSource({
+            audioSource: rest.audioSource,
+            reactive: legacyReactive,
+        }),
+        micGate: normalizeMicGate(rest.micGate),
+        peakGain: normalizePeakGain(rest.peakGain),
+    };
     // Legacy single fogColor → fogIdle
     if (
         cached.fogIdle === HEXAGONS_DEFAULTS.fogIdle &&
@@ -137,6 +152,15 @@ function readPrefs(): HexagonsPlaceLive {
     ) {
         cached.fogChannel = HEXAGONS_DEFAULTS.fogChannel;
     }
+    if (
+        cached.spinChannel !== "off" &&
+        cached.spinChannel !== "bass" &&
+        cached.spinChannel !== "mid" &&
+        cached.spinChannel !== "high" &&
+        cached.spinChannel !== "beat"
+    ) {
+        cached.spinChannel = HEXAGONS_DEFAULTS.spinChannel;
+    }
     // Legacy dolly zoom was ~6–40; scene scale lives in 0.25–2.5
     if (cached.cameraZoom > 3) cached.cameraZoom = HEXAGONS_DEFAULTS.cameraZoom;
     if (
@@ -166,9 +190,12 @@ export default function useHexagonsPlaceHook() {
     };
 
     const visualizer = useAudioReactive({
-        bands: HEX_VIZ_BANDS,
-        preferredReactive: live.reactive,
-        onReactiveChange: (reactive) => commit({ reactive }),
+        preferredSource: live.audioSource,
+        onSourceChange: (audioSource) => commit({ audioSource }),
+        preferredMicGate: live.micGate,
+        onMicGateChange: (micGate) => commit({ micGate }),
+        preferredPeakGain: live.peakGain,
+        onPeakGainChange: (peakGain) => commit({ peakGain }),
     });
 
     return {
@@ -255,6 +282,11 @@ export default function useHexagonsPlaceHook() {
             setSpinLeft: (spinLeft: boolean) => commit({ spinLeft }),
             spinSpeed: live.spinSpeed,
             setSpinSpeed: (spinSpeed: number) => commit({ spinSpeed }),
+            spinChannel: live.spinChannel,
+            setSpinChannel: (spinChannel: HexagonsPlaceLive["spinChannel"]) =>
+                commit({ spinChannel }),
+            spinAccel: live.spinAccel,
+            setSpinAccel: (spinAccel: number) => commit({ spinAccel }),
             fogHeight: live.fogHeight,
             setFogHeight: (fogHeight: number) => commit({ fogHeight }),
             fogDensity: live.fogDensity,
@@ -271,6 +303,8 @@ export default function useHexagonsPlaceHook() {
                 commit({ hexHeightSpread }),
             bandBounce: live.bandBounce,
             setBandBounce: (bandBounce: boolean) => commit({ bandBounce }),
+            bandFlicker: live.bandFlicker,
+            setBandFlicker: (bandFlicker: boolean) => commit({ bandFlicker }),
             bassBoost: live.bassBoost,
             setBassBoost: (bassBoost: number) => commit({ bassBoost }),
             bassBoostMax: BASS_BOOST_MAX,

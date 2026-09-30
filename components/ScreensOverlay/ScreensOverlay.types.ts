@@ -1,3 +1,3 @@
 export type ScreensOverlayProps = {
-    children: React.ReactNode;
-}
+  children: React.ReactNode;
+};

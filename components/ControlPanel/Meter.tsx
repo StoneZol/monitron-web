@@ -1,20 +1,23 @@
 import { cn } from "@/lib/utils";
+import { FieldLabel } from "./FieldInfo";
 import { fieldControlRow, fieldLabelRow, fieldRoot } from "./field";
 
 type MeterProps = {
   label: string;
   value: number;
+  /** Optional help text — shows a "?" tip next to the title */
+  info?: string;
   className?: string;
 };
 
 /** Read-only 0..1 level bar (same scale as audio bus / Matrix constants) */
-export function Meter({ label, value, className }: MeterProps) {
+export function Meter({ label, value, info, className }: MeterProps) {
   const clamped = Math.min(1, Math.max(0, value));
 
   return (
     <div className={cn(fieldRoot, "text-signal", className)}>
       <span className={fieldLabelRow}>
-        <span>{label}</span>
+        <FieldLabel label={label} info={info} />
         <span className="tabular-nums text-cyan">{clamped.toFixed(2)}</span>
       </span>
       <span className={fieldControlRow}>

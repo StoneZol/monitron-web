@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { FieldLabel } from "./FieldInfo";
 import {
   fieldControlRow,
   fieldLabelRow,
@@ -12,20 +13,26 @@ export type ColorInputProps = {
   /** With label → full panel field; without → compact swatch for tables */
   label?: string;
   disabled?: boolean;
+  /** Optional help text — shows a "?" tip next to the title */
+  info?: string;
   className?: string;
   "aria-label"?: string;
 };
 
 /**
  * Shared color control.
- * - `label` set → described field (hex beside title, swatch below)
+ * - `label` set → described field (title above, swatch + hex as one control)
  * - no `label` → compact stack (hex above swatch) for ColorTable cells
+ *
+ * Not a `<label>` wrap — native color pickers open on any label click,
+ * including empty space next to the swatch / title / info tip.
  */
 export function ColorInput({
   value,
   onChange,
   label,
   disabled = false,
+  info,
   className,
   "aria-label": ariaLabel,
 }: ColorInputProps) {
@@ -42,7 +49,7 @@ export function ColorInput({
 
   if (label) {
     return (
-      <label
+      <div
         className={cn(
           fieldRoot,
           disabled
@@ -51,12 +58,14 @@ export function ColorInput({
           className,
         )}
       >
-        <span className={fieldLabelRow}>
-          <span>{label}</span>
+        <div className={fieldLabelRow}>
+          <FieldLabel label={label} info={info} />
+        </div>
+        <div className={cn(fieldControlRow, "w-auto gap-2")}>
+          {swatch}
           <span className="tabular-nums text-cyan">{value}</span>
-        </span>
-        <span className={fieldControlRow}>{swatch}</span>
-      </label>
+        </div>
+      </div>
     );
   }
 

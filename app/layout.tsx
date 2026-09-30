@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Chakra_Petch, Geist_Mono } from "next/font/google";
+import { PhotosensitiveAlert } from "@/components/PhotosensitiveAlert";
 import "./globals.css";
 
 const chakra = Chakra_Petch({
@@ -24,7 +25,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${chakra.variable} ${geistMono.variable} h-full overflow-y-auto antialiased`}
     >
-      <body className="flex min-h-full flex-col">{children}</body>
+      <body className="flex min-h-full flex-col">
+        <PhotosensitiveAlert />
+        {children}
+      </body>
     </html>
   );
 }

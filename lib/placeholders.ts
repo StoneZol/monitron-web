@@ -24,8 +24,10 @@ export const placeholders: PlaceholderMeta[] = [
         reactive: true,
     },
     {
-        id: "grid",
-        title: "Grid",
-        href: "/s/grid",
+        id: "synthwave",
+        title: "Synthwave",
+        href: "/s/synthwave",
+        previewSrc: "/s/synthwave.webp",
+        reactive: true,
     },
 ];

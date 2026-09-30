@@ -32,7 +32,7 @@ Open [http://localhost:3000](http://localhost:3000).
   └─ canvas / WebGL
   └─ ScreensOverlay       idle-hide HUD (ControlPanel + back)
        └─ ControlPanel    per-screen knobs (bootleg AV chrome)
-       └─ visualizer*     extension / reactive / band meters
+       └─ visualizer*     extension / reactive / ::audio-bus
 ```
 
 \*Driven by `useAudioReactive` — only bands listed in the screen’s `bands` mask are shown.
@@ -41,22 +41,22 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ```
 ┌─────────────────────┐         window.postMessage            ┌──────────────────────┐
-│  Chrome extension   │  hello / audio-frame (bands 0..1)     │  Monitron page       │
-│  tabCapture → FFT   │ ───────────────────────────────────►  │  subscribeAudioBus   │
-│                     │ ◄───────────────────────────────────  │  visualizer-toggle   │
-└─────────────────────┘                                       └──────────┬───────────┘
-                                                                         │
-                                                                         ▼
-                                                                useAudioReactive
-                                                                ├─ meters (UI, throttled)
-                                                                └─ vizRef (rAF-safe)
+│  Chrome extension   │  hello / audio-frame (bands[32], rms, peak)│  Monitron page       │
+│  tabCapture → FFT   │ ─────────────────────────────────────────► │  subscribeAudioBus   │
+│  (raw spectrum)     │ ◄───────────────────────────────────────── │  visualizer-toggle   │
+└─────────────────────┘                                            └──────────┬───────────┘
+                                                                              │
+                                                                              ▼
+                                                                     useAudioReactive
+                                                                     ├─ bus → AudioBusPanel
+                                                                     └─ vizRef (rAF-safe raw)
                                                                          │
                                                                          ▼
                                                                 screen draw loop
-                                                                reads vizRef.current
+                                                                sliceBands / peak locally
 ```
 
-**Not** `localStorage`. High-rate audio goes through `postMessage` → refs. Panel meters are throttled (~4fps); the screen reads `vizRef` every frame.
+**Not** `localStorage`. High-rate audio goes through `postMessage` → refs. Bus panel UI is throttled (~12fps); the screen reads `vizRef` every frame and derives EQ / onset itself.
 
 Without the extension the site still works — visualizer UI stays dormant, screens run on their own ControlPanel knobs.
 
@@ -139,20 +139,23 @@ export default function Waves() {
 
 ```ts
 const [speed, setSpeed] = useState(1);
-const visualizer = useAudioReactive({ bands: { bass: true, beat: true } });
+const visualizer = useAudioReactive({
+  preferredSource: audioSource, // "off" | "mic" | "plugin"
+  onSourceChange: setAudioSource,
+});
 const { vizRef } = visualizer;
 
 // inside requestAnimationFrame / draw:
 const viz = vizRef.current;
 if (viz.enabled) {
-  // use viz.bass / viz.mid / viz.high / viz.beat  (all 0..1)
+  // viz.bands / viz.rms / viz.peak — derive meaning with sliceBands()
 }
 ```
 
 **Rules of thumb**
 
 - Own ControlPanel knobs = your screen’s look.
-- Visualizer bands = shared audio bus; pass a `bands` mask so unused meters stay hidden.
+- Visualizer `source` select routes mic or plugin into the same `vizRef`; screens stay source-agnostic.
 - Never `setState` per audio frame — read `vizRef.current` in the render loop.
 - Prefer `previewSrc` screenshots on the home page, not a live full-screen mount in the card.
 
@@ -161,9 +164,11 @@ if (viz.enabled) {
 | Module                                                     | Role                                                  |
 | ---------------------------------------------------------- | ----------------------------------------------------- |
 | [`lib/audioBus.ts`](lib/audioBus.ts)                       | Message protocol + subscribe / `postVisualizerToggle` |
-| [`hooks/useAudioReactive.ts`](hooks/useAudioReactive.ts)   | Extension handshake + `vizRef` + meters               |
+| [`hooks/useAudioReactive.ts`](hooks/useAudioReactive.ts)   | Extension handshake + `vizRef` + bus panel state      |
+| [`lib/audioDerive.ts`](lib/audioDerive.ts)                 | `sliceBands` / `bandAtColumn` / `risingEdge` helpers  |
 | [`lib/fullscreen.ts`](lib/fullscreen.ts)                   | `toggleFullscreen()`                                  |
 | [`components/ControlPanel`](components/ControlPanel)       | Bootleg AV knobs / meters / buttons                   |
+| [`components/AudioBusPanel`](components/AudioBusPanel)     | 1:1 plugin bus meters in ControlPanel                 |
 | [`components/ScreensOverlay`](components/ScreensOverlay)   | Idle-hide HUD shell                                   |
 | [`components/NavBackButton`](components/NavBackButton.tsx) | Back to library                                       |
 
@@ -173,7 +178,7 @@ if (viz.enabled) {
 
 ## Audio bus API
 
-Authoritative types live in [`lib/audioBus.ts`](lib/audioBus.ts). Short reference:
+Authoritative types live in [`lib/audioBus.ts`](lib/audioBus.ts). Screens derive meaning with [`lib/audioDerive.ts`](lib/audioDerive.ts) helpers — the plugin only ships raw spectrum.
 
 ### Extension → page
 
@@ -185,21 +190,21 @@ Authoritative types live in [`lib/audioBus.ts`](lib/audioBus.ts). Short referenc
 
 Shows the ControlPanel visualizer section (sets **extension** = true).
 
-**Frame** (normalized bands `0..1`)
+**Frame** (raw analyser dump)
 
 ```ts
 {
   source: "monitron-extension",
   type: "audio-frame",
-  t: number,       // timestamp
-  bass: number,
-  mid: number,
-  high: number,
-  beat: number     // transient / kick emphasis
+  t: number,            // ms since capture start
+  sampleRate: number,
+  bands: number[],      // length 32, log-spaced 20Hz→16kHz, each 0..1
+  rms: number,          // time-domain RMS 0..1
+  peak: number,         // time-domain peak 0..1
 }
 ```
 
-A frame also implies the extension is present.
+A frame also implies the extension is present. Screens slice `bands[]` (and use `rms` / `peak`) locally — no named EQ on the bus.
 
 ### Page → extension
 
@@ -226,36 +231,39 @@ Sent when the user flips **reactive** in the ControlPanel. Extension should star
 ### Dev console smoke test
 
 ```js
-postMessage(
-    { source: "monitron-extension", type: "hello" },
-    "*",
+const bands = Array.from({ length: 32 }, (_, i) =>
+  i < 8 ? 0.9 : i < 16 ? 0.4 : 0.15,
 );
 
 postMessage(
-    {
-        source: "monitron-extension",
-        type: "audio-frame",
-        t: performance.now(),
-        bass: 1,
-        mid: 0.4,
-        high: 0.2,
-        beat: 1,
-    },
-    "*",
+  { source: "monitron-extension", type: "hello" },
+  "*",
+);
+
+postMessage(
+  {
+    source: "monitron-extension",
+    type: "audio-frame",
+    t: performance.now(),
+    sampleRate: 48000,
+    bands,
+    rms: 0.4,
+    peak: 0.7,
+  },
+  "*",
 );
 ```
 
-Then enable **reactive** under **visualizer** on `/s/matrix` — rain should react.
+Then enable **reactive** under **visualizer** on `/s/matrix` — rain should react (columns follow spectrum left→lows / right→highs).
 
 ### `VizBands` (what screens read)
 
 ```ts
 type VizBands = {
-    enabled: boolean;
-    bass: number;
-    mid: number;
-    high: number;
-    beat: number;
+  enabled: boolean;
+  bands: number[]; // live spectrum (same layout as AudioFrame)
+  rms: number;
+  peak: number;
 };
 ```
 
