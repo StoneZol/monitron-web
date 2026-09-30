@@ -13,6 +13,7 @@ import {
     CELL,
     CELL_SQUASH,
     DEPTH_MIN,
+    cameraPerspective,
     roadDepth,
     WALL_LEN,
     WALL_SEGS,
@@ -34,6 +35,7 @@ function makeGridMaterial(cellsU: number, cellsV: number) {
             uCellsV: { value: cellsV },
             uLineWidth: { value: 1 },
             uGlow: { value: 0.35 },
+            uPerspective: { value: 0.5 },
             uColorGridNear: { value: new THREE.Color(1, 0, 0.2) },
             uColorGridFar: { value: new THREE.Color(0, 0, 1) },
             uColorGridBackground: { value: new THREE.Color(0.1, 0, 0.1) },
@@ -190,6 +192,9 @@ export function NeonGrid({
             mat.uniforms.uScroll!.value = scrollRef.current;
             mat.uniforms.uLineWidth!.value = knobs.roadThickness;
             mat.uniforms.uGlow!.value = Math.min(1, Math.max(0, glowUi / 40));
+            mat.uniforms.uPerspective!.value = cameraPerspective(
+                knobs.wallPerspective,
+            );
             const near = mat.uniforms.uColorGridNear!.value as THREE.Color;
             const far = mat.uniforms.uColorGridFar!.value as THREE.Color;
             if (knobs.gridTwinkle) {
