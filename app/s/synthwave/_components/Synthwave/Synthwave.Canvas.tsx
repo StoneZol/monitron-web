@@ -28,7 +28,7 @@ type SynthwaveCanvasProps = {
 };
 
 /** World cell size — square on every plane. */
-const CELL = 0.12;
+const CELL = 0.2;
 /** Short default (~⅓ of the view); slider only extends from here. */
 const DEPTH_MIN = 2.35;
 const DEPTH_MAX = 10;
@@ -219,6 +219,7 @@ function makeGridMaterial(cellsU: number, cellsV: number) {
             uZNear: { value: Z_PAD },
             uZFar: { value: -(DEPTH_MIN - Z_PAD) },
             uTaper: { value: 0.55 },
+            uNearWidth: { value: 1.35 },
             uColorGridNear: { value: new THREE.Color(1, 0, 0.2) },
             uColorGridFar: { value: new THREE.Color(0, 0, 1) },
             uColorGridBackground: { value: new THREE.Color(0.1, 0, 0.1) },
@@ -227,12 +228,18 @@ function makeGridMaterial(cellsU: number, cellsV: number) {
 }
 
 /** Planar wall quad that follows the tapered floor edge (no vertex X-warp). */
+function taperScale(depthT: number, taper: number, nearWidth: number) {
+    const farScale = Math.max(nearWidth * (1 - taper), nearWidth * 0.42);
+    return nearWidth + (farScale - nearWidth) * depthT;
+}
+
 function buildWallGeometry(
     side: -1 | 1,
     hinge: number,
     zNear: number,
     zFar: number,
     taper: number,
+    nearWidth: number,
     lean: number,
     segsU: number,
     segsV: number,
@@ -249,17 +256,13 @@ function buildWallGeometry(
         const v = iv / segsV;
         const z = zNear + (zFar - zNear) * v;
         const depthT = (zNear - z) / Math.max(1e-4, zNear - zFar);
-        const s = Math.max(1 - taper * depthT, 0.02);
+        const s = taperScale(depthT, taper, nearWidth);
         const xBot = side * hinge * s;
         const xTop = xBot - side * tipIn;
 
         for (let iu = 0; iu <= segsU; iu++) {
             const u = iu / segsU;
-            positions.push(
-                xBot + (xTop - xBot) * u,
-                tipUp * u,
-                z,
-            );
+            positions.push(xBot + (xTop - xBot) * u, tipUp * u, z);
             uvs.push(u, v);
         }
     }
@@ -299,6 +302,7 @@ function NeonGrid({
     const lastOffsetRef = useRef(-1);
     const lastLengthRef = useRef(-1);
     const lastTaperRef = useRef(-1);
+    const lastNearRef = useRef(-1);
     const builtRef = useRef(false);
 
     const wallCellsU = WALL_LEN / CELL;
@@ -342,25 +346,30 @@ function NeonGrid({
         const rate = 2 * knobs.roadSpeed * (1 + roadLv * knobs.drive * 0.5);
         scrollRef.current += Math.max(0, dt) * rate;
 
-        // Perspective = convergence angle into the distance (channel only; flat = plain sheet).
+        // Perspective: stretch near, ease far crush (channel only).
         const persp = Math.min(12, Math.max(-12, knobs.wallPerspective));
         const t = (persp + 12) / 24;
         const zNear = Z_PAD;
         const zFar = -(depth - Z_PAD);
-        const taper = mode === "flat" ? 0 : 0.08 + t * 0.92;
+        const taper = mode === "flat" ? 0 : 0.08 + t * 0.72;
+        const nearWidth = mode === "flat" ? 1 : 1.22 + t * 0.5;
 
-        const syncUniforms = (mat: THREE.ShaderMaterial, taperAmt: number) => {
+        const syncUniforms = (
+            mat: THREE.ShaderMaterial,
+            taperAmt: number,
+            nearW: number,
+        ) => {
             mat.uniforms.uScroll!.value = scrollRef.current;
             mat.uniforms.uZNear!.value = zNear;
             mat.uniforms.uZFar!.value = zFar;
             mat.uniforms.uTaper!.value = taperAmt;
+            mat.uniforms.uNearWidth!.value = nearW;
             hexToVec3(knobs.roadColor, mat.uniforms.uColorGridNear!.value);
             hexToVec3(knobs.roadFar, mat.uniforms.uColorGridFar!.value);
             hexToVec3(knobs.roadFloor, mat.uniforms.uColorGridBackground!.value);
         };
-        // Taper only the floor — warping walls with the same pinch curves them.
-        syncUniforms(floorM, taper);
-        syncUniforms(wallM, 0);
+        syncUniforms(floorM, taper, nearWidth);
+        syncUniforms(wallM, 0, 1);
 
         const floor = floorRef.current;
         const left = leftRef.current;
@@ -373,7 +382,8 @@ function NeonGrid({
             Math.abs(leanDeg - lastAngleRef.current) < 0.05 &&
             offsetCells === lastOffsetRef.current &&
             Math.abs(depth - lastLengthRef.current) < 0.01 &&
-            Math.abs(taper - lastTaperRef.current) < 0.005
+            Math.abs(taper - lastTaperRef.current) < 0.005 &&
+            Math.abs(nearWidth - lastNearRef.current) < 0.005
         ) {
             return;
         }
@@ -382,6 +392,7 @@ function NeonGrid({
         lastOffsetRef.current = offsetCells;
         lastLengthRef.current = depth;
         lastTaperRef.current = taper;
+        lastNearRef.current = nearWidth;
         builtRef.current = true;
 
         // Flat: wide sheet that fills left/right. Channel: road + hinged walls.
@@ -424,6 +435,7 @@ function NeonGrid({
                 zNear,
                 zFar,
                 taper,
+                nearWidth,
                 lean,
                 WALL_SEGS,
                 depthSegs,
@@ -523,10 +535,10 @@ function CameraRig({ liveRef }: { liveRef: RefObject<SynthwaveLive> }) {
         // Only pull cam in when road is narrower than ±4 cells.
         // At 4+ keep the framing locked — no further back/up shift as offset grows.
         const refHalf = 4 * CELL;
-        const t = channel ? Math.min(1, Math.max(0.28, half / refHalf)) : 1;
+        const t = channel ? Math.min(1, Math.max(0.6, half / refHalf)) : 1;
 
         const y = channel ? 0.14 + 0.28 * t : 0.42;
-        const z = channel ? 0 + 1.5 * t : 1.55;
+        const z = channel ? 0 + 1.2 * t : 1.55;
         const lookY = channel ? 0.06 + 0.08 * t : 0.12;
         const lookZ = -2.2;
 
