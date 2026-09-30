@@ -29,11 +29,13 @@ const INFO = {
     skyTop: "Cloud / upper sky tint (WE clouds).",
     skyHorizon: "Horizon glow tint.",
     sunRim: "Sun disk top of the gradient.",
-    sunMid: "Sun disk bottom of the gradient.",
-    sunCore: "Soft glow / halo around the sun.",
+    sunMid: "Sun disk bottom color (lower part of the gradient).",
     sunSize: "Scale × WE sun size.",
-    sunBrightness: "Brightness of the sun disk.",
-    sunGlowBrightness: "Brightness of the soft glow around the sun.",
+    sunBrightness:
+        "Disk intensity. Below 1 fades opacity (colors stay clean); above 1 pushes bloom.",
+    sunGradientStart:
+        "How far bottom color rises. 1 = bottom owns most of the disk (survives hot tops/bloom).",
+    sunGlowBrightness: "Brightness of the soft halo (color from top/bottom mix).",
     roadColor: "Near grid neon (WE gridnear).",
     roadFar: "Far grid neon (WE gridfar).",
     roadFloor: "Opaque terrain fill (WE gridbackground).",
@@ -54,8 +56,7 @@ const INFO = {
     roadChannel: "Band that punches scroll speed.",
     glowChannel: "Band that flashes grid glow / line brightness (bass kicks).",
     sunChannel: "Band that punches sun / glow brightness (idle dips a bit).",
-    sunTwinkle: "Hue walks over time from sun top/bottom disk colors.",
-    sunGlowTwinkle: "Hue walks over time from the sun glow color.",
+    sunTwinkle: "Hue walks over time from sun top/bottom (disk + halo).",
     gridTwinkle: "Hue walks over time from grid near/far colors.",
     skyTwinkle: "Hue walks over time from sky / horizon colors.",
     colorSpeed: "Hue walk rate while any twinkle is on.",
@@ -127,11 +128,15 @@ const Synthwave = ({ showOverlay = true }: SynthwaveProps) => {
                                 onChange={controls.setSunMid}
                                 info={INFO.sunMid}
                             />
-                            <ColorField
-                                label="Sun glow"
-                                value={controls.sunCore}
-                                onChange={controls.setSunCore}
-                                info={INFO.sunCore}
+                            <Slider
+                                label="Bottom fill"
+                                value={controls.sunGradientStart}
+                                min={0}
+                                max={1}
+                                step={0.01}
+                                onChange={controls.setSunGradientStart}
+                                format={(v) => v.toFixed(2)}
+                                info={INFO.sunGradientStart}
                             />
                             <Slider
                                 label="Sun size"
@@ -168,12 +173,6 @@ const Synthwave = ({ showOverlay = true }: SynthwaveProps) => {
                                 checked={controls.sunTwinkle}
                                 onChange={controls.setSunTwinkle}
                                 info={INFO.sunTwinkle}
-                            />
-                            <Toggle
-                                label="Sun glow twinkle"
-                                checked={controls.sunGlowTwinkle}
-                                onChange={controls.setSunGlowTwinkle}
-                                info={INFO.sunGlowTwinkle}
                             />
                             <ColorField
                                 label="Grid near"
@@ -221,7 +220,6 @@ const Synthwave = ({ showOverlay = true }: SynthwaveProps) => {
                             />
                             {(controls.skyTwinkle ||
                                 controls.sunTwinkle ||
-                                controls.sunGlowTwinkle ||
                                 controls.gridTwinkle) && (
                                     <Slider
                                         label="Color speed"

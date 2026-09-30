@@ -31,6 +31,7 @@ export const SYNTHWAVE_DEFAULTS: SynthwaveLive = {
   sunCore: "#ff0059",
   sunSize: 1,
   sunBrightness: 1,
+  sunGradientStart: 0.75,
   sunGlowBrightness: 1,
   mountPeak: "#3a1470",
   wallAngle: 0,
@@ -171,6 +172,13 @@ function migratePrefs(
   }
   next.sunBrightness = Math.min(3, Math.max(0, next.sunBrightness));
   if (
+    typeof next.sunGradientStart !== "number" ||
+    !Number.isFinite(next.sunGradientStart)
+  ) {
+    next.sunGradientStart = SYNTHWAVE_DEFAULTS.sunGradientStart;
+  }
+  next.sunGradientStart = Math.min(1, Math.max(0, next.sunGradientStart));
+  if (
     typeof next.sunGlowBrightness !== "number" ||
     !Number.isFinite(next.sunGlowBrightness)
   ) {
@@ -282,6 +290,8 @@ export default function useSynthwaveHook() {
     setSunCore: (sunCore: string) => commit({ sunCore }),
     setSunSize: (sunSize: number) => commit({ sunSize }),
     setSunBrightness: (sunBrightness: number) => commit({ sunBrightness }),
+    setSunGradientStart: (sunGradientStart: number) =>
+      commit({ sunGradientStart }),
     setSunGlowBrightness: (sunGlowBrightness: number) =>
       commit({ sunGlowBrightness }),
     setMountPeak: (mountPeak: string) => commit({ mountPeak }),

@@ -29,6 +29,8 @@ export type SynthwaveLive = {
   sunSize: number;
   /** Disk brightness (1 = default) */
   sunBrightness: number;
+  /** Bottom color fill up the disk (0 = tip only, 1 = full gradient) */
+  sunGradientStart: number;
   /** Glow / halo brightness (1 = default) */
   sunGlowBrightness: number;
   /** Unused legacy tint */

@@ -5,6 +5,7 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import type { VizBands } from "@/lib/audioBus";
 import {
+    neonSunFlashFragmentShader,
     neonSunFragmentShader,
     neonSunVertexShader,
 } from "./shaders/neonsun";
@@ -34,26 +35,54 @@ export function NeonSun({
                     uTime: { value: 0 },
                     uDiskBrightness: { value: 1 },
                     uGlowBrightness: { value: 1 },
+                    uGradientStart: { value: 0.75 },
                     uColorSunTop: { value: new THREE.Color(1, 0.85, 0.05) },
                     uColorSunBottom: { value: new THREE.Color(1, 0.3, 0.64) },
-                    uColorSunGlow: { value: new THREE.Color(1, 0, 0.35) },
+                },
+            }),
+        [],
+    );
+    const flashMat = useMemo(
+        () =>
+            new THREE.ShaderMaterial({
+                vertexShader: neonSunVertexShader,
+                fragmentShader: neonSunFlashFragmentShader,
+                transparent: true,
+                depthWrite: false,
+                depthTest: false,
+                blending: THREE.AdditiveBlending,
+                uniforms: {
+                    uTime: { value: 0 },
+                    uOpacity: { value: 0 },
+                    uGradientStart: { value: 0.75 },
+                    uColorSunTop: { value: new THREE.Color(1, 0.85, 0.05) },
+                    uColorSunBottom: { value: new THREE.Color(1, 0.3, 0.64) },
                 },
             }),
         [],
     );
     const matRef = useRef(mat);
+    const flashMatRef = useRef(flashMat);
     const scaleRef = useRef<THREE.Group>(null);
     const diskHue = useRef(0);
-    const glowHue = useRef(0);
     const sunHold = useRef(0);
 
-    useEffect(() => () => mat.dispose(), [mat]);
+    useEffect(
+        () => () => {
+            mat.dispose();
+            flashMat.dispose();
+        },
+        [mat, flashMat],
+    );
 
     useFrame(({ clock }, dt) => {
         const m = matRef.current;
+        const flash = flashMatRef.current;
         const knobs = liveRef.current;
         const viz = vizRef.current;
-        m.uniforms.uTime!.value = clock.elapsedTime;
+        const t = clock.elapsedTime;
+        m.uniforms.uTime!.value = t;
+        flash.uniforms.uTime!.value = t;
         if (!knobs) return;
 
         const reactive = Boolean(viz?.enabled);
@@ -62,36 +91,37 @@ export function NeonSun({
         sunHold.current = Math.max(sunRaw, sunHold.current * decay);
         const punch = Math.min(1, sunHold.current);
 
-        // Idle dim when channel armed; peaks restore slider brightness
         const sunArmed = reactive && knobs.sunChannel !== "off";
-        const brightMul = sunArmed ? 0.58 + punch * 0.42 : 1;
-        m.uniforms.uDiskBrightness!.value = knobs.sunBrightness * brightMul;
-        m.uniforms.uGlowBrightness!.value = knobs.sunGlowBrightness * brightMul;
+        const idle = sunArmed ? 0.58 : 1;
+        m.uniforms.uDiskBrightness!.value = knobs.sunBrightness * idle;
+        m.uniforms.uGlowBrightness!.value =
+            knobs.sunGlowBrightness * (sunArmed ? 0.55 + punch * 0.45 : 1);
+        m.uniforms.uGradientStart!.value = knobs.sunGradientStart;
+        flash.uniforms.uGradientStart!.value = knobs.sunGradientStart;
+
+        const overdrive = Math.max(0, Math.min(1, (knobs.sunBrightness - 1) / 2));
+        flash.uniforms.uOpacity!.value = sunArmed
+            ? Math.min(1, punch * 0.9 + overdrive * 0.3)
+            : overdrive * 0.45;
 
         const step = knobs.colorSpeed * Math.max(0, dt);
+        const top = m.uniforms.uColorSunTop!.value as THREE.Color;
+        const bottom = m.uniforms.uColorSunBottom!.value as THREE.Color;
+        const flashTop = flash.uniforms.uColorSunTop!.value as THREE.Color;
+        const flashBottom = flash.uniforms.uColorSunBottom!.value as THREE.Color;
 
         if (knobs.sunTwinkle) {
             diskHue.current = (diskHue.current + step) % 360;
             const off = diskHue.current;
-            hueWalkHex(knobs.sunRim, off, m.uniforms.uColorSunTop!.value);
-            hueWalkHex(knobs.sunMid, off, m.uniforms.uColorSunBottom!.value);
+            hueWalkHex(knobs.sunRim, off, top);
+            hueWalkHex(knobs.sunMid, off, bottom);
         } else {
             diskHue.current = 0;
-            hexToVec3(knobs.sunRim, m.uniforms.uColorSunTop!.value);
-            hexToVec3(knobs.sunMid, m.uniforms.uColorSunBottom!.value);
+            hexToVec3(knobs.sunRim, top);
+            hexToVec3(knobs.sunMid, bottom);
         }
-
-        if (knobs.sunGlowTwinkle) {
-            glowHue.current = (glowHue.current + step) % 360;
-            hueWalkHex(
-                knobs.sunCore,
-                glowHue.current,
-                m.uniforms.uColorSunGlow!.value,
-            );
-        } else {
-            glowHue.current = 0;
-            hexToVec3(knobs.sunCore, m.uniforms.uColorSunGlow!.value);
-        }
+        flashTop.copy(top);
+        flashBottom.copy(bottom);
 
         const base = 2.4;
         const s = base * knobs.sunSize;
@@ -114,6 +144,10 @@ export function NeonSun({
                 <mesh renderOrder={-5} frustumCulled={false}>
                     <planeGeometry args={[1, 1]} />
                     <primitive object={mat} attach="material" />
+                </mesh>
+                <mesh renderOrder={-4} frustumCulled={false}>
+                    <planeGeometry args={[1, 1]} />
+                    <primitive object={flashMat} attach="material" />
                 </mesh>
             </group>
         </group>
