@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { useAudioReactive } from "@/hooks/useAudioReactive";
+import { useAudioReactive, migrateAudioSource, MIC_GATE_DEFAULT, normalizeMicGate } from "@/hooks/useAudioReactive";
 import {
   bandAtColumn,
   risingEdge,
@@ -55,7 +55,8 @@ const DEFAULTS: MatrixControls = {
   fallSpeed: 10,
   colorSpeed: 8,
   drive: DRIVE_DEFAULT,
-  reactive: false,
+  audioSource: "off",
+  micGate: MIC_GATE_DEFAULT,
 };
 
 const SCREEN_ID = "matrix";
@@ -126,7 +127,11 @@ function useWakeLock() {
 }
 
 function migratePrefs(
-  saved: MatrixControls & { bassBoost?: number },
+  saved: MatrixControls & {
+    bassBoost?: number;
+    reactive?: boolean;
+    micGate?: number;
+  },
 ): MatrixControls {
   const drive =
     typeof saved.drive === "number"
@@ -140,7 +145,8 @@ function migratePrefs(
     fallSpeed: saved.fallSpeed ?? DEFAULTS.fallSpeed,
     colorSpeed: saved.colorSpeed ?? DEFAULTS.colorSpeed,
     drive,
-    reactive: saved.reactive ?? DEFAULTS.reactive,
+    audioSource: migrateAudioSource(saved),
+    micGate: normalizeMicGate(saved.micGate),
   };
 }
 
@@ -158,17 +164,25 @@ const useMatrixHook = () => {
   const [fallSpeed, setFallSpeedState] = useState(DEFAULTS.fallSpeed);
   const [colorSpeed, setColorSpeedState] = useState(DEFAULTS.colorSpeed);
   const [drive, setDriveState] = useState(DEFAULTS.drive);
-  const [reactivePref, setReactivePref] = useState(DEFAULTS.reactive);
-  const persistReactiveRef = useRef((enabled: boolean) => {
-    prefsRef.current = { ...prefsRef.current, reactive: enabled };
+  const [sourcePref, setSourcePref] = useState(DEFAULTS.audioSource);
+  const [micGatePref, setMicGatePref] = useState(DEFAULTS.micGate);
+  const persistSourceRef = useRef((audioSource: MatrixControls["audioSource"]) => {
+    prefsRef.current = { ...prefsRef.current, audioSource };
     saveScreenPrefs(SCREEN_ID, prefsRef.current);
-    setReactivePref(enabled);
+    setSourcePref(audioSource);
+  });
+  const persistMicGateRef = useRef((micGate: number) => {
+    prefsRef.current = { ...prefsRef.current, micGate };
+    saveScreenPrefs(SCREEN_ID, prefsRef.current);
+    setMicGatePref(micGate);
   });
 
   // Spectrum rain: bands → columns, peak → glow, low-slice → fall punches
   const visualizer = useAudioReactive({
-    preferredReactive: reactivePref,
-    onReactiveChange: (enabled) => persistReactiveRef.current(enabled),
+    preferredSource: sourcePref,
+    onSourceChange: (source) => persistSourceRef.current(source),
+    preferredMicGate: micGatePref,
+    onMicGateChange: (gate) => persistMicGateRef.current(gate),
   });
 
   useWakeLock();
@@ -198,8 +212,11 @@ const useMatrixHook = () => {
       driveRef.current = patch.drive;
       setDriveState(patch.drive);
     }
-    if (patch.reactive !== undefined) {
-      setReactivePref(patch.reactive);
+    if (patch.audioSource !== undefined) {
+      setSourcePref(patch.audioSource);
+    }
+    if (patch.micGate !== undefined) {
+      setMicGatePref(patch.micGate);
     }
   };
 
@@ -220,7 +237,8 @@ const useMatrixHook = () => {
     setFallSpeedState(saved.fallSpeed);
     setColorSpeedState(saved.colorSpeed);
     setDriveState(saved.drive);
-    setReactivePref(saved.reactive);
+    setSourcePref(saved.audioSource);
+    setMicGatePref(saved.micGate);
   }, []);
 
   const setTwinkle = (on: boolean) => {

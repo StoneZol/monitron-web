@@ -14,6 +14,10 @@ import {
     Toggle,
 } from "@/components/ControlPanel";
 import { PLUGIN_URL } from "@/lib/audioBus";
+import {
+    AUDIO_SOURCE_OPTIONS,
+    type AudioSource,
+} from "@/hooks/useAudioReactive";
 import useHexagonsPlaceHook from "./HexagonsPlace.hooks";
 import type { HexagonsPlaceProps } from "./HexagonsPlace.types";
 
@@ -32,8 +36,8 @@ const HexagonsCanvas = dynamic(() => import("./HexagonsPlace.Canvas"), {
 const HexagonsPlace = ({ showOverlay = true }: HexagonsPlaceProps) => {
     const { live, controls, visualizer } = useHexagonsPlaceHook();
     const peakLocked = !visualizer.reactive;
-    const peakStamp = !visualizer.pluginPresent
-        ? ({ peak: "reactive" } as const)
+    const peakStamp = !visualizer.reactive
+        ? ({ peak: "audio" } as const)
         : undefined;
 
     return (
@@ -416,14 +420,37 @@ const HexagonsPlace = ({ showOverlay = true }: HexagonsPlaceProps) => {
                                     </span>
                                 </a>
                             )}
-                            <div className='flex'>
-                                <Toggle
-                                    label="reactive"
-                                    checked={visualizer.reactive}
-                                    onChange={visualizer.setReactive}
-                                    disabled={!visualizer.pluginPresent}
+                            <Select
+                                label="source"
+                                value={visualizer.source}
+                                options={AUDIO_SOURCE_OPTIONS.map((opt) => ({
+                                    ...opt,
+                                    disabled:
+                                        opt.value === "plugin" &&
+                                        !visualizer.pluginPresent,
+                                }))}
+                                onChange={(value: AudioSource) =>
+                                    visualizer.setSource(value)
+                                }
+                            />
+                            {visualizer.source === "mic" && (
+                                <Slider
+                                    label="Noise gate"
+                                    value={visualizer.micGate}
+                                    min={0}
+                                    max={visualizer.micGateMax}
+                                    step={0.001}
+                                    onChange={visualizer.setMicGate}
+                                    format={(v) =>
+                                        v <= 0.0005 ? "off" : v.toFixed(3)
+                                    }
                                 />
-                            </div>
+                            )}
+                            {visualizer.micNeedsGesture && (
+                                <p className="text-[10px] uppercase tracking-[0.18em] text-warn">
+                                    click anywhere to enable mic
+                                </p>
+                            )}
                             <div className="flex flex-wrap gap-2">
                                 <Toggle
                                     label="Band bounce"

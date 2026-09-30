@@ -1,3 +1,5 @@
+import type { AudioSource } from "@/hooks/useAudioReactive";
+
 export type HexagonsPlaceProps = {
   showOverlay?: boolean;
 };
@@ -84,8 +86,10 @@ export type HexagonsPlaceLive = {
   hexSize: number;
   /** Random height range of hexes — mountains through fog */
   hexHeightSpread: number;
-  /** Prefer extension reactive when plugin is online */
-  reactive: boolean;
+  /** Audio feed: off | mic | plugin (legacy `reactive` migrated in hooks) */
+  audioSource: AudioSource;
+  /** Mic noise-gate threshold (only used when audioSource === mic) */
+  micGate: number;
   /** When reactive: bounce hex groups on spectrum lows/mids/highs */
   bandBounce: boolean;
   /** When reactive: caps / fog / grid color flicker from spectrum */

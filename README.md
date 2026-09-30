@@ -139,7 +139,10 @@ export default function Waves() {
 
 ```ts
 const [speed, setSpeed] = useState(1);
-const visualizer = useAudioReactive({ preferredReactive: reactive });
+const visualizer = useAudioReactive({
+  preferredSource: audioSource, // "off" | "mic" | "plugin"
+  onSourceChange: setAudioSource,
+});
 const { vizRef } = visualizer;
 
 // inside requestAnimationFrame / draw:
@@ -152,7 +155,7 @@ if (viz.enabled) {
 **Rules of thumb**
 
 - Own ControlPanel knobs = your screen’s look.
-- Visualizer bus = raw spectrum; each screen derives lows / mids / highs / beat as needed.
+- Visualizer `source` select routes mic or plugin into the same `vizRef`; screens stay source-agnostic.
 - Never `setState` per audio frame — read `vizRef.current` in the render loop.
 - Prefer `previewSrc` screenshots on the home page, not a live full-screen mount in the card.
 

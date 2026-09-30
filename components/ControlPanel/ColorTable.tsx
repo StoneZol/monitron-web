@@ -72,7 +72,7 @@ export function ColorTable({
                     {stamp ? (
                       <span
                         className="stamp px-1 py-0.5 text-[7px] tracking-[0.16em]"
-                        title="Requires Monitron extension + reactive"
+                        title="Requires audio source (mic or plugin)"
                       >
                         {stamp}
                       </span>

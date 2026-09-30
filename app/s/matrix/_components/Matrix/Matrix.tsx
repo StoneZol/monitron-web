@@ -7,9 +7,14 @@ import {
   ControlPanel,
   ControlSection,
   PanelButton,
+  Select,
   Slider,
   Toggle,
 } from "@/components/ControlPanel";
+import {
+  AUDIO_SOURCE_OPTIONS,
+  type AudioSource,
+} from "@/hooks/useAudioReactive";
 import { PLUGIN_URL } from "@/lib/audioBus";
 import useMatrixHook from "./Matrix.hooks";
 
@@ -91,12 +96,31 @@ const Matrix = ({ showOverlay = true }: { showOverlay?: boolean }) => {
                   </span>
                 </a>
               )}
-              {visualizer.pluginPresent && (
-                <Toggle
-                  label="reactive"
-                  checked={visualizer.reactive}
-                  onChange={visualizer.setReactive}
+              <Select
+                label="source"
+                value={visualizer.source}
+                options={AUDIO_SOURCE_OPTIONS.map((opt) => ({
+                  ...opt,
+                  disabled:
+                    opt.value === "plugin" && !visualizer.pluginPresent,
+                }))}
+                onChange={(value: AudioSource) => visualizer.setSource(value)}
+              />
+              {visualizer.source === "mic" && (
+                <Slider
+                  label="Noise gate"
+                  value={visualizer.micGate}
+                  min={0}
+                  max={visualizer.micGateMax}
+                  step={0.001}
+                  onChange={visualizer.setMicGate}
+                  format={(v) => (v <= 0.0005 ? "off" : v.toFixed(3))}
                 />
+              )}
+              {visualizer.micNeedsGesture && (
+                <p className="text-[10px] uppercase tracking-[0.18em] text-warn">
+                  click anywhere to enable mic
+                </p>
               )}
               {visualizer.reactive && (
                 <Slider

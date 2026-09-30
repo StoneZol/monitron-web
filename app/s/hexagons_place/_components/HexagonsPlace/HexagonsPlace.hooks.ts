@@ -1,7 +1,12 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { useAudioReactive } from "@/hooks/useAudioReactive";
+import {
+    MIC_GATE_DEFAULT,
+    migrateAudioSource,
+    normalizeMicGate,
+    useAudioReactive,
+} from "@/hooks/useAudioReactive";
 import { toggleFullscreen } from "@/lib/fullscreen";
 import { loadScreenPrefs, saveScreenPrefs } from "@/lib/screenPrefs";
 import type { HexagonsPlaceLive } from "./HexagonsPlace.types";
@@ -47,7 +52,8 @@ export const HEXAGONS_DEFAULTS: HexagonsPlaceLive = {
     hexGrid: 81,
     hexSize: 0.5,
     hexHeightSpread: 1,
-    reactive: false,
+    audioSource: "off",
+    micGate: MIC_GATE_DEFAULT,
     bandBounce: true,
     bandFlicker: true,
     bassBoost: 2,
@@ -83,6 +89,7 @@ function readPrefs(): HexagonsPlaceLive {
         coloredFog: _coloredFog,
         capBeatFogIdle: legacyBeatFogIdle,
         capBeatFogPeak: legacyBeatFogPeak,
+        reactive: legacyReactive,
         ...rest
     } = loaded as HexagonsPlaceLive & {
         cameraRotation?: number;
@@ -92,8 +99,17 @@ function readPrefs(): HexagonsPlaceLive {
         coloredFog?: boolean;
         capBeatFogIdle?: string;
         capBeatFogPeak?: string;
+        reactive?: boolean;
     };
-    cached = { ...HEXAGONS_DEFAULTS, ...rest };
+    cached = {
+        ...HEXAGONS_DEFAULTS,
+        ...rest,
+        audioSource: migrateAudioSource({
+            audioSource: rest.audioSource,
+            reactive: legacyReactive,
+        }),
+        micGate: normalizeMicGate(rest.micGate),
+    };
     // Legacy single fogColor → fogIdle
     if (
         cached.fogIdle === HEXAGONS_DEFAULTS.fogIdle &&
@@ -170,8 +186,10 @@ export default function useHexagonsPlaceHook() {
     };
 
     const visualizer = useAudioReactive({
-        preferredReactive: live.reactive,
-        onReactiveChange: (reactive) => commit({ reactive }),
+        preferredSource: live.audioSource,
+        onSourceChange: (audioSource) => commit({ audioSource }),
+        preferredMicGate: live.micGate,
+        onMicGateChange: (micGate) => commit({ micGate }),
     });
 
     return {

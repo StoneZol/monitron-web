@@ -1,3 +1,5 @@
+import type { AudioSource } from "@/hooks/useAudioReactive";
+
 export type HslColor = {
   h: number;
   s: number;
@@ -11,7 +13,10 @@ export type MatrixControls = {
   colorSpeed: number;
   /** Multiplies low-slice punches + global fall on reactive */
   drive: number;
-  reactive: boolean;
+  /** Audio feed: off | mic | plugin */
+  audioSource: AudioSource;
+  /** Mic noise-gate threshold (only used when audioSource === mic) */
+  micGate: number;
 };
 
 export type MatrixProps = Record<string, never>;

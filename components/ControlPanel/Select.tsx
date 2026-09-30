@@ -7,6 +7,8 @@ import { fieldControlRow, fieldLabelRow, fieldRoot } from "./field";
 export type SelectOption<T extends string = string> = {
     value: T;
     label: string;
+    /** Shown but not selectable */
+    disabled?: boolean;
 };
 
 type SelectProps<T extends string = string> = {
@@ -88,17 +90,27 @@ export function Select<T extends string>({
                     >
                         {options.map((opt) => {
                             const active = opt.value === value;
+                            const optDisabled = Boolean(opt.disabled);
                             return (
-                                <li key={opt.value} role="option" aria-selected={active}>
+                                <li
+                                    key={opt.value}
+                                    role="option"
+                                    aria-selected={active}
+                                    aria-disabled={optDisabled || undefined}
+                                >
                                     <button
                                         type="button"
+                                        disabled={optDisabled}
                                         className={cn(
                                             "flex w-full px-2 py-1.5 text-left text-[10px] uppercase tracking-[0.18em]",
-                                            active
-                                                ? "bg-signal/20 text-cyan"
-                                                : "text-signal hover:bg-signal/10 hover:text-cyan",
+                                            optDisabled
+                                                ? "cursor-not-allowed text-muted opacity-40"
+                                                : active
+                                                  ? "bg-signal/20 text-cyan"
+                                                  : "text-signal hover:bg-signal/10 hover:text-cyan",
                                         )}
                                         onClick={() => {
+                                            if (optDisabled) return;
                                             onChange(opt.value);
                                             setOpen(false);
                                         }}
