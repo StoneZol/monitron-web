@@ -21,13 +21,17 @@ import {
 /** Defaults match Wallpaper Engine neon_sunset material values */
 export const SYNTHWAVE_DEFAULTS: SynthwaveLive = {
   roadColor: "#ff0033",
+  roadColorPeak: "#ff6699",
   roadFar: "#0000ff",
+  roadFarPeak: "#66aaff",
   roadFloor: "#1a001a",
   roadGlow: 14,
   roadThickness: 1,
   roadSpeed: 1,
   sunRim: "#ffd90d",
+  sunRimPeak: "#fff56a",
   sunMid: "#ff4fa3",
+  sunMidPeak: "#ff9fd0",
   sunCore: "#ff0059",
   sunSize: 1,
   sunBrightness: 1,
@@ -40,7 +44,9 @@ export const SYNTHWAVE_DEFAULTS: SynthwaveLive = {
   perspV2: true,
   roadLength: 0,
   skyTop: "#0d2666",
+  skyTopPeak: "#3a6acc",
   skyHorizon: "#0d2666",
+  skyHorizonPeak: "#5a8aee",
   roadChannel: "beat",
   glowChannel: "bass",
   sunChannel: "bass",
@@ -109,6 +115,39 @@ function migratePrefs(
     next.colorSpeed = SYNTHWAVE_DEFAULTS.colorSpeed;
   }
   next.colorSpeed = Math.min(180, Math.max(0, next.colorSpeed));
+  // idle→peak pairs (legacy single color = idle; peak defaults if missing)
+  const peakOr = (v: unknown, fallback: string, idle: string) =>
+    typeof v === "string" && v.length > 0 ? v : fallback || idle;
+  next.sunRimPeak = peakOr(
+    next.sunRimPeak,
+    SYNTHWAVE_DEFAULTS.sunRimPeak,
+    next.sunRim,
+  );
+  next.sunMidPeak = peakOr(
+    next.sunMidPeak,
+    SYNTHWAVE_DEFAULTS.sunMidPeak,
+    next.sunMid,
+  );
+  next.roadColorPeak = peakOr(
+    next.roadColorPeak,
+    SYNTHWAVE_DEFAULTS.roadColorPeak,
+    next.roadColor,
+  );
+  next.roadFarPeak = peakOr(
+    next.roadFarPeak,
+    SYNTHWAVE_DEFAULTS.roadFarPeak,
+    next.roadFar,
+  );
+  next.skyTopPeak = peakOr(
+    next.skyTopPeak,
+    SYNTHWAVE_DEFAULTS.skyTopPeak,
+    next.skyTop,
+  );
+  next.skyHorizonPeak = peakOr(
+    next.skyHorizonPeak,
+    SYNTHWAVE_DEFAULTS.skyHorizonPeak,
+    next.skyHorizon,
+  );
   // migrate: old 20–120 from horizontal → lean from vertical (−90…+90)
   const rawRec = raw as SynthwaveLive & { mountSpeed?: number };
   if (
@@ -280,13 +319,17 @@ export default function useSynthwaveHook() {
     ...live,
     driveMax: DRIVE_MAX,
     setRoadColor: (roadColor: string) => commit({ roadColor }),
+    setRoadColorPeak: (roadColorPeak: string) => commit({ roadColorPeak }),
     setRoadFar: (roadFar: string) => commit({ roadFar }),
+    setRoadFarPeak: (roadFarPeak: string) => commit({ roadFarPeak }),
     setRoadFloor: (roadFloor: string) => commit({ roadFloor }),
     setRoadGlow: (roadGlow: number) => commit({ roadGlow }),
     setRoadThickness: (roadThickness: number) => commit({ roadThickness }),
     setRoadSpeed: (roadSpeed: number) => commit({ roadSpeed }),
     setSunRim: (sunRim: string) => commit({ sunRim }),
+    setSunRimPeak: (sunRimPeak: string) => commit({ sunRimPeak }),
     setSunMid: (sunMid: string) => commit({ sunMid }),
+    setSunMidPeak: (sunMidPeak: string) => commit({ sunMidPeak }),
     setSunCore: (sunCore: string) => commit({ sunCore }),
     setSunSize: (sunSize: number) => commit({ sunSize }),
     setSunBrightness: (sunBrightness: number) => commit({ sunBrightness }),
@@ -301,7 +344,9 @@ export default function useSynthwaveHook() {
       commit({ wallPerspective }),
     setRoadLength: (roadLength: number) => commit({ roadLength }),
     setSkyTop: (skyTop: string) => commit({ skyTop }),
+    setSkyTopPeak: (skyTopPeak: string) => commit({ skyTopPeak }),
     setSkyHorizon: (skyHorizon: string) => commit({ skyHorizon }),
+    setSkyHorizonPeak: (skyHorizonPeak: string) => commit({ skyHorizonPeak }),
     setRoadChannel: (roadChannel: SynthwaveLive["roadChannel"]) =>
       commit({ roadChannel }),
     setGlowChannel: (glowChannel: SynthwaveLive["glowChannel"]) =>

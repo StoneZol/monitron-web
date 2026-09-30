@@ -3,18 +3,26 @@
 import { useEffect, useMemo, useRef, type RefObject } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
+import type { VizBands } from "@/lib/audioBus";
 import {
     neonSkyFragmentShader,
     neonSkyVertexShader,
 } from "./shaders/neonsky";
-import { hexToVec3, hueWalkHex } from "./Synthwave.audio";
+import {
+    channelLevel,
+    hexToVec3,
+    hueWalkHex,
+    lerpHex,
+} from "./Synthwave.audio";
 import type { SynthwaveLive } from "./Synthwave.types";
 
 export function Sky({
     liveRef,
+    vizRef,
     meshRef,
 }: {
     liveRef: RefObject<SynthwaveLive>;
+    vizRef: RefObject<VizBands>;
     meshRef: RefObject<THREE.Mesh | null>;
 }) {
     const mat = useMemo(
@@ -39,6 +47,7 @@ export function Sky({
     );
     const matRef = useRef(mat);
     const hueOffset = useRef(0);
+    const skyHold = useRef(0);
 
     const { size } = useThree();
     useEffect(() => {
@@ -51,19 +60,35 @@ export function Sky({
     useFrame(({ clock }, dt) => {
         const m = matRef.current;
         const knobs = liveRef.current;
+        const viz = vizRef.current;
         m.uniforms.uTime!.value = clock.elapsedTime;
         if (!knobs) return;
+
+        const clouds = m.uniforms.uColorClouds!.value as THREE.Color;
+        const horizon = m.uniforms.uColorHorizon!.value as THREE.Color;
+        const reactive = Boolean(viz?.enabled);
 
         if (knobs.skyTwinkle) {
             hueOffset.current =
                 (hueOffset.current + knobs.colorSpeed * Math.max(0, dt)) % 360;
             const off = hueOffset.current;
-            hueWalkHex(knobs.skyTop, off, m.uniforms.uColorClouds!.value);
-            hueWalkHex(knobs.skyHorizon, off, m.uniforms.uColorHorizon!.value);
+            hueWalkHex(knobs.skyTop, off, clouds);
+            hueWalkHex(knobs.skyHorizon, off, horizon);
+            skyHold.current = 0;
         } else {
             hueOffset.current = 0;
-            hexToVec3(knobs.skyTop, m.uniforms.uColorClouds!.value);
-            hexToVec3(knobs.skyHorizon, m.uniforms.uColorHorizon!.value);
+            if (reactive) {
+                const raw = channelLevel(viz!, "beat");
+                const decay = Math.exp(-Math.max(0, dt) * 5.5);
+                skyHold.current = Math.max(raw, skyHold.current * decay);
+                const level = Math.min(1, skyHold.current);
+                lerpHex(knobs.skyTop, knobs.skyTopPeak, level, clouds);
+                lerpHex(knobs.skyHorizon, knobs.skyHorizonPeak, level, horizon);
+            } else {
+                skyHold.current = 0;
+                hexToVec3(knobs.skyTop, clouds);
+                hexToVec3(knobs.skyHorizon, horizon);
+            }
         }
     });
 

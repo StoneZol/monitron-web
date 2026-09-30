@@ -8,7 +8,7 @@ import {
     neonGridFragmentShader,
     neonGridVertexShader,
 } from "./shaders/neongrid";
-import { channelLevel, hexToVec3, hueWalkHex } from "./Synthwave.audio";
+import { channelLevel, hexToVec3, hueWalkHex, lerpHex } from "./Synthwave.audio";
 import {
     CELL,
     CELL_SQUASH,
@@ -181,7 +181,6 @@ export function NeonGrid({
             40,
             knobs.roadGlow * (glowArmed ? 0.7 + flash * 0.3 : 1) + flash * 8,
         );
-        const bright = glowArmed ? 0.58 + flash * 1.55 : 1;
 
         const syncUniforms = (mat: THREE.ShaderMaterial) => {
             mat.uniforms.uScroll!.value = scrollRef.current;
@@ -189,16 +188,18 @@ export function NeonGrid({
             mat.uniforms.uGlow!.value = Math.min(1, Math.max(0, glowUi / 40));
             const near = mat.uniforms.uColorGridNear!.value as THREE.Color;
             const far = mat.uniforms.uColorGridFar!.value as THREE.Color;
-            if (hueOff) {
-                hueWalkHex(knobs.roadColor, hueOff, near);
-                hueWalkHex(knobs.roadFar, hueOff, far);
+            if (knobs.gridTwinkle) {
+                if (hueOff) {
+                    hueWalkHex(knobs.roadColor, hueOff, near);
+                    hueWalkHex(knobs.roadFar, hueOff, far);
+                } else {
+                    hexToVec3(knobs.roadColor, near);
+                    hexToVec3(knobs.roadFar, far);
+                }
             } else {
-                hexToVec3(knobs.roadColor, near);
-                hexToVec3(knobs.roadFar, far);
-            }
-            if (glowArmed) {
-                near.multiplyScalar(bright);
-                far.multiplyScalar(bright);
+                const level = glowArmed ? flash : 0;
+                lerpHex(knobs.roadColor, knobs.roadColorPeak, level, near);
+                lerpHex(knobs.roadFar, knobs.roadFarPeak, level, far);
             }
             hexToVec3(knobs.roadFloor, mat.uniforms.uColorGridBackground!.value);
         };

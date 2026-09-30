@@ -27,8 +27,39 @@ export function hexToVec3(hex: string, target: THREE.Color) {
 }
 
 const _hsl = { h: 0, s: 0, l: 0 };
+const _lerpA = new THREE.Color();
+const _lerpB = new THREE.Color();
 
-/** Hue walk from the picked base (Matrix / Hexagons garland). */
+/** Idle dim under garland when audio punches brightness. */
+export const TWINKLE_IDLE = 0.52;
+
+/**
+ * Scale current color: idle dim → full on peaks (`level` 0…1).
+ * Call after hueWalk / hexToVec3.
+ */
+export function pulseBrightness(
+    target: THREE.Color,
+    level: number,
+    idleMul = TWINKLE_IDLE,
+) {
+    const t = Math.min(1, Math.max(0, level));
+    return target.multiplyScalar(idleMul + (1 - idleMul) * t);
+}
+
+/** Hex idle→peak lerp (garland off). */
+export function lerpHex(
+    idle: string,
+    peak: string,
+    level: number,
+    target: THREE.Color,
+) {
+    const t = Math.min(1, Math.max(0, level));
+    _lerpA.set(idle);
+    _lerpB.set(peak);
+    return target.copy(_lerpA).lerp(_lerpB, t);
+}
+
+/** Hue walk from the picked base (garland). */
 export function hueWalkHex(
     hex: string,
     hueOffsetDeg: number,

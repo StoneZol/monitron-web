@@ -7,10 +7,14 @@ export type SynthwaveProps = {
 export type ReactiveChannel = "off" | "bass" | "mid" | "high" | "beat";
 
 export type SynthwaveLive = {
-  /** Grid near (pink) — WE gridnear */
+  /** Grid near idle — WE gridnear */
   roadColor: string;
-  /** Grid far (blue) — WE gridfar */
+  /** Grid near peak (glow channel) */
+  roadColorPeak: string;
+  /** Grid far idle — WE gridfar */
   roadFar: string;
+  /** Grid far peak (glow channel) */
+  roadFarPeak: string;
   /** Terrain fill — WE gridbackground */
   roadFloor: string;
   /** Grid line glow / halo (0…40) */
@@ -19,10 +23,14 @@ export type SynthwaveLive = {
   roadThickness: number;
   /** Scroll multiplier (WE base ≈ 1 → uScrollSpeed 2) */
   roadSpeed: number;
-  /** Sun top / disk — WE colorsuntop */
+  /** Sun top idle — WE colorsuntop */
   sunRim: string;
-  /** Sun disk bottom of the gradient */
+  /** Sun top peak (sun channel) */
+  sunRimPeak: string;
+  /** Sun bottom idle */
   sunMid: string;
+  /** Sun bottom peak (sun channel) */
+  sunMidPeak: string;
   /** Sun glow / halo tint */
   sunCore: string;
   /** Multiplier on WE sun scale */
@@ -45,23 +53,27 @@ export type SynthwaveLive = {
   perspV2?: boolean;
   /** Extra road length beyond the short default (0 = ~⅓ screen, 1 = full stretch) */
   roadLength: number;
-  /** Sky / cloud tint */
+  /** Sky / cloud idle */
   skyTop: string;
-  /** Horizon glow tint */
+  /** Sky / cloud peak (beat) */
+  skyTopPeak: string;
+  /** Horizon idle */
   skyHorizon: string;
+  /** Horizon peak (beat) */
+  skyHorizonPeak: string;
   /** Band that accelerates road scroll */
   roadChannel: ReactiveChannel;
   /** Band that flashes grid glow / line brightness */
   glowChannel: ReactiveChannel;
   /** Band that punches sun / glow brightness */
   sunChannel: ReactiveChannel;
-  /** Hue walk on sun disk (top) color */
+  /** Garland hue walk on sun (from idle); peak unused while on */
   sunTwinkle: boolean;
   /** Hue walk on sun glow (halo) color */
   sunGlowTwinkle: boolean;
-  /** Hue walk on grid near/far from picked colors */
+  /** Garland hue walk on grid (from idle) */
   gridTwinkle: boolean;
-  /** Hue walk on sky / horizon from picked colors */
+  /** Garland hue walk on sky (from idle) */
   skyTwinkle: boolean;
   /** Hue degrees per second while any twinkle is on */
   colorSpeed: number;

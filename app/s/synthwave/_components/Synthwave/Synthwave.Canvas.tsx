@@ -30,7 +30,7 @@ function Scene({
     return (
         <>
             <CameraRig liveRef={liveRef} />
-            <Sky liveRef={liveRef} meshRef={skyRef} />
+            <Sky liveRef={liveRef} vizRef={vizRef} meshRef={skyRef} />
             <NeonSun liveRef={liveRef} vizRef={vizRef} groupRef={sunRef} />
             <NeonGrid liveRef={liveRef} vizRef={vizRef} groupRef={gridRef} />
             <Bloom skyRef={skyRef} sunRef={sunRef} gridRef={gridRef} />

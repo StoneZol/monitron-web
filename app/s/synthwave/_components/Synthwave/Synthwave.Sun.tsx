@@ -9,7 +9,7 @@ import {
     neonSunFragmentShader,
     neonSunVertexShader,
 } from "./shaders/neonsun";
-import { channelLevel, hexToVec3, hueWalkHex } from "./Synthwave.audio";
+import { channelLevel, hueWalkHex, lerpHex } from "./Synthwave.audio";
 import { DEPTH_MIN, roadDepth, Z_PAD } from "./Synthwave.constants";
 import type { SynthwaveLive } from "./Synthwave.types";
 
@@ -92,7 +92,7 @@ export function NeonSun({
         const punch = Math.min(1, sunHold.current);
 
         const sunArmed = reactive && knobs.sunChannel !== "off";
-        const idle = sunArmed ? 0.58 : 1;
+        const idle = sunArmed && !knobs.sunTwinkle ? 0.58 : 1;
         m.uniforms.uDiskBrightness!.value = knobs.sunBrightness * idle;
         m.uniforms.uGlowBrightness!.value =
             knobs.sunGlowBrightness * (sunArmed ? 0.55 + punch * 0.45 : 1);
@@ -117,8 +117,9 @@ export function NeonSun({
             hueWalkHex(knobs.sunMid, off, bottom);
         } else {
             diskHue.current = 0;
-            hexToVec3(knobs.sunRim, top);
-            hexToVec3(knobs.sunMid, bottom);
+            const level = sunArmed ? punch : 0;
+            lerpHex(knobs.sunRim, knobs.sunRimPeak, level, top);
+            lerpHex(knobs.sunMid, knobs.sunMidPeak, level, bottom);
         }
         flashTop.copy(top);
         flashBottom.copy(bottom);
