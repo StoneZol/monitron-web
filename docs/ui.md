@@ -32,11 +32,14 @@ import { PlaceholderCard } from "@/components/PlaceholderCard";
 ## Layout hierarchy
 
 ```
-ScreensOverlay          full-screen HUD (idle-fade + back)
-  └─ ControlPanel       titled box, scrollable body
-       └─ ControlSection   labeled group (look / fog / camera / visualizer / …)
-            └─ … knobs …
-            └─ AudioBusPanel   ::audio-bus (1:1 plugin bus meters) in visualizer
+ScreensOverlay          full-screen HUD (idle-fade)
+  └─ ControlPanel       titled box
+       ├─ title
+       ├─ actions*      fixed: back / reset / fullscreen (outside scroll)
+       └─ scroll body
+            └─ ControlSection …
+            └─ VisualizerSection   shared bus chrome + Peak gain
+                 └─ children       screen-only knobs (drive / channels…)
 ```
 
 `AudioSpectrum` (`components/AudioSpectrum`) is a separate canvas deck module — not mounted in the HUD; reserved for a future saver.
@@ -47,15 +50,20 @@ Typical screen:
 <div className="relative h-screen w-screen overflow-hidden bg-black">
   {/* canvas / R3F */}
   <ScreensOverlay>
-    <ControlPanel title="my_screen">
+    <ControlPanel
+      title="my_screen"
+      actions={
+        <div className="flex gap-2">
+          <NavBackButton className="flex-1" />
+          <PanelButton onClick={reset} className="flex-1">reset</PanelButton>
+          <PanelButton onClick={fullscreen} className="flex-1">fullscreen</PanelButton>
+        </div>
+      }
+    >
       <ControlSection label="look">{/* knobs */}</ControlSection>
-      <ControlSection label="visualizer">
-        <AudioBusPanel
-          bus={visualizer.bus}
-          busAgeMs={visualizer.busAgeMs}
-          busLive={visualizer.busLive}
-        />
-      </ControlSection>
+      <VisualizerSection visualizer={visualizer}>
+        {/* optional screen-specific reactive knobs */}
+      </VisualizerSection>
     </ControlPanel>
   </ScreensOverlay>
 </div>
@@ -74,7 +82,8 @@ Shell for screen knobs. Fixed max height + internal scroll.
 | Prop        | Type        | Default | Notes                          |
 | ----------- | ----------- | ------- | ------------------------------ |
 | `title`     | `string`    | —       | Header label (usually screen id) |
-| `children`  | `ReactNode` | —       | Sections / controls            |
+| `actions`   | `ReactNode?`| —       | Fixed under title (back / reset / fullscreen) |
+| `children`  | `ReactNode` | —       | Scrollable sections / controls |
 | `className` | `string?`   | —       | Optional layout override       |
 
 ```tsx
@@ -307,7 +316,7 @@ Action button inside the panel (reset, fullscreen, …).
 
 ## `ScreensOverlay`
 
-Fullscreen HUD wrapper for a screen. Centers the panel, adds back nav, fades after idle (~6s without pointer).
+Fullscreen HUD wrapper for a screen. Centers the panel, fades after idle (~6s without pointer).
 
 | Prop       | Type        | Default | Notes                          |
 | ---------- | ----------- | ------- | ------------------------------ |
@@ -315,11 +324,13 @@ Fullscreen HUD wrapper for a screen. Centers the panel, adds back nav, fades aft
 
 ```tsx
 <ScreensOverlay>
-  <ControlPanel title="matrix">{/* … */}</ControlPanel>
+  <ControlPanel title="matrix" actions={/* back / reset / fullscreen */}>
+    {/* … */}
+  </ControlPanel>
 </ScreensOverlay>
 ```
 
-Already includes `NavBackButton` top-left. Don’t nest another back control unless you need a custom target.
+Put `NavBackButton` in `ControlPanel.actions` (fixed under the title) — not as a floating corner control.
 
 ---
 
@@ -327,17 +338,17 @@ Already includes `NavBackButton` top-left. Don’t nest another back control unl
 
 Link back to the library (or elsewhere).
 
-| Prop        | Type     | Default     | Notes        |
-| ----------- | -------- | ----------- | ------------ |
-| `href`      | `string?`| `"/"`       |              |
-| `label`     | `string?`| `"library"` |              |
-| `className` | `string?`| —           | Positioning  |
+| Prop        | Type     | Default  | Notes        |
+| ----------- | -------- | -------- | ------------ |
+| `href`      | `string?`| `"/"`    |              |
+| `label`     | `string?`| `"back"` |              |
+| `className` | `string?`| —        | Layout       |
 
 ```tsx
-<NavBackButton className="absolute top-4 left-4 z-20" />
+<NavBackButton className="flex-1 justify-center shadow-none" />
 ```
 
-Usually you get this for free via `ScreensOverlay`.
+Pass it via `ControlPanel.actions` alongside reset / fullscreen.
 
 ---
 

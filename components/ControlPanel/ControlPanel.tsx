@@ -4,20 +4,32 @@ import { cn } from "@/lib/utils";
 type ControlPanelProps = {
     title: string;
     children: ReactNode;
+    /** Fixed under the title — outside the scroll body (back / reset / fullscreen) */
+    actions?: ReactNode;
     className?: string;
 };
 
-export function ControlPanel({ title, children, className }: ControlPanelProps) {
+export function ControlPanel({
+    title,
+    children,
+    actions,
+    className,
+}: ControlPanelProps) {
     return (
         <div
             className={cn(
-                "flex max-h-[min(80vh,720px)] flex-col border border-signal bg-screen/85 font-mono text-signal shadow-[2px_2px_0_var(--magenta)] backdrop-blur-sm mt-2",
+                "mt-2 flex max-h-[min(80vh,720px)] flex-col border border-signal bg-screen/85 font-mono text-signal shadow-[2px_2px_0_var(--magenta)] backdrop-blur-sm",
                 className,
             )}
         >
             <div className="shrink-0 border-b border-line px-3 py-2 text-[10px] uppercase tracking-[0.28em]">
                 {title}
             </div>
+            {actions ? (
+                <div className="shrink-0 border-b border-line px-3 py-2">
+                    {actions}
+                </div>
+            ) : null}
             <div className="control-panel-scroll flex flex-col gap-3 overflow-y-auto overscroll-contain p-3">
                 {children}
             </div>

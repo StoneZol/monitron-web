@@ -13,6 +13,8 @@ export type MatrixControls = {
   colorSpeed: number;
   /** Multiplies low-slice punches + global fall on reactive */
   drive: number;
+  /** Multiplies bus peak for punches / glow (quiet tab volume) */
+  peakGain: number;
   /** Audio feed: off | mic | plugin */
   audioSource: AudioSource;
   /** Mic noise-gate threshold (only used when audioSource === mic) */

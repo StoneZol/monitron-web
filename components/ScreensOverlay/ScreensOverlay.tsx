@@ -1,10 +1,13 @@
 "use client";
 
-import { NavBackButton } from "@/components/NavBackButton";
 import { cn } from "@/lib/utils";
 import useScreensOverlayHook from "./ScreensOverlay.hooks";
 import type { ScreensOverlayProps } from "./ScreensOverlay.types";
 
+/**
+ * Idle-fade HUD shell. Back / reset / fullscreen live in ControlPanel.actions
+ * (fixed under the title) so they stay visible while knobs scroll.
+ */
 const ScreensOverlay = ({ children }: ScreensOverlayProps) => {
   const { hideHud } = useScreensOverlayHook();
 
@@ -16,8 +19,6 @@ const ScreensOverlay = ({ children }: ScreensOverlayProps) => {
       )}
       aria-hidden={hideHud}
     >
-      <NavBackButton className="absolute top-4 left-4 z-20" />
-
       <div className="relative z-20 w-80">{children}</div>
     </div>
   );

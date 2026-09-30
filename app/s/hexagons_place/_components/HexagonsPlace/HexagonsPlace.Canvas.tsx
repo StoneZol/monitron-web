@@ -67,7 +67,7 @@ function spectrumTrio(viz: VizBands): Record<CapBand, number> {
     };
 }
 
-/** Peak on the bus often sits ~0.02–0.1 — scale beat so channel selects actually move */
+/** Base scale — bus peak often sits ~0.02–0.1 (Peak gain lives in the audio hook) */
 const BEAT_GAIN = 10;
 
 /** Fog / grid / spin channel level from spectrum + peak (beat ≈ crest). */

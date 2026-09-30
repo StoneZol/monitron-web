@@ -5,6 +5,8 @@ import {
     MIC_GATE_DEFAULT,
     migrateAudioSource,
     normalizeMicGate,
+    normalizePeakGain,
+    PEAK_GAIN_DEFAULT,
     useAudioReactive,
 } from "@/hooks/useAudioReactive";
 import { toggleFullscreen } from "@/lib/fullscreen";
@@ -54,6 +56,7 @@ export const HEXAGONS_DEFAULTS: HexagonsPlaceLive = {
     hexHeightSpread: 1,
     audioSource: "off",
     micGate: MIC_GATE_DEFAULT,
+    peakGain: PEAK_GAIN_DEFAULT,
     bandBounce: true,
     bandFlicker: true,
     bassBoost: 2,
@@ -109,6 +112,7 @@ function readPrefs(): HexagonsPlaceLive {
             reactive: legacyReactive,
         }),
         micGate: normalizeMicGate(rest.micGate),
+        peakGain: normalizePeakGain(rest.peakGain),
     };
     // Legacy single fogColor → fogIdle
     if (
@@ -190,6 +194,8 @@ export default function useHexagonsPlaceHook() {
         onSourceChange: (audioSource) => commit({ audioSource }),
         preferredMicGate: live.micGate,
         onMicGateChange: (micGate) => commit({ micGate }),
+        preferredPeakGain: live.peakGain,
+        onPeakGainChange: (peakGain) => commit({ peakGain }),
     });
 
     return {

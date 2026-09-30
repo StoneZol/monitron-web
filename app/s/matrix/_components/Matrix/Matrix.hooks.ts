@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { useAudioReactive, migrateAudioSource, MIC_GATE_DEFAULT, normalizeMicGate } from "@/hooks/useAudioReactive";
+import { useAudioReactive, migrateAudioSource, MIC_GATE_DEFAULT, normalizeMicGate, PEAK_GAIN_DEFAULT, normalizePeakGain } from "@/hooks/useAudioReactive";
 import {
   bandAtColumn,
   risingEdge,
@@ -55,6 +55,7 @@ const DEFAULTS: MatrixControls = {
   fallSpeed: 10,
   colorSpeed: 8,
   drive: DRIVE_DEFAULT,
+  peakGain: PEAK_GAIN_DEFAULT,
   audioSource: "off",
   micGate: MIC_GATE_DEFAULT,
 };
@@ -145,6 +146,7 @@ function migratePrefs(
     fallSpeed: saved.fallSpeed ?? DEFAULTS.fallSpeed,
     colorSpeed: saved.colorSpeed ?? DEFAULTS.colorSpeed,
     drive,
+    peakGain: normalizePeakGain(saved.peakGain),
     audioSource: migrateAudioSource(saved),
     micGate: normalizeMicGate(saved.micGate),
   };
@@ -166,6 +168,7 @@ const useMatrixHook = () => {
   const [drive, setDriveState] = useState(DEFAULTS.drive);
   const [sourcePref, setSourcePref] = useState(DEFAULTS.audioSource);
   const [micGatePref, setMicGatePref] = useState(DEFAULTS.micGate);
+  const [peakGainPref, setPeakGainPref] = useState(DEFAULTS.peakGain);
   const persistSourceRef = useRef((audioSource: MatrixControls["audioSource"]) => {
     prefsRef.current = { ...prefsRef.current, audioSource };
     saveScreenPrefs(SCREEN_ID, prefsRef.current);
@@ -176,6 +179,11 @@ const useMatrixHook = () => {
     saveScreenPrefs(SCREEN_ID, prefsRef.current);
     setMicGatePref(micGate);
   });
+  const persistPeakGainRef = useRef((peakGain: number) => {
+    prefsRef.current = { ...prefsRef.current, peakGain };
+    saveScreenPrefs(SCREEN_ID, prefsRef.current);
+    setPeakGainPref(peakGain);
+  });
 
   // Spectrum rain: bands → columns, peak → glow, low-slice → fall punches
   const visualizer = useAudioReactive({
@@ -183,6 +191,8 @@ const useMatrixHook = () => {
     onSourceChange: (source) => persistSourceRef.current(source),
     preferredMicGate: micGatePref,
     onMicGateChange: (gate) => persistMicGateRef.current(gate),
+    preferredPeakGain: peakGainPref,
+    onPeakGainChange: (gain) => persistPeakGainRef.current(gain),
   });
 
   useWakeLock();
@@ -218,6 +228,9 @@ const useMatrixHook = () => {
     if (patch.micGate !== undefined) {
       setMicGatePref(patch.micGate);
     }
+    if (patch.peakGain !== undefined) {
+      setPeakGainPref(patch.peakGain);
+    }
   };
 
   useLayoutEffect(() => {
@@ -239,6 +252,7 @@ const useMatrixHook = () => {
     setDriveState(saved.drive);
     setSourcePref(saved.audioSource);
     setMicGatePref(saved.micGate);
+    setPeakGainPref(saved.peakGain);
   }, []);
 
   const setTwinkle = (on: boolean) => {
