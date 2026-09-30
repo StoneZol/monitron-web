@@ -1,4 +1,8 @@
-/** Neon grid: square UV cells + X taper (floor). Near stretched, far less crushed. */
+/**
+ * Neon grid: UV cells + X taper on floor only.
+ * Seams lock because floor & walls share `uv.y * uCellsV + uScroll`.
+ * Taper coeffs (uTaper / uNearWidth / uFarFloor) come from Synthwave.constants.
+ */
 
 export const neonGridVertexShader = /* glsl */ `
 uniform float uScroll;
@@ -8,6 +12,7 @@ uniform float uZNear;
 uniform float uZFar;
 uniform float uTaper;
 uniform float uNearWidth;
+uniform float uFarFloor;
 
 varying vec2 vUv;
 varying vec2 vGrid;
@@ -18,15 +23,14 @@ void main() {
 
   vec4 worldPos = modelMatrix * vec4(position, 1.0);
 
-  // Perspective pinch: stretch the near end, ease off crushing the far end
-  // so UV tiles stay closer to square along the road.
+  // Perspective pinch on floor X only (walls: uTaper = 0).
   if (uTaper > 1e-5) {
     float depthT = clamp(
       (uZNear - worldPos.z) / max(1e-4, uZNear - uZFar),
       0.0,
       1.0
     );
-    float farScale = max(uNearWidth * (1.0 - uTaper), uNearWidth * 0.42);
+    float farScale = max(uNearWidth * (1.0 - uTaper), uNearWidth * uFarFloor);
     float scale = mix(uNearWidth, farScale, depthT);
     worldPos.x *= scale;
   }
