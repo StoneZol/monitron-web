@@ -178,7 +178,7 @@ export function NeonGrid({
         builtRef.current = true;
 
         const floorCellsU = Math.max(1, offsetCells) * 2;
-        const floorW = floorCellsU * CELL;
+        const floorW = floorCellsU * CELL * 2;
         // Denser U than world-square: floor X and wall height compressed for screen.
         floorM.uniforms.uCellsU!.value = floorW / cellU;
         floorM.uniforms.uCellsV!.value = cellsV;
