@@ -44,16 +44,27 @@ void main() {
   vec2 fw = max(fwidth(vGrid), vec2(1e-5));
   vec2 halfWidth = min(fw * 1.0, vec2(0.07));
   vec2 line = smoothstep(0.5 - halfWidth, vec2(0.5), dist);
-  float a = 1.0 - smoothstep(0.22, 0.55, fw.x);
-  float b = 1.0 - smoothstep(0.12, 0.32, fw.y);
-  float gridAlpha = min(max(line.x * a, line.y * b), 0.92);
 
-  float far = smoothstep(0.55, 0.95, vUv.y);
-  gridAlpha *= mix(1.0, 0.75, far);
+  float a = 1.0 - smoothstep(0.22, 0.55, fw.x);
+  float b = 1.0 - smoothstep(0.10, 0.26, fw.y);
+
+  // Horizontals densify at the vanishing point → kill them before they shimmer.
+  float far = smoothstep(0.62, 0.96, vUv.y);
+  float horiz = line.y * b * (1.0 - far);
+  float vert = line.x * a * mix(1.0, 0.55, far);
+  float gridAlpha = min(max(vert, horiz), 0.92);
 
   float colorDistanceBlend = pow(max(vUv.y, 0.0), 0.8);
   vec3 lineColor = mix(uColorGridNear, uColorGridFar, colorDistanceBlend);
   vec3 resultColor = mix(uColorGridBackground, lineColor, gridAlpha);
+
+  // Static horizon light — horizontals read as emerging from this band.
+  float horizonGlow = 1.0 - smoothstep(0.0, 0.085, abs(vUv.y - 0.965));
+  float horizonCore = 1.0 - smoothstep(0.0, 0.014, abs(vUv.y - 0.992));
+  float horizon = max(horizonCore, horizonGlow * 0.65);
+  vec3 horizonColor = mix(uColorGridFar, uColorGridNear, 0.35);
+  horizonColor = mix(horizonColor, vec3(1.0), 0.22);
+  resultColor = mix(resultColor, horizonColor, horizon);
 
   gl_FragColor = vec4(resultColor, 1.0);
 }

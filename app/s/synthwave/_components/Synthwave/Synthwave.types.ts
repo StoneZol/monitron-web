@@ -27,7 +27,7 @@ export type SynthwaveLive = {
   sunSize: number;
   /** Unused legacy tint */
   mountPeak: string;
-  /** Wall lean from vertical, degrees (− outward … 0 vertical … + inward triangle) */
+  /** Wall lean from vertical (− outward … 0 vertical … +90 flat over the road) */
   wallAngle: number;
   /** How far walls sit from center near the camera (cells of flat road each side) */
   wallOffset: number;

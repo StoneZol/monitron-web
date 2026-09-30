@@ -34,12 +34,13 @@ const INFO = {
     roadFar: "Far grid neon (WE gridfar).",
     roadFloor: "Opaque terrain fill (WE gridbackground).",
     mountains: "Terrain shape — flat grid or a U-channel with two side walls.",
-    terrainMode: "flat = plane. channel = road between two walls that rise into the sky.",
+    terrainMode:
+      "flat = wide plane (wall knobs off). channel = road between two walls.",
     wallAngle:
-        "Lean from vertical: − opens outward, 0 = vertical, + folds inward to a point.",
+      "Lean from vertical: − opens outward, 0 = vertical, + folds inward (90° = flat over the road).",
     wallOffset: "Flat road half-width near the camera (cells from center).",
     wallPerspective:
-        "Convergence angle of the grid into the distance: − almost parallel, + steeper taper toward the sun.",
+      "Convergence angle of the grid into the distance: − almost parallel, + steeper taper toward the sun.",
     roadLength:
         "How far the neon road runs toward the sun. Default is short (~⅓ of the view); slide up to extend.",
     motion: "Scroll speed of the neon grid (WE time×2 base).",
@@ -158,7 +159,12 @@ const Synthwave = ({ showOverlay = true }: SynthwaveProps) => {
                                 max={90}
                                 step={1}
                                 onChange={controls.setWallAngle}
-                                format={(v) => `${v > 0 ? "+" : ""}${Math.round(v)}°`}
+                                disabled={controls.terrainMode === "flat"}
+                                format={(v) =>
+                                  v >= 90
+                                    ? "flat"
+                                    : `${v > 0 ? "+" : ""}${Math.round(v)}°`
+                                }
                                 info={INFO.wallAngle}
                             />
                             <Slider
@@ -168,6 +174,7 @@ const Synthwave = ({ showOverlay = true }: SynthwaveProps) => {
                                 max={16}
                                 step={1}
                                 onChange={controls.setWallOffset}
+                                disabled={controls.terrainMode === "flat"}
                                 format={(v) => `±${Math.round(v)} cells`}
                                 info={INFO.wallOffset}
                             />
@@ -178,6 +185,7 @@ const Synthwave = ({ showOverlay = true }: SynthwaveProps) => {
                                 max={10}
                                 step={1}
                                 onChange={controls.setWallPerspective}
+                                disabled={controls.terrainMode === "flat"}
                                 format={(v) =>
                                     v === 0
                                         ? "focus mid"

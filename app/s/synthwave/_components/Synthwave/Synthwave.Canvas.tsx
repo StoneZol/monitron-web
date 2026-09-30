@@ -90,18 +90,23 @@ function Sky({
       }),
     [],
   );
+  const matRef = useRef(mat);
 
   const { size } = useThree();
   useEffect(() => {
-    mat.uniforms.uAspect!.value = size.width / Math.max(1, size.height);
-  }, [mat, size]);
+    matRef.current.uniforms.uAspect!.value =
+      size.width / Math.max(1, size.height);
+  }, [size.width, size.height]);
+
+  useEffect(() => () => mat.dispose(), [mat]);
 
   useFrame(({ clock }) => {
+    const m = matRef.current;
     const knobs = liveRef.current;
-    mat.uniforms.uTime!.value = clock.elapsedTime;
+    m.uniforms.uTime!.value = clock.elapsedTime;
     if (!knobs) return;
-    hexToVec3(knobs.skyTop, mat.uniforms.uColorClouds!.value);
-    hexToVec3(knobs.skyHorizon, mat.uniforms.uColorHorizon!.value);
+    hexToVec3(knobs.skyTop, m.uniforms.uColorClouds!.value);
+    hexToVec3(knobs.skyHorizon, m.uniforms.uColorHorizon!.value);
   });
 
   return (
@@ -138,14 +143,18 @@ function NeonSun({
       }),
     [],
   );
+  const matRef = useRef(mat);
+
+  useEffect(() => () => mat.dispose(), [mat]);
 
   useFrame(({ clock }) => {
+    const m = matRef.current;
     const knobs = liveRef.current;
     const viz = vizRef.current;
-    mat.uniforms.uTime!.value = clock.elapsedTime;
+    m.uniforms.uTime!.value = clock.elapsedTime;
     if (!knobs) return;
-    hexToVec3(knobs.sunRim, mat.uniforms.uColorSunTop!.value);
-    hexToVec3(knobs.sunCore, mat.uniforms.uColorSunBottom!.value);
+    hexToVec3(knobs.sunRim, m.uniforms.uColorSunTop!.value);
+    hexToVec3(knobs.sunCore, m.uniforms.uColorSunBottom!.value);
     void viz;
     const depth = roadDepth(knobs.roadLength);
     const zFar = -(depth - Z_PAD);
@@ -156,7 +165,11 @@ function NeonSun({
 
   const base = 2.4;
   return (
-    <group ref={groupRef} position={[0, 0.22, -(DEPTH_MIN - Z_PAD) - 0.12]} renderOrder={-5}>
+    <group
+      ref={groupRef}
+      position={[0, 0.22, -(DEPTH_MIN - Z_PAD) - 0.12]}
+      renderOrder={-5}
+    >
       <SunPulse liveRef={liveRef} vizRef={vizRef} baseScale={base}>
         <mesh renderOrder={-5} frustumCulled={false}>
           <planeGeometry args={[1, 1]} />
@@ -235,31 +248,31 @@ function NeonGrid({
 
   const wallCellsU = WALL_LEN / CELL;
 
-  const floorMatRef = useRef<THREE.ShaderMaterial | null>(null);
-  const wallMatRef = useRef<THREE.ShaderMaterial | null>(null);
-  if (!floorMatRef.current) {
-    floorMatRef.current = makeGridMaterial(1, DEPTH_MIN / CELL);
-  }
-  if (!wallMatRef.current) {
-    wallMatRef.current = makeGridMaterial(wallCellsU, DEPTH_MIN / CELL);
-  }
+  const floorMat = useMemo(
+    () => makeGridMaterial(1, DEPTH_MIN / CELL),
+    [],
+  );
+  const wallMat = useMemo(
+    () => makeGridMaterial(wallCellsU, DEPTH_MIN / CELL),
+    [wallCellsU],
+  );
+  const floorMatRef = useRef(floorMat);
+  const wallMatRef = useRef(wallMat);
 
   useEffect(
     () => () => {
-      floorMatRef.current?.dispose();
-      wallMatRef.current?.dispose();
-      floorMatRef.current = null;
-      wallMatRef.current = null;
+      floorMat.dispose();
+      wallMat.dispose();
     },
-    [],
+    [floorMat, wallMat],
   );
 
   useFrame((_, dt) => {
     const knobs = liveRef.current;
     const viz = vizRef.current;
-    const floorMat = floorMatRef.current;
-    const wallMat = wallMatRef.current;
-    if (!knobs || !floorMat || !wallMat) return;
+    const floorM = floorMatRef.current;
+    const wallM = wallMatRef.current;
+    if (!knobs) return;
 
     const reactive = Boolean(viz?.enabled);
     const roadLv = reactive ? channelLevel(viz!, knobs.roadChannel) : 0;
@@ -274,13 +287,12 @@ function NeonGrid({
     const rate = 2 * knobs.roadSpeed * (1 + roadLv * knobs.drive * 0.5);
     scrollRef.current += Math.max(0, dt) * rate;
 
-    // Perspective = convergence angle of longitudinal lines into the distance.
+    // Perspective = convergence angle into the distance (channel only; flat = plain sheet).
     const persp = Math.min(12, Math.max(-12, knobs.wallPerspective));
     const t = (persp + 12) / 24;
     const zNear = Z_PAD;
     const zFar = -(depth - Z_PAD);
-    // − almost parallel … + meet near the far edge (steep angle)
-    const taper = 0.08 + t * 0.92;
+    const taper = mode === "flat" ? 0 : 0.08 + t * 0.92;
 
     const syncUniforms = (mat: THREE.ShaderMaterial) => {
       mat.uniforms.uScroll!.value = scrollRef.current;
@@ -291,8 +303,8 @@ function NeonGrid({
       hexToVec3(knobs.roadFar, mat.uniforms.uColorGridFar!.value);
       hexToVec3(knobs.roadFloor, mat.uniforms.uColorGridBackground!.value);
     };
-    syncUniforms(floorMat);
-    syncUniforms(wallMat);
+    syncUniforms(floorM);
+    syncUniforms(wallM);
 
     const floor = floorRef.current;
     const left = leftRef.current;
@@ -314,14 +326,14 @@ function NeonGrid({
     lastLengthRef.current = depth;
     builtRef.current = true;
 
-    // Flat: wide sheet. Channel: road half-width = wallOffset cells each side.
+    // Flat: wide sheet that fills left/right. Channel: road + hinged walls.
     const floorCellsU =
-      mode === "flat" ? Math.max(offsetCells * 2, 48) : offsetCells * 2;
+      mode === "flat" ? 96 : Math.max(1, offsetCells) * 2;
     const floorW = floorCellsU * CELL;
-    floorMat.uniforms.uCellsU!.value = floorCellsU;
-    floorMat.uniforms.uCellsV!.value = cellsV;
-    wallMat.uniforms.uCellsU!.value = wallCellsU;
-    wallMat.uniforms.uCellsV!.value = cellsV;
+    floorM.uniforms.uCellsU!.value = floorCellsU;
+    floorM.uniforms.uCellsV!.value = cellsV;
+    wallM.uniforms.uCellsU!.value = wallCellsU;
+    wallM.uniforms.uCellsV!.value = cellsV;
 
     // Near edge at +Z_PAD (past camera), far at −(depth−Z_PAD) toward the sun.
     const zCenter = (Z_PAD - (depth - Z_PAD)) / 2;
@@ -340,7 +352,8 @@ function NeonGrid({
     floor.visible = true;
 
     const showWalls = mode === "channel";
-    const lean = (Math.min(70, Math.max(-70, leanDeg)) * Math.PI) / 180;
+    // Lean from vertical: 0 upright, + tips inward (closes), − opens out.
+    const lean = (Math.min(90, Math.max(-70, leanDeg)) * Math.PI) / 180;
     const hinge = floorW / 2;
 
     const placeWall = (mesh: THREE.Mesh, side: -1 | 1) => {
@@ -352,6 +365,7 @@ function NeonGrid({
       g.translate(WALL_LEN / 2, 0, zCenter);
       mesh.geometry = g;
       mesh.position.set(side * hinge, 0, 0);
+      // Left: +90° = vertical; +lean tips toward center. Right mirrored.
       if (side === 1) {
         mesh.rotation.set(0, 0, -(Math.PI / 2 + lean));
         mesh.scale.set(-1, 1, 1);
@@ -367,9 +381,9 @@ function NeonGrid({
 
   return (
     <group ref={groupRef} position={[0, 0, 0]}>
-      <mesh ref={floorRef} material={floorMatRef.current!} renderOrder={1} />
-      <mesh ref={leftRef} material={wallMatRef.current!} renderOrder={1} />
-      <mesh ref={rightRef} material={wallMatRef.current!} renderOrder={1} />
+      <mesh ref={floorRef} material={floorMat} renderOrder={1} />
+      <mesh ref={leftRef} material={wallMat} renderOrder={1} />
+      <mesh ref={rightRef} material={wallMat} renderOrder={1} />
     </group>
   );
 }
@@ -408,18 +422,18 @@ function Bloom({
   }, [size]);
 
   // Visibility toggle is reliable (layers were flaky). Bloom sky+sun, then opaque grid on top.
-  useFrame(() => {
+  useFrame(({ gl: frameGl, scene: frameScene, camera: frameCam }) => {
     const sky = skyRef.current;
     const sun = sunRef.current;
     const grid = gridRef.current;
-    const prevAutoClear = gl.autoClear;
+    const prevAutoClear = frameGl.autoClear;
 
     if (grid) grid.visible = false;
     if (sky) sky.visible = true;
     if (sun) sun.visible = true;
 
     if (!composer.current) {
-      gl.render(scene, camera);
+      frameGl.render(frameScene, frameCam);
     } else {
       composer.current.render();
     }
@@ -428,31 +442,44 @@ function Bloom({
     if (sky) sky.visible = false;
     if (sun) sun.visible = false;
 
-    gl.autoClear = false;
-    gl.clearDepth();
-    gl.render(scene, camera);
+    frameGl.autoClear = false;
+    frameGl.clearDepth();
+    frameGl.render(frameScene, frameCam);
 
     if (sky) sky.visible = true;
     if (sun) sun.visible = true;
-    gl.autoClear = prevAutoClear;
+    frameGl.autoClear = prevAutoClear;
   }, 1);
 
   return null;
 }
 
-function CameraRig() {
-  const { camera } = useThree();
-  const camRef = useRef(camera);
-  camRef.current = camera;
-  useFrame(() => {
-    const cam = camRef.current as THREE.PerspectiveCamera;
-    // Fixed immersive framing — perspective is mesh focus, not cam height.
-    cam.position.set(0, 0.42, 1.55);
+function CameraRig({ liveRef }: { liveRef: RefObject<SynthwaveLive> }) {
+  useFrame(({ camera }) => {
+    const knobs = liveRef.current;
+    const cam = camera as THREE.PerspectiveCamera;
+    if (!knobs) return;
+
+    const channel = knobs.terrainMode === "channel";
+    const half = Math.max(1, Math.round(knobs.wallOffset)) * CELL;
+    // Framed for ~±4 cells; when narrower, dive forward/down into the trench
+    // so walls don't sit as giant slabs filling the sides.
+    const refHalf = 4 * CELL;
+    const t = channel
+      ? Math.min(1.35, Math.max(0.28, half / refHalf))
+      : 1;
+
+    const y = channel ? 0.14 + 0.28 * t : 0.42;
+    const z = channel ? 0.4 + 1.15 * t : 1.55;
+    const lookY = channel ? 0.06 + 0.08 * t : 0.12;
+    const lookZ = -2.2;
+
+    cam.position.set(0, y, z);
     cam.fov = 75;
     cam.near = 0.05;
     cam.far = 60;
     cam.updateProjectionMatrix();
-    cam.lookAt(0, 0.12, -2.2);
+    cam.lookAt(0, lookY, lookZ);
   });
   return null;
 }
@@ -470,7 +497,7 @@ function Scene({
 
   return (
     <>
-      <CameraRig />
+      <CameraRig liveRef={liveRef} />
       <Sky liveRef={liveRef} meshRef={skyRef} />
       <NeonSun liveRef={liveRef} vizRef={vizRef} groupRef={sunRef} />
       <NeonGrid liveRef={liveRef} vizRef={vizRef} groupRef={gridRef} />
