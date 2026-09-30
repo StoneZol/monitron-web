@@ -39,6 +39,28 @@ export function sliceBands(
   return n > 0 ? sum / n : 0;
 }
 
+/** Map column index 0..cols-1 → spectrum bin */
+export function bandAtColumn(
+  bands: ArrayLike<number>,
+  column: number,
+  columns: number,
+): number {
+  const n = bands.length;
+  if (n <= 0 || columns <= 0) return 0;
+  const bi = Math.min(n - 1, Math.max(0, Math.floor((column / columns) * n)));
+  return Math.max(0, bands[bi] ?? 0);
+}
+
+/** Simple rising-edge gate on a 0..1 signal */
+export function risingEdge(
+  level: number,
+  prev: number,
+  edge = 0.05,
+  min = 0.06,
+): boolean {
+  return level > prev + edge && level >= min;
+}
+
 export type DerivedAudio = {
   bands: number[];
   bass: number;

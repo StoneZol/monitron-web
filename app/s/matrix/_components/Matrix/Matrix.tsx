@@ -100,12 +100,12 @@ const Matrix = ({ showOverlay = true }: { showOverlay?: boolean }) => {
               )}
               {visualizer.reactive && (
                 <Slider
-                  label="Bass boost"
-                  value={controls.bassBoost}
+                  label="Drive"
+                  value={controls.drive}
                   min={0}
-                  max={controls.bassBoostMax}
+                  max={controls.driveMax}
                   step={0.5}
-                  onChange={controls.setBassBoost}
+                  onChange={controls.setDrive}
                   format={(v) => v.toFixed(1)}
                 />
               )}
