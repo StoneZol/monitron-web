@@ -13,8 +13,10 @@ export type SynthwaveLive = {
   roadFar: string;
   /** Terrain fill — WE gridbackground */
   roadFloor: string;
-  /** Soft unused in WE port (kept for UI compat / future) */
+  /** Grid line glow / halo (0…40) */
   roadGlow: number;
+  /** Grid line thickness scale (0.5…3, 1 = default) */
+  roadThickness: number;
   /** Scroll multiplier (WE base ≈ 1 → uScrollSpeed 2) */
   roadSpeed: number;
   /** Sun top — WE colorsuntop */
@@ -23,7 +25,7 @@ export type SynthwaveLive = {
   sunMid: string;
   /** Sun bottom — WE colorsunbottom */
   sunCore: string;
-  /** Multiplier on WE sun scale 0.387 */
+  /** Multiplier on WE sun scale */
   sunSize: number;
   /** Unused legacy tint */
   mountPeak: string;
@@ -41,9 +43,14 @@ export type SynthwaveLive = {
   skyTop: string;
   /** Horizon glow tint */
   skyHorizon: string;
+  /** Band that accelerates road scroll */
   roadChannel: ReactiveChannel;
-  mountChannel: ReactiveChannel;
-  sunChannel: ReactiveChannel;
+  /** Hue walk on sun top/bottom from picked colors */
+  sunTwinkle: boolean;
+  /** Hue walk on grid near/far from picked colors */
+  gridTwinkle: boolean;
+  /** Hue walk on sky / horizon from picked colors */
+  skyTwinkle: boolean;
   drive: number;
   audioSource: AudioSource;
   micGate: number;

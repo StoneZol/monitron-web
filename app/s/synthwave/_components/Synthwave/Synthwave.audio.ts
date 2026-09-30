@@ -25,3 +25,27 @@ export function channelLevel(viz: VizBands, ch: ReactiveChannel): number {
 export function hexToVec3(hex: string, target: THREE.Color) {
     return target.set(hex);
 }
+
+const _hsl = { h: 0, s: 0, l: 0 };
+
+/** Hue walk from the picked base (Matrix / Hexagons garland). */
+export function hueWalkHex(
+    hex: string,
+    hueOffsetDeg: number,
+    target: THREE.Color,
+) {
+    target.set(hex);
+    if (!hueOffsetDeg) return target;
+
+    target.getHSL(_hsl);
+    let h = (_hsl.h + hueOffsetDeg / 360) % 1;
+    if (h < 0) h += 1;
+    // Achromatic / black: invent a vivid base so the walk is visible
+    const achromatic = _hsl.s < 0.08 || _hsl.l < 0.06;
+    const s = achromatic ? 0.85 : Math.max(_hsl.s, 0.55);
+    const l = achromatic ? 0.5 : Math.max(_hsl.l, 0.12);
+    return target.setHSL(h, s, l);
+}
+
+/** Degrees per second while a twinkle toggle is on. */
+export const TWINKLE_HUE_SPEED = 40;

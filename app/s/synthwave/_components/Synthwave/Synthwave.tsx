@@ -11,6 +11,7 @@ import {
     PanelButton,
     Select,
     Slider,
+    Toggle,
 } from "@/components/ControlPanel";
 import useSynthwaveHook from "./Synthwave.hooks";
 import type { SynthwaveProps } from "./Synthwave.types";
@@ -33,6 +34,8 @@ const INFO = {
     roadColor: "Near grid neon (WE gridnear).",
     roadFar: "Far grid neon (WE gridfar).",
     roadFloor: "Opaque terrain fill (WE gridbackground).",
+    roadGlow: "Soft neon halo around grid lines (shader glow, not post bloom).",
+    roadThickness: "Grid stroke width. 1 = default; higher = thicker lines.",
     mountains: "Road between two hinged walls — lean ±90° for flat.",
     wallAngle:
         "Lean from vertical: −90 = flat outward, 0 = vertical, +60 = max lean inward. Tips meet when lean matches wall length vs road half-width.",
@@ -46,8 +49,9 @@ const INFO = {
     roadSpeed: "Multiplies base scroll speed.",
     drive: "How strongly audio accelerates road scroll.",
     roadChannel: "Band that accelerates scroll.",
-    mountChannel: "Reserved for a later wall mechanism.",
-    sunChannel: "Band that pulses sun size.",
+    sunTwinkle: "Hue walks over time from sun top/bottom colors.",
+    gridTwinkle: "Hue walks over time from grid near/far colors.",
+    skyTwinkle: "Hue walks over time from sky / horizon colors.",
     visualizer: {
         section: "Audio in → bus meters → peak gain for reactive screens.",
         source:
@@ -98,6 +102,12 @@ const Synthwave = ({ showOverlay = true }: SynthwaveProps) => {
                                 onChange={controls.setSkyHorizon}
                                 info={INFO.skyHorizon}
                             />
+                            <Toggle
+                                label="Sky twinkle"
+                                checked={controls.skyTwinkle}
+                                onChange={controls.setSkyTwinkle}
+                                info={INFO.skyTwinkle}
+                            />
                             <ColorField
                                 label="Sun top"
                                 value={controls.sunRim}
@@ -120,6 +130,12 @@ const Synthwave = ({ showOverlay = true }: SynthwaveProps) => {
                                 format={(v) => `×${v.toFixed(2)}`}
                                 info={INFO.sunSize}
                             />
+                            <Toggle
+                                label="Sun twinkle"
+                                checked={controls.sunTwinkle}
+                                onChange={controls.setSunTwinkle}
+                                info={INFO.sunTwinkle}
+                            />
                             <ColorField
                                 label="Grid near"
                                 value={controls.roadColor}
@@ -137,6 +153,32 @@ const Synthwave = ({ showOverlay = true }: SynthwaveProps) => {
                                 value={controls.roadFloor}
                                 onChange={controls.setRoadFloor}
                                 info={INFO.roadFloor}
+                            />
+                            <Slider
+                                label="Grid glow"
+                                value={controls.roadGlow}
+                                min={0}
+                                max={40}
+                                step={1}
+                                onChange={controls.setRoadGlow}
+                                format={(v) => `${Math.round(v)}`}
+                                info={INFO.roadGlow}
+                            />
+                            <Slider
+                                label="Grid thickness"
+                                value={controls.roadThickness}
+                                min={0.5}
+                                max={3}
+                                step={0.05}
+                                onChange={controls.setRoadThickness}
+                                format={(v) => `×${v.toFixed(2)}`}
+                                info={INFO.roadThickness}
+                            />
+                            <Toggle
+                                label="Grid twinkle"
+                                checked={controls.gridTwinkle}
+                                onChange={controls.setGridTwinkle}
+                                info={INFO.gridTwinkle}
                             />
                         </ControlSection>
 
@@ -223,20 +265,6 @@ const Synthwave = ({ showOverlay = true }: SynthwaveProps) => {
                                         options={[...REACTIVE_CHANNEL_OPTIONS]}
                                         onChange={controls.setRoadChannel}
                                         info={INFO.roadChannel}
-                                    />
-                                    <Select
-                                        label="Mount channel"
-                                        value={controls.mountChannel}
-                                        options={[...REACTIVE_CHANNEL_OPTIONS]}
-                                        onChange={controls.setMountChannel}
-                                        info={INFO.mountChannel}
-                                    />
-                                    <Select
-                                        label="Sun channel"
-                                        value={controls.sunChannel}
-                                        options={[...REACTIVE_CHANNEL_OPTIONS]}
-                                        onChange={controls.setSunChannel}
-                                        info={INFO.sunChannel}
                                     />
                                 </>
                             )}

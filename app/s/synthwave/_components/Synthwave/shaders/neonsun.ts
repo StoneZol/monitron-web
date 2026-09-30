@@ -16,6 +16,7 @@ export const neonSunFragmentShader = /* glsl */ `
 varying vec2 vTexCoord;
 
 uniform float uTime;
+uniform float uBrightness;
 uniform vec3 uColorSunTop;
 uniform vec3 uColorSunBottom;
 
@@ -43,8 +44,9 @@ void main() {
     1.0
   );
 
-  vec3 rgb = uColorSunBottom;
-  rgb = mix(rgb, colorSun.rgb, colorSun.a * sunCutOut);
+  float bright = max(uBrightness, 0.0);
+  vec3 rgb = uColorSunBottom * bright;
+  rgb = mix(rgb, colorSun.rgb * bright, colorSun.a * sunCutOut);
   float alpha = max(glowAlpha * sunCutOutSmooth, colorSun.a * sunCutOut);
 
   gl_FragColor = vec4(rgb, alpha);

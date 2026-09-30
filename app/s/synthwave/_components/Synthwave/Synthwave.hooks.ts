@@ -24,6 +24,7 @@ export const SYNTHWAVE_DEFAULTS: SynthwaveLive = {
   roadFar: "#0000ff",
   roadFloor: "#1a001a",
   roadGlow: 14,
+  roadThickness: 1,
   roadSpeed: 1,
   sunRim: "#ffd90d",
   sunMid: "#ff4fa3",
@@ -38,8 +39,9 @@ export const SYNTHWAVE_DEFAULTS: SynthwaveLive = {
   skyTop: "#0d2666",
   skyHorizon: "#0d2666",
   roadChannel: "beat",
-  mountChannel: "bass",
-  sunChannel: "beat",
+  sunTwinkle: false,
+  gridTwinkle: false,
+  skyTwinkle: false,
   drive: 2,
   audioSource: "off",
   micGate: MIC_GATE_DEFAULT,
@@ -82,10 +84,14 @@ function migratePrefs(
   };
   if (!CHANNELS.has(next.roadChannel))
     next.roadChannel = SYNTHWAVE_DEFAULTS.roadChannel;
-  if (!CHANNELS.has(next.mountChannel))
-    next.mountChannel = SYNTHWAVE_DEFAULTS.mountChannel;
-  if (!CHANNELS.has(next.sunChannel))
-    next.sunChannel = SYNTHWAVE_DEFAULTS.sunChannel;
+  next.sunTwinkle = Boolean(next.sunTwinkle);
+  next.gridTwinkle = Boolean(next.gridTwinkle);
+  // migrate: fogTwinkle → skyTwinkle (no fog layer — sky + horizon)
+  const rawFog = (raw as { fogTwinkle?: boolean }).fogTwinkle;
+  next.skyTwinkle = Boolean(
+    next.skyTwinkle || (rawFog !== undefined ? rawFog : false),
+  );
+  delete (next as { fogTwinkle?: boolean }).fogTwinkle;
   // migrate: old 20–120 from horizontal → lean from vertical (−90…+90)
   const rawRec = raw as SynthwaveLive & { mountSpeed?: number };
   if (
@@ -130,6 +136,17 @@ function migratePrefs(
     next.roadLength = SYNTHWAVE_DEFAULTS.roadLength;
   }
   next.roadLength = Math.min(1, Math.max(0, next.roadLength));
+  if (typeof next.roadGlow !== "number" || !Number.isFinite(next.roadGlow)) {
+    next.roadGlow = SYNTHWAVE_DEFAULTS.roadGlow;
+  }
+  next.roadGlow = Math.min(40, Math.max(0, next.roadGlow));
+  if (
+    typeof next.roadThickness !== "number" ||
+    !Number.isFinite(next.roadThickness)
+  ) {
+    next.roadThickness = SYNTHWAVE_DEFAULTS.roadThickness;
+  }
+  next.roadThickness = Math.min(3, Math.max(0.5, next.roadThickness));
   return next;
 }
 
@@ -228,6 +245,7 @@ export default function useSynthwaveHook() {
     setRoadFar: (roadFar: string) => commit({ roadFar }),
     setRoadFloor: (roadFloor: string) => commit({ roadFloor }),
     setRoadGlow: (roadGlow: number) => commit({ roadGlow }),
+    setRoadThickness: (roadThickness: number) => commit({ roadThickness }),
     setRoadSpeed: (roadSpeed: number) => commit({ roadSpeed }),
     setSunRim: (sunRim: string) => commit({ sunRim }),
     setSunMid: (sunMid: string) => commit({ sunMid }),
@@ -243,10 +261,9 @@ export default function useSynthwaveHook() {
     setSkyHorizon: (skyHorizon: string) => commit({ skyHorizon }),
     setRoadChannel: (roadChannel: SynthwaveLive["roadChannel"]) =>
       commit({ roadChannel }),
-    setMountChannel: (mountChannel: SynthwaveLive["mountChannel"]) =>
-      commit({ mountChannel }),
-    setSunChannel: (sunChannel: SynthwaveLive["sunChannel"]) =>
-      commit({ sunChannel }),
+    setSunTwinkle: (sunTwinkle: boolean) => commit({ sunTwinkle }),
+    setGridTwinkle: (gridTwinkle: boolean) => commit({ gridTwinkle }),
+    setSkyTwinkle: (skyTwinkle: boolean) => commit({ skyTwinkle }),
     setDrive: (drive: number) => commit({ drive }),
     reset: () => commit({ ...SYNTHWAVE_DEFAULTS }),
     fullscreen: () => void toggleFullscreen(),

@@ -7,7 +7,7 @@ import {
     neonSkyFragmentShader,
     neonSkyVertexShader,
 } from "./shaders/neonsky";
-import { hexToVec3 } from "./Synthwave.audio";
+import { hexToVec3, hueWalkHex, TWINKLE_HUE_SPEED } from "./Synthwave.audio";
 import type { SynthwaveLive } from "./Synthwave.types";
 
 export function Sky({
@@ -38,6 +38,7 @@ export function Sky({
         [],
     );
     const matRef = useRef(mat);
+    const hueOffset = useRef(0);
 
     const { size } = useThree();
     useEffect(() => {
@@ -47,13 +48,23 @@ export function Sky({
 
     useEffect(() => () => mat.dispose(), [mat]);
 
-    useFrame(({ clock }) => {
+    useFrame(({ clock }, dt) => {
         const m = matRef.current;
         const knobs = liveRef.current;
         m.uniforms.uTime!.value = clock.elapsedTime;
         if (!knobs) return;
-        hexToVec3(knobs.skyTop, m.uniforms.uColorClouds!.value);
-        hexToVec3(knobs.skyHorizon, m.uniforms.uColorHorizon!.value);
+
+        if (knobs.skyTwinkle) {
+            hueOffset.current =
+                (hueOffset.current + TWINKLE_HUE_SPEED * Math.max(0, dt)) % 360;
+            const off = hueOffset.current;
+            hueWalkHex(knobs.skyTop, off, m.uniforms.uColorClouds!.value);
+            hueWalkHex(knobs.skyHorizon, off, m.uniforms.uColorHorizon!.value);
+        } else {
+            hueOffset.current = 0;
+            hexToVec3(knobs.skyTop, m.uniforms.uColorClouds!.value);
+            hexToVec3(knobs.skyHorizon, m.uniforms.uColorHorizon!.value);
+        }
     });
 
     return (

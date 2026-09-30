@@ -8,7 +8,7 @@ import {
     neonGridFragmentShader,
     neonGridVertexShader,
 } from "./shaders/neongrid";
-import { channelLevel, hexToVec3 } from "./Synthwave.audio";
+import { channelLevel, hexToVec3, hueWalkHex, TWINKLE_HUE_SPEED } from "./Synthwave.audio";
 import {
     CELL,
     CELL_SQUASH,
@@ -32,6 +32,8 @@ function makeGridMaterial(cellsU: number, cellsV: number) {
             uScroll: { value: 0 },
             uCellsU: { value: cellsU },
             uCellsV: { value: cellsV },
+            uLineWidth: { value: 1 },
+            uGlow: { value: 0.35 },
             uColorGridNear: { value: new THREE.Color(1, 0, 0.2) },
             uColorGridFar: { value: new THREE.Color(0, 0, 1) },
             uColorGridBackground: { value: new THREE.Color(0.1, 0, 0.1) },
@@ -120,6 +122,7 @@ export function NeonGrid({
     );
     const floorMatRef = useRef(floorMat);
     const wallMatRef = useRef(wallMat);
+    const hueOffset = useRef(0);
 
     useEffect(
         () => () => {
@@ -139,6 +142,14 @@ export function NeonGrid({
         const reactive = Boolean(viz?.enabled);
         const roadLv = reactive ? channelLevel(viz!, knobs.roadChannel) : 0;
 
+        if (knobs.gridTwinkle) {
+            hueOffset.current =
+                (hueOffset.current + TWINKLE_HUE_SPEED * Math.max(0, dt)) % 360;
+        } else {
+            hueOffset.current = 0;
+        }
+        const hueOff = hueOffset.current;
+
         const leanDeg = knobs.wallAngle;
         const offsetCells = Math.max(1, Math.round(knobs.wallOffset));
         const depth = roadDepth(knobs.roadLength);
@@ -152,8 +163,15 @@ export function NeonGrid({
 
         const syncUniforms = (mat: THREE.ShaderMaterial) => {
             mat.uniforms.uScroll!.value = scrollRef.current;
-            hexToVec3(knobs.roadColor, mat.uniforms.uColorGridNear!.value);
-            hexToVec3(knobs.roadFar, mat.uniforms.uColorGridFar!.value);
+            mat.uniforms.uLineWidth!.value = knobs.roadThickness;
+            mat.uniforms.uGlow!.value = Math.min(1, Math.max(0, knobs.roadGlow / 40));
+            if (hueOff) {
+                hueWalkHex(knobs.roadColor, hueOff, mat.uniforms.uColorGridNear!.value);
+                hueWalkHex(knobs.roadFar, hueOff, mat.uniforms.uColorGridFar!.value);
+            } else {
+                hexToVec3(knobs.roadColor, mat.uniforms.uColorGridNear!.value);
+                hexToVec3(knobs.roadFar, mat.uniforms.uColorGridFar!.value);
+            }
             hexToVec3(knobs.roadFloor, mat.uniforms.uColorGridBackground!.value);
         };
         syncUniforms(floorM);
