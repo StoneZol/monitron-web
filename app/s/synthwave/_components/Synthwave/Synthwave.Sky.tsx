@@ -34,7 +34,7 @@ export function Sky({
                 depthTest: false,
                 uniforms: {
                     uTime: { value: 0 },
-                    uCloudSpeeds: { value: new THREE.Vector2(0.0007, -0.0011) },
+                    uCloudSpeeds: { value: new THREE.Vector2(0.0014, -0.002) },
                     uCloudScales: {
                         value: new THREE.Vector4(1.1, 1.1, 0.7, 0.7),
                     },
