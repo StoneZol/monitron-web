@@ -358,3 +358,144 @@ html::-webkit-scrollbar-thumb,
     background: var(--signal);
     border: 1px solid var(--line);
 }
+
+/* Photosensitive alert — Run button: signal green + hover glitch */
+@keyframes alert-run-glitch-magenta {
+    0%,
+    100% {
+        opacity: 0;
+        transform: translate(0, 0);
+        clip-path: inset(0 0 0 0);
+    }
+    12% {
+        opacity: 0.9;
+        transform: translate(3px, -1px) skewX(-2deg);
+        clip-path: inset(8% 0 72% 0);
+    }
+    22% {
+        opacity: 0;
+    }
+    38% {
+        opacity: 0.95;
+        transform: translate(-4px, 1px);
+        clip-path: inset(42% 0 38% 0);
+    }
+    48% {
+        opacity: 0.7;
+        transform: translate(6px, 0) skewX(4deg);
+        clip-path: inset(68% 0 10% 0);
+    }
+    58% {
+        opacity: 0;
+    }
+    74% {
+        opacity: 0.85;
+        transform: translate(-2px, 2px);
+        clip-path: inset(28% 0 55% 0);
+    }
+    84% {
+        opacity: 0;
+    }
+}
+
+@keyframes alert-run-glitch-cyan {
+    0%,
+    100% {
+        opacity: 0;
+        transform: translate(0, 0);
+        clip-path: inset(0 0 0 0);
+    }
+    18% {
+        opacity: 0.8;
+        transform: translate(-3px, 1px) skewX(2deg);
+        clip-path: inset(55% 0 20% 0);
+    }
+    28% {
+        opacity: 0;
+    }
+    52% {
+        opacity: 0.9;
+        transform: translate(4px, -2px) skewX(-3deg);
+        clip-path: inset(15% 0 65% 0);
+    }
+    62% {
+        opacity: 0;
+    }
+    80% {
+        opacity: 0.75;
+        transform: translate(-5px, 0);
+        clip-path: inset(48% 0 30% 0);
+    }
+    90% {
+        opacity: 0;
+    }
+}
+
+@keyframes alert-run-jitter {
+    0%,
+    100% {
+        transform: translate(0, 0);
+    }
+    25% {
+        transform: translate(1px, -1px);
+    }
+    50% {
+        transform: translate(-1px, 1px);
+    }
+    75% {
+        transform: translate(1px, 0);
+    }
+}
+
+.alert-run-glitch {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    border-color: var(--signal) !important;
+    color: var(--signal) !important;
+    box-shadow: 2px 2px 0 var(--magenta) !important;
+}
+
+.alert-run-glitch:hover,
+.alert-run-glitch:focus-visible {
+    border-color: var(--signal) !important;
+    color: var(--signal) !important;
+    box-shadow: 3px 3px 0 var(--magenta) !important;
+    animation: alert-run-jitter 0.28s steps(2, end) infinite;
+}
+
+.alert-run-glitch::before,
+.alert-run-glitch::after {
+    content: attr(data-text);
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    pointer-events: none;
+    mix-blend-mode: screen;
+    opacity: 0;
+    font: inherit;
+    letter-spacing: inherit;
+    text-transform: uppercase;
+}
+
+.alert-run-glitch:hover::before,
+.alert-run-glitch:focus-visible::before {
+    color: var(--magenta);
+    text-shadow:
+        0 0 8px color-mix(in oklab, var(--magenta) 70%, transparent),
+        2px 0 var(--magenta);
+    animation: alert-run-glitch-magenta 0.42s steps(1, end) infinite;
+}
+
+.alert-run-glitch:hover::after,
+.alert-run-glitch:focus-visible::after {
+    color: var(--cyan);
+    text-shadow:
+        0 0 10px color-mix(in oklab, var(--cyan) 75%, transparent),
+        -2px 0 var(--cyan);
+    animation: alert-run-glitch-cyan 0.42s steps(1, end) infinite;
+}
+
