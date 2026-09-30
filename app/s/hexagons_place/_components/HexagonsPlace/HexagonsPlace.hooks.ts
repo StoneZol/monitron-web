@@ -57,14 +57,6 @@ const BASS_BOOST_MAX = 8;
 
 const SCREEN_ID = "hexagons_place";
 
-/** Spectrum feeds hex groups; page derives lows/mids/highs from bands[] */
-const HEX_VIZ_BANDS = {
-    bass: true,
-    mid: true,
-    high: true,
-    beat: true,
-} as const;
-
 const listeners = new Set<() => void>();
 
 function emit() {
@@ -178,7 +170,6 @@ export default function useHexagonsPlaceHook() {
     };
 
     const visualizer = useAudioReactive({
-        bands: HEX_VIZ_BANDS,
         preferredReactive: live.reactive,
         onReactiveChange: (reactive) => commit({ reactive }),
     });
