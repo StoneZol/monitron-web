@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
   type ReactNode,
+  type MouseEvent,
 } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
@@ -18,9 +19,15 @@ type FieldInfoProps = {
 
 type TipCoords = { top: number; left: number };
 
+function stopLabelActivation(e: MouseEvent) {
+  // Nested <label> parents must not treat "?" as a control click.
+  e.preventDefault();
+  e.stopPropagation();
+}
+
 /**
- * Optional "?" next to a control title — opens a description popover
- * portaled to `document.body` so panel overflow doesn't clip / scroll it.
+ * Optional "?" next to a control title — opens only on explicit icon click.
+ * Portaled to `document.body` so panel overflow doesn't clip / scroll it.
  */
 export function FieldInfo({ text, className }: FieldInfoProps) {
   const [open, setOpen] = useState(false);
@@ -58,11 +65,9 @@ export function FieldInfo({ text, className }: FieldInfoProps) {
     };
 
     place();
-    // second pass after tip mounts with real size
     const raf = requestAnimationFrame(place);
 
     window.addEventListener("resize", place);
-    // capture scroll from panel / ancestors
     window.addEventListener("scroll", place, true);
 
     return () => {
@@ -74,7 +79,7 @@ export function FieldInfo({ text, className }: FieldInfoProps) {
 
   useEffect(() => {
     if (!open) return;
-    const onDoc = (e: MouseEvent) => {
+    const onDoc = (e: globalThis.MouseEvent) => {
       const t = e.target as Node;
       if (rootRef.current?.contains(t) || tipRef.current?.contains(t)) return;
       setOpen(false);
@@ -91,15 +96,20 @@ export function FieldInfo({ text, className }: FieldInfoProps) {
   }, [open]);
 
   return (
-    <span ref={rootRef} className={cn("relative inline-flex", className)}>
+    <span
+      ref={rootRef}
+      className={cn("relative inline-flex shrink-0", className)}
+      onClick={stopLabelActivation}
+      onMouseDown={stopLabelActivation}
+    >
       <button
         type="button"
         aria-expanded={open}
         aria-controls={tipId}
         aria-label="Info"
+        onMouseDown={stopLabelActivation}
         onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
+          stopLabelActivation(e);
           setOpen((v) => !v);
         }}
         className={cn(
@@ -123,6 +133,8 @@ export function FieldInfo({ text, className }: FieldInfoProps) {
                   : { top: 0, left: 0, visibility: "hidden" }
               }
               className="fixed z-50 w-56 border border-signal bg-screen/95 p-2.5 font-mono text-[11px] normal-case leading-snug tracking-[0.04em] text-signal shadow-[2px_2px_0_var(--magenta)] backdrop-blur-sm"
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
             >
               {text}
             </span>,

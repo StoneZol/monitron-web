@@ -35,15 +35,16 @@ const INFO = {
     roadFloor: "Opaque terrain fill (WE gridbackground).",
     mountains: "Road between two hinged walls — lean ±90° for flat.",
     wallAngle:
-        "Lean from vertical: −90 = flat outward, 0 = vertical, +60 = max lean inward",
-    wallOffset: "Road half-width near the camera (cells from center).",
+        "Lean from vertical: −90 = flat outward, 0 = vertical, +60 = max lean inward. Tips meet when lean matches wall length vs road half-width.",
+    wallOffset:
+        "Road half-width in cells. Floor paints offset×2 tiles across; walls keep their own height scale.",
     wallPerspective:
-        "Camera foreshortening: 0 = higher / flatter view, 40 = lower / stronger vanishing point. Geometry stays planar.",
+        "Camera foreshortening only (0 = higher eye, 40 = lower + wider FOV). Does not warp the grid mesh.",
     roadLength:
         "How far the neon road runs toward the sun. Default is short (~⅓ of the view); slide up to extend.",
-    motion: "Scroll speed of the neon grid (WE time×2 base).",
-    roadSpeed: "Multiplies WE scroll speed.",
-    drive: "Audio multiplies road scroll.",
+    motion: "Scroll speed of the neon grid.",
+    roadSpeed: "Multiplies base scroll speed.",
+    drive: "How strongly audio accelerates road scroll.",
     roadChannel: "Band that accelerates scroll.",
     mountChannel: "Reserved for a later wall mechanism.",
     sunChannel: "Band that pulses sun size.",

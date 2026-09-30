@@ -178,9 +178,9 @@ export function NeonGrid({
         builtRef.current = true;
 
         const floorCellsU = Math.max(1, offsetCells) * 2;
+        // ×2 keeps screen proportions; paint still uses floorCellsU (= offset×2 tiles).
         const floorW = floorCellsU * CELL * 2;
-        // Denser U than world-square: floor X and wall height compressed for screen.
-        floorM.uniforms.uCellsU!.value = floorW / cellU;
+        floorM.uniforms.uCellsU!.value = floorCellsU;
         floorM.uniforms.uCellsV!.value = cellsV;
         wallM.uniforms.uCellsU!.value = WALL_LEN / cellU;
         wallM.uniforms.uCellsV!.value = cellsV;

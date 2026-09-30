@@ -13,6 +13,7 @@ type ToggleProps = {
   className?: string;
 };
 
+/** Not a `<label>` wrap — that steals clicks from the "?" info button. */
 export function Toggle({
   label,
   checked,
@@ -25,7 +26,7 @@ export function Toggle({
   const inert = disabled || readOnly;
 
   return (
-    <label
+    <div
       className={cn(
         fieldRoot,
         inert ? "text-muted" : "text-signal",
@@ -33,12 +34,13 @@ export function Toggle({
         className,
       )}
     >
-      <span className={cn(fieldControlRow, "justify-between gap-3")}>
+      <div className={cn(fieldControlRow, "justify-between gap-3")}>
         <FieldLabel label={label} info={info} />
         <button
           type="button"
           role="switch"
           aria-checked={checked}
+          aria-label={label}
           aria-readonly={readOnly || undefined}
           disabled={disabled}
           onClick={() => {
@@ -60,7 +62,7 @@ export function Toggle({
             )}
           />
         </button>
-      </span>
-    </label>
+      </div>
+    </div>
   );
 }

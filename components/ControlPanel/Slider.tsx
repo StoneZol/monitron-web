@@ -16,6 +16,7 @@ type SliderProps = {
   className?: string;
 };
 
+/** Not a `<label>` wrap — that steals clicks from the "?" info button. */
 export function Slider({
   label,
   value,
@@ -29,18 +30,18 @@ export function Slider({
   className,
 }: SliderProps) {
   return (
-    <label
+    <div
       className={cn(
         fieldRoot,
         disabled ? "pointer-events-none text-muted opacity-40" : "text-signal",
         className,
       )}
     >
-      <span className={fieldLabelRow}>
+      <div className={fieldLabelRow}>
         <FieldLabel label={label} info={info} />
         <span className="tabular-nums text-cyan">{format(value)}</span>
-      </span>
-      <span className={fieldControlRow}>
+      </div>
+      <div className={fieldControlRow}>
         <input
           type="range"
           min={min}
@@ -48,6 +49,7 @@ export function Slider({
           step={step}
           value={value}
           disabled={disabled}
+          aria-label={label}
           onChange={(e) => onChange(Number(e.target.value))}
           onWheel={(e) => {
             e.currentTarget.blur();
@@ -58,7 +60,7 @@ export function Slider({
             "[&::-moz-range-thumb]:h-3 [&::-moz-range-thumb]:w-3 [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-signal",
           )}
         />
-      </span>
-    </label>
+      </div>
+    </div>
   );
 }
