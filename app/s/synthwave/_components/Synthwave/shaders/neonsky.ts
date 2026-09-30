@@ -64,7 +64,7 @@ void main() {
   float cloud1 = fbm(vTexCoordClouds.zw * 3.0);
   float cloudBlend = cloud0 * cloud1;
 
-  // Extra slow fog sheet drifting across the sky
+  // Slow extra fog sheet over the WE cloud stack
   float fogSheet = fbm(
     vec2(vTexCoord.x * 1.8 + uTime * 0.04, vTexCoord.y * 2.4 - uTime * 0.018)
   );
@@ -73,26 +73,23 @@ void main() {
   );
 
   vec3 albedo = uColorClouds * cloudBlend;
-  albedo += uColorClouds * fogSheet * 0.45 * smoothstep(1.0, 0.25, vTexCoord.y);
+  albedo += uColorClouds * fogSheet * 0.35 * smoothstep(1.0, 0.25, vTexCoord.y);
   albedo += (uColorClouds * 0.5 + albedo) * pow(smoothstep(0.5, 0.0, vTexCoord.y), 2.0) * 2.0;
 
-  float breath = 0.9 + 0.1 * sin(uTime * 0.35);
+  // Horizon glow (WE-style blob) — user-tinted, slightly alive
+  float breath = 0.92 + 0.08 * sin(uTime * 0.35);
   float horizonBend = 1.0 - cos(clamp(vTexCoord.x * 2.0 - 0.5, 0.0, 1.0) * 2.0 * 3.14159265);
-  // Horizon glow drifts slightly left/right
-  float hx = 0.5 + 0.04 * sin(uTime * 0.22);
+  float hx = 0.5 + 0.03 * sin(uTime * 0.22);
   vec2 horizonDelta = (vTexCoord.xy - vec2(hx, 0.6)) * vec2(0.5, 1.5 - horizonBend * 0.3);
   float distanceToCenter = length(horizonDelta);
   albedo += uColorHorizon * pow(smoothstep(0.5, 0.0, distanceToCenter), 2.0) * 2.0 * breath;
 
-  // Low mist band near horizon — scrolls sideways
-  float mist = fbm(vec2(vTexCoord.x * 4.0 + uTime * 0.06, vTexCoord.y * 8.0));
-  albedo += uColorHorizon * mist * smoothstep(0.55, 0.78, vTexCoord.y)
-    * smoothstep(1.0, 0.7, vTexCoord.y) * 0.55;
-
-  // sparse stars — soft twinkle
+  // sparse stars
   vec2 starCell = floor(vTexCoord.xy * vec2(180.0, 120.0));
   float star = step(0.997, rand(starCell));
-  float twinkle = 0.55 + 0.45 * sin(uTime * (2.2 + rand(starCell) * 3.0) + rand(starCell * 1.7) * 6.28);
+  float twinkle = 0.55 + 0.45 * sin(
+    uTime * (2.2 + rand(starCell) * 3.0) + rand(starCell * 1.7) * 6.28
+  );
   albedo += vec3(star) * smoothstep(0.55, 0.0, vTexCoord.y) * 0.7 * twinkle;
 
   gl_FragColor = vec4(albedo, 1.0);

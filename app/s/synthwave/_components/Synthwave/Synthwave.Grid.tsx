@@ -145,11 +145,15 @@ export function NeonGrid({
         const reactive = Boolean(viz?.enabled);
         const roadRaw = reactive ? channelLevel(viz!, knobs.roadChannel) : 0;
         const glowRaw = reactive ? channelLevel(viz!, knobs.glowChannel) : 0;
-        const decay = Math.exp(-Math.max(0, dt) * 5.5);
-        roadHold.current = Math.max(roadRaw, roadHold.current * decay);
-        glowHold.current = Math.max(glowRaw, glowHold.current * decay);
+        // Road: short sharp kicks. Glow can linger a bit longer for color flash.
+        const roadDecay = Math.exp(-Math.max(0, dt) * 12);
+        const glowDecay = Math.exp(-Math.max(0, dt) * 7);
+        roadHold.current = Math.max(roadRaw, roadHold.current * roadDecay);
+        glowHold.current = Math.max(glowRaw, glowHold.current * glowDecay);
         const roadPunch = Math.min(1, roadHold.current);
         const flash = Math.min(1, glowHold.current);
+        // Emphasize peaks so mid mush disappears — idle floor stays 0.7
+        const roadKick = roadPunch * roadPunch;
 
         if (knobs.gridTwinkle) {
             hueOffset.current =
@@ -170,7 +174,7 @@ export function NeonGrid({
         // Idle a bit slower when road channel is armed; peaks punch with Drive
         const roadArmed = reactive && knobs.roadChannel !== "off";
         const speedMul = roadArmed
-            ? 0.7 + roadPunch * (0.3 + knobs.drive * 0.9)
+            ? 0.7 + roadKick * (0.3 + knobs.drive * 0.9)
             : 1;
         const rate = 2 * knobs.roadSpeed * speedMul;
         scrollRef.current += Math.max(0, dt) * rate;
