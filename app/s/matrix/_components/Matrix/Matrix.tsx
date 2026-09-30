@@ -1,11 +1,11 @@
 "use client";
 
 import { ScreensOverlay } from "@/components/ScreensOverlay";
+import { AudioBusPanel } from "@/components/AudioBusPanel";
 import {
   ColorField,
   ControlPanel,
   ControlSection,
-  Meter,
   PanelButton,
   Slider,
   Toggle,
@@ -21,10 +21,7 @@ const Matrix = ({ showOverlay = true }: { showOverlay?: boolean }) => {
       <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" />
 
       {showOverlay && (
-        <ScreensOverlay
-          spectrumRef={visualizer.spectrumRef}
-          pluginPresent={visualizer.pluginPresent}
-        >
+        <ScreensOverlay>
           <ControlPanel title="matrix">
             <ControlSection label="look">
               <Toggle
@@ -112,13 +109,11 @@ const Matrix = ({ showOverlay = true }: { showOverlay?: boolean }) => {
                   format={(v) => v.toFixed(1)}
                 />
               )}
-              {visualizer.visibleBands.map((band) => (
-                <Meter
-                  key={band}
-                  label={band}
-                  value={visualizer.meters[band]}
-                />
-              ))}
+              <AudioBusPanel
+                bus={visualizer.bus}
+                busAgeMs={visualizer.busAgeMs}
+                busLive={visualizer.busLive}
+              />
             </ControlSection>
           </ControlPanel>
         </ScreensOverlay>

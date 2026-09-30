@@ -1,16 +1,11 @@
 "use client";
 
-import { AudioSpectrum } from "@/components/AudioSpectrum";
 import { NavBackButton } from "@/components/NavBackButton";
 import { cn } from "@/lib/utils";
 import useScreensOverlayHook from "./ScreensOverlay.hooks";
 import type { ScreensOverlayProps } from "./ScreensOverlay.types";
 
-const ScreensOverlay = ({
-  children,
-  spectrumRef,
-  pluginPresent = false,
-}: ScreensOverlayProps) => {
+const ScreensOverlay = ({ children }: ScreensOverlayProps) => {
   const { hideHud } = useScreensOverlayHook();
 
   return (
@@ -24,13 +19,6 @@ const ScreensOverlay = ({
       <NavBackButton className="absolute top-4 left-4 z-20" />
 
       <div className="relative z-20 w-80">{children}</div>
-
-      {spectrumRef && (
-        <AudioSpectrum
-          spectrumRef={spectrumRef}
-          pluginPresent={pluginPresent}
-        />
-      )}
     </div>
   );
 };

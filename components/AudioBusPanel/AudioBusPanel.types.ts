@@ -1,23 +1,22 @@
 import { AUDIO_BAND_COUNT } from "@/lib/audioBus";
 
-export type SpectrumSnap = {
+export type AudioBusSnap = {
   bands: number[];
   rms: number;
   peak: number;
   sampleRate: number;
   t: number;
-  /** performance.now() of last frame */
-  at: number;
+  fps: number;
 };
 
-export function emptySpectrumSnap(): SpectrumSnap {
+export function emptyAudioBusSnap(): AudioBusSnap {
   return {
     bands: new Array(AUDIO_BAND_COUNT).fill(0),
     rms: 0,
     peak: 0,
     sampleRate: 0,
     t: 0,
-    at: 0,
+    fps: 0,
   };
 }
 

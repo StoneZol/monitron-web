@@ -2,12 +2,12 @@
 
 import dynamic from "next/dynamic";
 import { ScreensOverlay } from "@/components/ScreensOverlay";
+import { AudioBusPanel } from "@/components/AudioBusPanel";
 import {
     ColorField,
     ColorTable,
     ControlPanel,
     ControlSection,
-    Meter,
     PanelButton,
     Select,
     Slider,
@@ -41,10 +41,7 @@ const HexagonsPlace = ({ showOverlay = true }: HexagonsPlaceProps) => {
             <HexagonsCanvas live={live} vizRef={visualizer.vizRef} />
 
             {showOverlay && (
-                <ScreensOverlay
-                    spectrumRef={visualizer.spectrumRef}
-                    pluginPresent={visualizer.pluginPresent}
-                >
+                <ScreensOverlay>
                     <ControlPanel title="hexagons">
                         <ControlSection label="look">
                             <div className="flex gap-2">
@@ -463,13 +460,11 @@ const HexagonsPlace = ({ showOverlay = true }: HexagonsPlaceProps) => {
                                         : "—"}
                                 </span>
                             </div>
-                            {visualizer.visibleBands.map((band) => (
-                                <Meter
-                                    key={band}
-                                    label={band}
-                                    value={visualizer.meters[band]}
-                                />
-                            ))}
+                            <AudioBusPanel
+                                bus={visualizer.bus}
+                                busAgeMs={visualizer.busAgeMs}
+                                busLive={visualizer.busLive}
+                            />
                         </ControlSection>
                     </ControlPanel>
                 </ScreensOverlay>

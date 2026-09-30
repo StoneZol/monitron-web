@@ -2,6 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
+  emptyAudioBusSnap,
+  type AudioBusSnap,
+} from "@/components/AudioBusPanel";
+import {
   emptySpectrumSnap,
   type SpectrumSnap,
 } from "@/components/AudioSpectrum";
@@ -59,7 +63,7 @@ const ZERO_METERS: AudioReactiveMeters = {
 
 /**
  * Extension handshake + raw spectrum feed.
- * Analysis stays on whenever the plugin is present (HUD spectrum).
+ * Analysis stays on whenever the plugin is present (bus panel + future savers).
  * `reactive` only gates whether the screen reads vizRef.
  */
 export function useAudioReactive({
@@ -79,11 +83,20 @@ export function useAudioReactive({
   const lastToggleRef = useRef<boolean | null>(null);
   const preferredRef = useRef(preferredReactive);
   const onReactiveChangeRef = useRef(onReactiveChange);
+  const busStatsRef = useRef({
+    lastUi: 0,
+    frames: 0,
+    windowStart: performance.now(),
+    receivedAt: 0,
+  });
 
   const [pluginPresent, setPluginPresent] = useState(false);
   const [reactive, setReactiveState] = useState(false);
   const [meters, setMeters] = useState<AudioReactiveMeters>(ZERO_METERS);
   const [bpm, setBpm] = useState(0);
+  const [bus, setBus] = useState<AudioBusSnap | null>(null);
+  const [busAgeMs, setBusAgeMs] = useState<number | null>(null);
+  const [busLive, setBusLive] = useState(false);
 
   useEffect(() => {
     activeRef.current = resolveBands(bandsMask);
@@ -99,7 +112,7 @@ export function useAudioReactive({
     postVisualizerToggle(enabled);
   };
 
-  /** Keep analyser on while plugin is present — HUD needs the stream */
+  /** Keep analyser on while plugin is present — bus panel needs the stream */
   const ensureAnalysing = () => {
     if (!pluginRef.current) return;
     sendToggle(true);
@@ -118,7 +131,6 @@ export function useAudioReactive({
       setBpm(0);
       beatPeakRef.current = 0;
       bpmEstimatorRef.current.reset();
-      // keep deriver + analyser for overlay spectrum
     }
     if (notify) onReactiveChangeRef.current?.(enabled);
   };
@@ -142,6 +154,7 @@ export function useAudioReactive({
     let lastHelloAt = 0;
     let present = false;
     let pollTimer: number | null = null;
+    let staleTimer: number | null = null;
     const deriver = deriverRef.current;
     const bpmEstimator = bpmEstimatorRef.current;
 
@@ -152,6 +165,15 @@ export function useAudioReactive({
       setBpm(0);
       vizRef.current = emptyVizBands(false);
       spectrumRef.current = emptySpectrumSnap();
+      busStatsRef.current = {
+        lastUi: 0,
+        frames: 0,
+        windowStart: performance.now(),
+        receivedAt: 0,
+      };
+      setBus(emptyAudioBusSnap());
+      setBusAgeMs(null);
+      setBusLive(false);
       beatPeakRef.current = 0;
       deriver.reset();
       bpmEstimator.reset();
@@ -209,14 +231,39 @@ export function useAudioReactive({
         markPresent();
         const derived = deriver.push(frame);
         const now = performance.now();
+        const stats = busStatsRef.current;
+        stats.frames += 1;
+        stats.receivedAt = now;
 
-        // HUD spectrum — always, even when screen reactive is off
+        // Always feed spectrumRef (future savers) + bus panel
         spectrumRef.current = {
           bands: derived.bands,
           rms: derived.rms,
           peak: derived.peak,
+          sampleRate: frame.sampleRate,
+          t: frame.t,
           at: now,
         };
+
+        if (now - stats.lastUi >= 80) {
+          stats.lastUi = now;
+          const elapsed = (now - stats.windowStart) / 1000;
+          const fps = elapsed > 0 ? stats.frames / elapsed : 0;
+          if (elapsed >= 1) {
+            stats.frames = 0;
+            stats.windowStart = now;
+          }
+          setBus({
+            bands: derived.bands.slice(),
+            rms: derived.rms,
+            peak: derived.peak,
+            sampleRate: frame.sampleRate,
+            t: frame.t,
+            fps,
+          });
+          setBusAgeMs(frame.t > 0 ? frame.t : null);
+          setBusLive(true);
+        }
 
         if (!vizRef.current.enabled) return;
 
@@ -254,6 +301,15 @@ export function useAudioReactive({
       },
     });
 
+    staleTimer = window.setInterval(() => {
+      const { receivedAt } = busStatsRef.current;
+      if (!receivedAt) {
+        setBusLive(false);
+        return;
+      }
+      setBusLive(performance.now() - receivedAt < 500);
+    }, 200);
+
     const onVisible = () => {
       if (document.visibilityState === "visible") tick();
     };
@@ -266,6 +322,7 @@ export function useAudioReactive({
     return () => {
       unsubscribe();
       if (pollTimer != null) window.clearInterval(pollTimer);
+      if (staleTimer != null) window.clearInterval(staleTimer);
       document.removeEventListener("visibilitychange", onVisible);
       window.removeEventListener("focus", tick);
       if (lastToggleRef.current) postVisualizerToggle(false);
@@ -279,8 +336,12 @@ export function useAudioReactive({
 
   return {
     vizRef,
-    /** Live spectrum for overlay HUD (always fed while plugin streams) */
+    /** Live spectrum ref for future savers (AudioSpectrum module) */
     spectrumRef,
+    /** Plugin-style ::audio-bus panel state */
+    bus,
+    busAgeMs,
+    busLive,
     pluginPresent,
     reactive,
     setReactive,

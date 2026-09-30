@@ -32,26 +32,29 @@ import { PlaceholderCard } from "@/components/PlaceholderCard";
 ## Layout hierarchy
 
 ```
-ScreensOverlay          full-screen HUD (idle-fade + back + ::bus spectrum)
-  ├─ AudioSpectrum      bottom deck — live bands[32] + rms/peak (always when plugin streams)
+ScreensOverlay          full-screen HUD (idle-fade + back)
   └─ ControlPanel       titled box, scrollable body
-       └─ ControlSection   labeled group (look / fog / camera / …)
-            └─ Slider | Toggle | Select | ColorInput / ColorField | ColorTable | Meter | PanelButton
+       └─ ControlSection   labeled group (look / fog / camera / visualizer / …)
+            └─ … knobs …
+            └─ AudioBusPanel   ::audio-bus (1:1 plugin bus meters) in visualizer
 ```
+
+`AudioSpectrum` (`components/AudioSpectrum`) is a separate canvas deck module — not mounted in the HUD; reserved for a future saver.
 
 Typical screen:
 
 ```tsx
 <div className="relative h-screen w-screen overflow-hidden bg-black">
   {/* canvas / R3F */}
-  <ScreensOverlay
-    spectrumRef={visualizer.spectrumRef}
-    pluginPresent={visualizer.pluginPresent}
-  >
+  <ScreensOverlay>
     <ControlPanel title="my_screen">
       <ControlSection label="look">{/* knobs */}</ControlSection>
-      <ControlSection label="actions">
-        <PanelButton onClick={reset}>reset</PanelButton>
+      <ControlSection label="visualizer">
+        <AudioBusPanel
+          bus={visualizer.bus}
+          busAgeMs={visualizer.busAgeMs}
+          busLive={visualizer.busLive}
+        />
       </ControlSection>
     </ControlPanel>
   </ScreensOverlay>
