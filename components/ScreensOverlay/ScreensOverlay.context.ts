@@ -3,6 +3,7 @@
 import { createContext, useContext } from "react";
 
 type ScreensOverlayApi = {
+  screenId: string;
   hide: () => void;
   /** Push localStorage prefs to same-path tabs + reload this tab. */
   sync: () => void;

@@ -47,13 +47,13 @@ export function ColorTable({
     return (
         <div
             className={cn(
-                "border border-line/60 p-2",
+                "border border-line/60 p-1.5",
                 disabled && "pointer-events-none opacity-40",
                 className,
             )}
         >
             {label || info ? (
-                <div className="mb-2 flex items-center gap-1.5 text-[9px] uppercase tracking-[0.24em] text-muted">
+                <div className="mb-1 flex items-center gap-1.5 text-[9px] uppercase tracking-[0.24em] text-muted">
                     {label ? <span>{label}</span> : null}
                     {info ? <FieldInfo text={info} /> : null}
                 </div>
@@ -102,7 +102,7 @@ export function ColorTable({
                 <tbody>
                     {rows.map((row) => (
                         <tr key={row.label}>
-                            <td className="py-1 pr-2 text-left text-muted">{row.label}</td>
+                            <td className="py-0.5 pr-2 text-left text-muted">{row.label}</td>
                             {row.cells.map((cell, i) => {
                                 const col = columns[i] ?? `col-${i}`;
                                 const cellDisabled =
@@ -111,7 +111,7 @@ export function ColorTable({
                                     <td
                                         key={`${row.label}-${col}`}
                                         className={cn(
-                                            "px-1 py-1.5 text-center align-middle",
+                                            "px-1 py-0.5 text-center align-middle",
                                             locked.has(col) && "opacity-50",
                                         )}
                                     >

@@ -32,7 +32,9 @@ const ScreensOverlay = ({ screenId, children }: ScreensOverlayProps) => {
   }
 
   return (
-    <ScreensOverlayContext.Provider value={{ hide, sync, hasPeers }}>
+    <ScreensOverlayContext.Provider
+      value={{ screenId, hide, sync, hasPeers }}
+    >
       <div className="absolute inset-0 z-10 flex h-screen w-screen items-center justify-center">
         <div className="relative z-20 w-80">{children}</div>
       </div>

@@ -9,6 +9,7 @@ import {
     ColorTable,
     ControlPanel,
     ControlSection,
+    ControlSubSection,
     PanelButton,
     Select,
     Slider,
@@ -26,7 +27,8 @@ const REACTIVE_CHANNEL_OPTIONS = [
 ] as const;
 
 const INFO = {
-    look: "Wallpaper Engine neon_sunset materials — grid, sun, sky.",
+    look: "Scene layers — sky, sunset beacon, grid, terrain framing.",
+    sky: "Cloud wash + horizon tint and drift.",
     skyPalette:
         "Idle = rest. Peak = beat target (locked while garland is on or audio is off). Horizon is separate.",
     skyHorizon:
@@ -34,8 +36,11 @@ const INFO = {
     skySpeed: "Cloud drift speed. 1 ≈ classic WE scroll rate.",
     skyDirection:
         "Cloud drift angle in degrees. 0 = right, −90 = down, ±180 = left.",
+    sunset:
+        "Horizon beacon — sun disk now; later can swap to light pillars into the sky.",
     sunPalette:
         "Idle = rest. Peak = sun-channel target (locked while garland is on or audio is off).",
+    grid: "Neon road lines, floor fill, scroll speed.",
     gridPalette:
         "Idle = rest. Peak = glow-channel target (locked while garland is on or audio is off).",
     sunSize: "Scale × WE sun size.",
@@ -47,7 +52,8 @@ const INFO = {
     roadFloor: "Opaque terrain fill (WE gridbackground).",
     roadGlow: "Soft neon halo around grid lines (shader glow, not post bloom).",
     roadThickness: "Grid stroke width. 1 = default; higher = thicker lines.",
-    mountains: "Road between two hinged walls — lean ±90° for flat.",
+    roadSpeed: "Multiplies base road scroll speed.",
+    terrain: "Road channel framing — wall lean, width, perspective, length.",
     wallAngle:
         "Lean from vertical: −90 = flat outward, 0 = vertical, +60 = max lean inward. Tips meet when lean matches wall length vs road half-width.",
     wallOffset:
@@ -56,8 +62,6 @@ const INFO = {
         "Camera foreshortening only (0 = higher eye, 40 = lower + wider FOV). Does not warp the grid mesh.",
     roadLength:
         "How far the neon road runs toward the sun. Default is short (~⅓ of the view); slide up to extend.",
-    motion: "Scroll speed of the neon grid.",
-    roadSpeed: "Multiplies base scroll speed.",
     drive: "How hard peaks punch road scroll (idle dips a bit when channel is on).",
     roadChannel: "Band that punches scroll speed.",
     glowChannel: "Band that flashes grid glow / line brightness (bass kicks).",
@@ -109,232 +113,304 @@ const Synthwave = ({ showOverlay = true }: SynthwaveProps) => {
                         }
                     >
                         <ControlSection label="look" info={INFO.look}>
-                            <Toggle
-                                label="Sky twinkle"
-                                checked={controls.skyTwinkle}
-                                onChange={controls.setSkyTwinkle}
-                                info={INFO.skyTwinkle}
-                            />
-                            <ColorTable
-                                label="sky palette"
-                                info={INFO.skyPalette}
-                                columns={["idle", "peak"]}
-                                lockedColumns={
-                                    audioLocked || controls.skyTwinkle
-                                        ? ["peak"]
-                                        : []
-                                }
-                                columnStamps={
-                                    controls.skyTwinkle
-                                        ? { peak: "twinkle" }
-                                        : audioStamp
-                                }
-                                rows={[
-                                    {
-                                        label: "sky",
-                                        cells: [
-                                            {
-                                                value: controls.skyTop,
-                                                onChange: controls.setSkyTop,
-                                            },
-                                            {
-                                                value: controls.skyTopPeak,
-                                                onChange: controls.setSkyTopPeak,
-                                            },
-                                        ],
-                                    },
-                                ]}
-                            />
-                            <ColorField
-                                label="Horizon"
-                                value={controls.skyHorizon}
-                                onChange={controls.setSkyHorizon}
-                                info={INFO.skyHorizon}
-                            />
-                            <Slider
-                                label="Sky speed"
-                                value={controls.skySpeed}
-                                min={0}
-                                max={10}
-                                step={0.05}
-                                onChange={controls.setSkySpeed}
-                                format={(v) => `×${v.toFixed(2)}`}
-                                info={INFO.skySpeed}
-                            />
-                            <Slider
-                                label="Sky direction"
-                                value={controls.skyDirection}
-                                min={0}
-                                max={180}
-                                step={1}
-                                onChange={controls.setSkyDirection}
-                                format={(v) => `${Math.round(v)}°`}
-                                info={INFO.skyDirection}
-                            />
-                            <Toggle
-                                label="Sun twinkle"
-                                checked={controls.sunTwinkle}
-                                onChange={controls.setSunTwinkle}
-                                info={INFO.sunTwinkle}
-                            />
-                            <ColorTable
-                                label="sun palette"
-                                info={INFO.sunPalette}
-                                columns={["idle", "peak"]}
-                                lockedColumns={
-                                    audioLocked || controls.sunTwinkle
-                                        ? ["peak"]
-                                        : []
-                                }
-                                columnStamps={
-                                    controls.sunTwinkle
-                                        ? { peak: "twinkle" }
-                                        : audioStamp
-                                }
-                                rows={[
-                                    {
-                                        label: "top",
-                                        cells: [
-                                            {
-                                                value: controls.sunRim,
-                                                onChange: controls.setSunRim,
-                                            },
-                                            {
-                                                value: controls.sunRimPeak,
-                                                onChange: controls.setSunRimPeak,
-                                            },
-                                        ],
-                                    },
-                                    {
-                                        label: "bottom",
-                                        cells: [
-                                            {
-                                                value: controls.sunMid,
-                                                onChange: controls.setSunMid,
-                                            },
-                                            {
-                                                value: controls.sunMidPeak,
-                                                onChange: controls.setSunMidPeak,
-                                            },
-                                        ],
-                                    },
-                                ]}
-                            />
-                            <Slider
-                                label="Bottom fill"
-                                value={controls.sunGradientStart}
-                                min={0}
-                                max={1}
-                                step={0.01}
-                                onChange={controls.setSunGradientStart}
-                                format={(v) => v.toFixed(2)}
-                                info={INFO.sunGradientStart}
-                            />
-                            <Slider
-                                label="Sun size"
-                                value={controls.sunSize}
-                                min={0.5}
-                                max={5}
-                                step={0.1}
-                                onChange={controls.setSunSize}
-                                format={(v) => `×${v.toFixed(2)}`}
-                                info={INFO.sunSize}
-                            />
-                            <Slider
-                                label="Sun brightness"
-                                value={controls.sunBrightness}
-                                min={0}
-                                max={3}
-                                step={0.05}
-                                onChange={controls.setSunBrightness}
-                                format={(v) => `×${v.toFixed(2)}`}
-                                info={INFO.sunBrightness}
-                            />
-                            <Slider
-                                label="Sun glow brightness"
-                                value={controls.sunGlowBrightness}
-                                min={0}
-                                max={3}
-                                step={0.05}
-                                onChange={controls.setSunGlowBrightness}
-                                format={(v) => `×${v.toFixed(2)}`}
-                                info={INFO.sunGlowBrightness}
-                            />
-                            <Toggle
-                                label="Grid twinkle"
-                                checked={controls.gridTwinkle}
-                                onChange={controls.setGridTwinkle}
-                                info={INFO.gridTwinkle}
-                            />
-                            <ColorTable
-                                label="grid palette"
-                                info={INFO.gridPalette}
-                                columns={["idle", "peak"]}
-                                lockedColumns={
-                                    audioLocked || controls.gridTwinkle
-                                        ? ["peak"]
-                                        : []
-                                }
-                                columnStamps={
-                                    controls.gridTwinkle
-                                        ? { peak: "twinkle" }
-                                        : audioStamp
-                                }
-                                rows={[
-                                    {
-                                        label: "near",
-                                        cells: [
-                                            {
-                                                value: controls.roadColor,
-                                                onChange: controls.setRoadColor,
-                                            },
-                                            {
-                                                value: controls.roadColorPeak,
-                                                onChange: controls.setRoadColorPeak,
-                                            },
-                                        ],
-                                    },
-                                    {
-                                        label: "far",
-                                        cells: [
-                                            {
-                                                value: controls.roadFar,
-                                                onChange: controls.setRoadFar,
-                                            },
-                                            {
-                                                value: controls.roadFarPeak,
-                                                onChange: controls.setRoadFarPeak,
-                                            },
-                                        ],
-                                    },
-                                ]}
-                            />
-                            <ColorField
-                                label="Floor"
-                                value={controls.roadFloor}
-                                onChange={controls.setRoadFloor}
-                                info={INFO.roadFloor}
-                            />
-                            <Slider
-                                label="Grid glow"
-                                value={controls.roadGlow}
-                                min={0}
-                                max={40}
-                                step={1}
-                                onChange={controls.setRoadGlow}
-                                format={(v) => `${Math.round(v)}`}
-                                info={INFO.roadGlow}
-                            />
-                            <Slider
-                                label="Grid thickness"
-                                value={controls.roadThickness}
-                                min={0.5}
-                                max={3}
-                                step={0.05}
-                                onChange={controls.setRoadThickness}
-                                format={(v) => `×${v.toFixed(2)}`}
-                                info={INFO.roadThickness}
-                            />
+                            <ControlSubSection label="sky" info={INFO.sky}>
+                                <Toggle
+                                    label="Sky twinkle"
+                                    checked={controls.skyTwinkle}
+                                    onChange={controls.setSkyTwinkle}
+                                    info={INFO.skyTwinkle}
+                                />
+                                <ColorTable
+                                    label="sky palette"
+                                    info={INFO.skyPalette}
+                                    columns={["idle", "peak"]}
+                                    lockedColumns={
+                                        audioLocked || controls.skyTwinkle
+                                            ? ["peak"]
+                                            : []
+                                    }
+                                    columnStamps={
+                                        controls.skyTwinkle
+                                            ? { peak: "twinkle" }
+                                            : audioStamp
+                                    }
+                                    rows={[
+                                        {
+                                            label: "sky",
+                                            cells: [
+                                                {
+                                                    value: controls.skyTop,
+                                                    onChange: controls.setSkyTop,
+                                                },
+                                                {
+                                                    value: controls.skyTopPeak,
+                                                    onChange: controls.setSkyTopPeak,
+                                                },
+                                            ],
+                                        },
+                                    ]}
+                                />
+                                <ColorField
+                                    label="Horizon"
+                                    value={controls.skyHorizon}
+                                    onChange={controls.setSkyHorizon}
+                                    info={INFO.skyHorizon}
+                                />
+                                <Slider
+                                    label="Sky speed"
+                                    value={controls.skySpeed}
+                                    min={0}
+                                    max={10}
+                                    step={0.05}
+                                    onChange={controls.setSkySpeed}
+                                    format={(v) => `×${v.toFixed(2)}`}
+                                    info={INFO.skySpeed}
+                                />
+                                <Slider
+                                    label="Sky direction"
+                                    value={controls.skyDirection}
+                                    min={0}
+                                    max={180}
+                                    step={1}
+                                    onChange={controls.setSkyDirection}
+                                    format={(v) => `${Math.round(v)}°`}
+                                    info={INFO.skyDirection}
+                                />
+                            </ControlSubSection>
+
+                            <ControlSubSection label="sunset" info={INFO.sunset}>
+                                <Toggle
+                                    label="Sun twinkle"
+                                    checked={controls.sunTwinkle}
+                                    onChange={controls.setSunTwinkle}
+                                    info={INFO.sunTwinkle}
+                                />
+                                <ColorTable
+                                    label="sun palette"
+                                    info={INFO.sunPalette}
+                                    columns={["idle", "peak"]}
+                                    lockedColumns={
+                                        audioLocked || controls.sunTwinkle
+                                            ? ["peak"]
+                                            : []
+                                    }
+                                    columnStamps={
+                                        controls.sunTwinkle
+                                            ? { peak: "twinkle" }
+                                            : audioStamp
+                                    }
+                                    rows={[
+                                        {
+                                            label: "top",
+                                            cells: [
+                                                {
+                                                    value: controls.sunRim,
+                                                    onChange: controls.setSunRim,
+                                                },
+                                                {
+                                                    value: controls.sunRimPeak,
+                                                    onChange: controls.setSunRimPeak,
+                                                },
+                                            ],
+                                        },
+                                        {
+                                            label: "bottom",
+                                            cells: [
+                                                {
+                                                    value: controls.sunMid,
+                                                    onChange: controls.setSunMid,
+                                                },
+                                                {
+                                                    value: controls.sunMidPeak,
+                                                    onChange: controls.setSunMidPeak,
+                                                },
+                                            ],
+                                        },
+                                    ]}
+                                />
+                                <Slider
+                                    label="Bottom fill"
+                                    value={controls.sunGradientStart}
+                                    min={0}
+                                    max={1}
+                                    step={0.01}
+                                    onChange={controls.setSunGradientStart}
+                                    format={(v) => v.toFixed(2)}
+                                    info={INFO.sunGradientStart}
+                                />
+                                <Slider
+                                    label="Sun size"
+                                    value={controls.sunSize}
+                                    min={0.5}
+                                    max={5}
+                                    step={0.1}
+                                    onChange={controls.setSunSize}
+                                    format={(v) => `×${v.toFixed(2)}`}
+                                    info={INFO.sunSize}
+                                />
+                                <Slider
+                                    label="Sun brightness"
+                                    value={controls.sunBrightness}
+                                    min={0}
+                                    max={3}
+                                    step={0.05}
+                                    onChange={controls.setSunBrightness}
+                                    format={(v) => `×${v.toFixed(2)}`}
+                                    info={INFO.sunBrightness}
+                                />
+                                <Slider
+                                    label="Sun glow brightness"
+                                    value={controls.sunGlowBrightness}
+                                    min={0}
+                                    max={3}
+                                    step={0.05}
+                                    onChange={controls.setSunGlowBrightness}
+                                    format={(v) => `×${v.toFixed(2)}`}
+                                    info={INFO.sunGlowBrightness}
+                                />
+                            </ControlSubSection>
+
+                            <ControlSubSection label="grid" info={INFO.grid}>
+                                <Toggle
+                                    label="Grid twinkle"
+                                    checked={controls.gridTwinkle}
+                                    onChange={controls.setGridTwinkle}
+                                    info={INFO.gridTwinkle}
+                                />
+                                <ColorTable
+                                    label="grid palette"
+                                    info={INFO.gridPalette}
+                                    columns={["idle", "peak"]}
+                                    lockedColumns={
+                                        audioLocked || controls.gridTwinkle
+                                            ? ["peak"]
+                                            : []
+                                    }
+                                    columnStamps={
+                                        controls.gridTwinkle
+                                            ? { peak: "twinkle" }
+                                            : audioStamp
+                                    }
+                                    rows={[
+                                        {
+                                            label: "near",
+                                            cells: [
+                                                {
+                                                    value: controls.roadColor,
+                                                    onChange: controls.setRoadColor,
+                                                },
+                                                {
+                                                    value: controls.roadColorPeak,
+                                                    onChange: controls.setRoadColorPeak,
+                                                },
+                                            ],
+                                        },
+                                        {
+                                            label: "far",
+                                            cells: [
+                                                {
+                                                    value: controls.roadFar,
+                                                    onChange: controls.setRoadFar,
+                                                },
+                                                {
+                                                    value: controls.roadFarPeak,
+                                                    onChange: controls.setRoadFarPeak,
+                                                },
+                                            ],
+                                        },
+                                    ]}
+                                />
+                                <ColorField
+                                    label="Floor"
+                                    value={controls.roadFloor}
+                                    onChange={controls.setRoadFloor}
+                                    info={INFO.roadFloor}
+                                />
+                                <Slider
+                                    label="Grid glow"
+                                    value={controls.roadGlow}
+                                    min={0}
+                                    max={40}
+                                    step={1}
+                                    onChange={controls.setRoadGlow}
+                                    format={(v) => `${Math.round(v)}`}
+                                    info={INFO.roadGlow}
+                                />
+                                <Slider
+                                    label="Grid thickness"
+                                    value={controls.roadThickness}
+                                    min={0.5}
+                                    max={3}
+                                    step={0.05}
+                                    onChange={controls.setRoadThickness}
+                                    format={(v) => `×${v.toFixed(2)}`}
+                                    info={INFO.roadThickness}
+                                />
+                                <Slider
+                                    label="Road speed"
+                                    value={controls.roadSpeed}
+                                    min={0.1}
+                                    max={4}
+                                    step={0.05}
+                                    onChange={controls.setRoadSpeed}
+                                    format={(v) => v.toFixed(2)}
+                                    info={INFO.roadSpeed}
+                                />
+                            </ControlSubSection>
+
+                            <ControlSubSection label="terrain" info={INFO.terrain}>
+                                <Slider
+                                    label="Wall lean"
+                                    value={controls.wallAngle}
+                                    min={-90}
+                                    max={60}
+                                    step={1}
+                                    onChange={controls.setWallAngle}
+                                    format={(v) =>
+                                        Math.abs(v) >= 90
+                                            ? v > 0
+                                                ? "flat in"
+                                                : "flat out"
+                                            : `${v > 0 ? "+" : ""}${Math.round(v)}°`
+                                    }
+                                    info={INFO.wallAngle}
+                                />
+                                <Slider
+                                    label="Wall offset"
+                                    value={controls.wallOffset}
+                                    min={1}
+                                    max={16}
+                                    step={1}
+                                    onChange={controls.setWallOffset}
+                                    format={(v) => `±${Math.round(v)} cells`}
+                                    info={INFO.wallOffset}
+                                />
+                                <Slider
+                                    label="Perspective"
+                                    value={controls.wallPerspective}
+                                    min={0}
+                                    max={40}
+                                    step={1}
+                                    onChange={controls.setWallPerspective}
+                                    format={(v) => `${Math.round(v)}`}
+                                    info={INFO.wallPerspective}
+                                />
+                                <Slider
+                                    label="Road length"
+                                    value={controls.roadLength}
+                                    min={0}
+                                    max={1}
+                                    step={0.01}
+                                    onChange={controls.setRoadLength}
+                                    format={(v) =>
+                                        v < 0.01
+                                            ? "short"
+                                            : `+${Math.round(v * 100)}%`
+                                    }
+                                    info={INFO.roadLength}
+                                />
+                            </ControlSubSection>
+
                             {(controls.skyTwinkle ||
                                 controls.sunTwinkle ||
                                 controls.gridTwinkle) && (
@@ -348,70 +424,6 @@ const Synthwave = ({ showOverlay = true }: SynthwaveProps) => {
                                         info={INFO.colorSpeed}
                                     />
                                 )}
-                        </ControlSection>
-
-                        <ControlSection label="terrain" info={INFO.mountains}>
-                            <Slider
-                                label="Wall lean"
-                                value={controls.wallAngle}
-                                min={-90}
-                                max={60}
-                                step={1}
-                                onChange={controls.setWallAngle}
-                                format={(v) =>
-                                    Math.abs(v) >= 90
-                                        ? v > 0
-                                            ? "flat in"
-                                            : "flat out"
-                                        : `${v > 0 ? "+" : ""}${Math.round(v)}°`
-                                }
-                                info={INFO.wallAngle}
-                            />
-                            <Slider
-                                label="Wall offset"
-                                value={controls.wallOffset}
-                                min={1}
-                                max={16}
-                                step={1}
-                                onChange={controls.setWallOffset}
-                                format={(v) => `±${Math.round(v)} cells`}
-                                info={INFO.wallOffset}
-                            />
-                            <Slider
-                                label="Perspective"
-                                value={controls.wallPerspective}
-                                min={0}
-                                max={40}
-                                step={1}
-                                onChange={controls.setWallPerspective}
-                                format={(v) => `${Math.round(v)}`}
-                                info={INFO.wallPerspective}
-                            />
-                            <Slider
-                                label="Road length"
-                                value={controls.roadLength}
-                                min={0}
-                                max={1}
-                                step={0.01}
-                                onChange={controls.setRoadLength}
-                                format={(v) =>
-                                    v < 0.01 ? "short" : `+${Math.round(v * 100)}%`
-                                }
-                                info={INFO.roadLength}
-                            />
-                        </ControlSection>
-
-                        <ControlSection label="motion" info={INFO.motion}>
-                            <Slider
-                                label="Road speed"
-                                value={controls.roadSpeed}
-                                min={0.1}
-                                max={4}
-                                step={0.05}
-                                onChange={controls.setRoadSpeed}
-                                format={(v) => v.toFixed(2)}
-                                info={INFO.roadSpeed}
-                            />
                         </ControlSection>
 
                         <VisualizerSection visualizer={visualizer} info={INFO.visualizer}>
