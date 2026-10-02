@@ -39,7 +39,7 @@ const Matrix = ({ showOverlay = true }: { showOverlay?: boolean }) => {
             <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" />
 
             {showOverlay && (
-                <ScreensOverlay>
+                <ScreensOverlay screenId="matrix">
                     <ControlPanel
                         title="matrix"
                         actions={

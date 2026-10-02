@@ -93,7 +93,7 @@ const Synthwave = ({ showOverlay = true }: SynthwaveProps) => {
             <SynthwaveCanvas liveRef={liveRef} vizRef={visualizer.vizRef} />
 
             {showOverlay && (
-                <ScreensOverlay>
+                <ScreensOverlay screenId="synthwave">
                     <ControlPanel
                         title="synthwave"
                         actions={

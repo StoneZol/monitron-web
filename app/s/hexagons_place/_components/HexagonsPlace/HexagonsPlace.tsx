@@ -84,12 +84,12 @@ const HexagonsPlace = ({ showOverlay = true }: HexagonsPlaceProps) => {
         ? ({ peak: "audio" } as const)
         : undefined;
 
-    return (
+  return (
         <div className="relative h-screen w-screen overflow-hidden bg-black select-none">
             <HexagonsCanvas live={live} vizRef={visualizer.vizRef} />
 
             {showOverlay && (
-                <ScreensOverlay>
+                <ScreensOverlay screenId="hexagons_place">
                     <ControlPanel
                         title="hexagons place"
                         actions={
@@ -510,7 +510,7 @@ const HexagonsPlace = ({ showOverlay = true }: HexagonsPlaceProps) => {
                 </ScreensOverlay>
             )}
         </div>
-    );
+  );
 };
 
 export default HexagonsPlace;

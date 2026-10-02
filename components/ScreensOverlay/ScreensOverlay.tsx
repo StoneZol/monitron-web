@@ -7,9 +7,13 @@ import type { ScreensOverlayProps } from "./ScreensOverlay.types";
 /**
  * HUD shell. Hide lives in ControlPanel title row; tap empty screen to wake.
  * Back / reset / fullscreen live in ControlPanel.actions (fixed under the title).
+ * HUD hidden state is persisted per screenId in localStorage.
  */
-const ScreensOverlay = ({ children }: ScreensOverlayProps) => {
-  const { hideHud, hide, show } = useScreensOverlayHook();
+const ScreensOverlay = ({ screenId, children }: ScreensOverlayProps) => {
+  const { ready, hideHud, hide, show } = useScreensOverlayHook(screenId);
+
+  // Wait for client prefs — avoids HUD flash on reload when it was hidden.
+  if (!ready) return null;
 
   if (hideHud) {
     return (
