@@ -8,7 +8,6 @@ function hudKey(screenId: string) {
 }
 
 const listeners = new Map<string, Set<() => void>>();
-const cache = new Map<string, boolean>();
 
 function emit(screenId: string) {
   const set = listeners.get(screenId);
@@ -29,27 +28,25 @@ function subscribe(screenId: string, listener: () => void) {
   };
 }
 
+/** Always hit localStorage on client — never cache SSR/false poison. */
 function readHidden(screenId: string): boolean {
-  const hit = cache.get(screenId);
-  if (hit !== undefined) return hit;
+  if (typeof window === "undefined") return false;
   try {
-    const v = window.localStorage.getItem(hudKey(screenId)) === "1";
-    cache.set(screenId, v);
-    return v;
+    return window.localStorage.getItem(hudKey(screenId)) === "1";
   } catch {
-    cache.set(screenId, false);
     return false;
   }
 }
 
 function writeHidden(screenId: string, hidden: boolean) {
-  try {
-    if (hidden) window.localStorage.setItem(hudKey(screenId), "1");
-    else window.localStorage.removeItem(hudKey(screenId));
-  } catch {
-    /* private mode — keep session cache */
+  if (typeof window !== "undefined") {
+    try {
+      if (hidden) window.localStorage.setItem(hudKey(screenId), "1");
+      else window.localStorage.removeItem(hudKey(screenId));
+    } catch {
+      /* private mode */
+    }
   }
-  cache.set(screenId, hidden);
   emit(screenId);
 }
 
