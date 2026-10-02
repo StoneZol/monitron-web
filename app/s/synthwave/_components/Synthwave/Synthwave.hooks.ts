@@ -42,6 +42,7 @@ export const SYNTHWAVE_DEFAULTS: SynthwaveLive = {
     wallPerspective: 40,
     perspV2: true,
     roadLength: 0.2,
+    roadStretch: false,
     skyTop: "#a202f7",
     skyTopPeak: "#ee00ff",
     skyHorizon: "#330028",
@@ -227,6 +228,7 @@ function migratePrefs(
         next.roadLength = SYNTHWAVE_DEFAULTS.roadLength;
     }
     next.roadLength = Math.min(1, Math.max(0, next.roadLength));
+    next.roadStretch = Boolean(next.roadStretch);
     if (typeof next.roadGlow !== "number" || !Number.isFinite(next.roadGlow)) {
         next.roadGlow = SYNTHWAVE_DEFAULTS.roadGlow;
     }
@@ -367,6 +369,7 @@ export default function useSynthwaveHook() {
         setWallPerspective: (wallPerspective: number) =>
             commit({ wallPerspective }),
         setRoadLength: (roadLength: number) => commit({ roadLength }),
+        setRoadStretch: (roadStretch: boolean) => commit({ roadStretch }),
         setSkyTop: (skyTop: string) => commit({ skyTop }),
         setSkyTopPeak: (skyTopPeak: string) => commit({ skyTopPeak }),
         setSkyHorizon: (skyHorizon: string) => commit({ skyHorizon }),

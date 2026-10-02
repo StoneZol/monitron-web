@@ -62,6 +62,8 @@ const INFO = {
         "Camera foreshortening only (0 = higher eye, 40 = lower + wider FOV). Does not warp the grid mesh.",
     roadLength:
         "How far the neon road runs toward the sun. Default is short (~⅓ of the view); slide up to extend.",
+    roadStretch:
+        "Kick stretches the road toward the horizon with road channel; idle eases back to Road length.",
     roadChannel: "Band that punches scroll speed.",
     roadDrive: "Scroll punch strength for the road channel (was the single Drive).",
     glowChannel: "Band that flashes grid glow / line brightness (bass kicks).",
@@ -273,12 +275,20 @@ const Synthwave = ({ showOverlay = true }: SynthwaveProps) => {
                             </ControlSubSection>
 
                             <ControlSubSection label="grid" info={INFO.grid}>
-                                <Toggle
-                                    label="Grid twinkle"
-                                    checked={controls.gridTwinkle}
-                                    onChange={controls.setGridTwinkle}
-                                    info={INFO.gridTwinkle}
-                                />
+                                <div className="flex flex-wrap gap-1.5">
+                                    <Toggle
+                                        label="Grid twinkle"
+                                        checked={controls.gridTwinkle}
+                                        onChange={controls.setGridTwinkle}
+                                        info={INFO.gridTwinkle}
+                                    />
+                                    <Toggle
+                                        label="Stretch"
+                                        checked={controls.roadStretch}
+                                        onChange={controls.setRoadStretch}
+                                        info={INFO.roadStretch}
+                                    />
+                                </div>
                                 <ColorTable
                                     label="grid palette"
                                     info={INFO.gridPalette}

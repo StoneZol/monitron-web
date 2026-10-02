@@ -53,6 +53,8 @@ export type SynthwaveLive = {
   perspV2?: boolean;
   /** Extra road length beyond the short default (0 = ~⅓ screen, 1 = full stretch) */
   roadLength: number;
+  /** Audio kicks stretch road toward horizon; idle returns to roadLength */
+  roadStretch: boolean;
   /** Sky / cloud idle */
   skyTop: string;
   /** Sky / cloud peak (beat) */

@@ -14,7 +14,9 @@ import {
     CELL_SQUASH,
     DEPTH_MIN,
     cameraPerspective,
+    liveRoadDepthRef,
     roadDepth,
+    roadDepthStretched,
     WALL_LEN,
     WALL_SEGS,
     Z_PAD,
@@ -129,6 +131,8 @@ export function NeonGrid({
     /** Peak-hold so bass kicks flash like Hexagons band flicker */
     const glowHold = useRef(0);
     const roadHold = useRef(0);
+    /** Smoothed stretch 0…1 so mesh rebuilds aren't every kick sample */
+    const stretchSmooth = useRef(0);
 
     useEffect(
         () => () => {
@@ -168,11 +172,6 @@ export function NeonGrid({
 
         const leanDeg = knobs.wallAngle;
         const offsetCells = Math.max(1, Math.round(knobs.wallOffset));
-        const depth = roadDepth(knobs.roadLength);
-        // Shared depth axis (seams). Squash only U — counters foreshortening.
-        const cellsV = depth / CELL;
-        const depthSegs = Math.max(2, Math.round(depth / CELL));
-        const cellU = CELL * CELL_SQUASH;
 
         // Idle a bit slower when road channel is armed; peaks punch with roadDrive
         const roadArmed = reactive && knobs.roadChannel !== "off";
@@ -181,6 +180,35 @@ export function NeonGrid({
             : 1;
         const rate = 2 * knobs.roadSpeed * speedMul;
         scrollRef.current += Math.max(0, dt) * rate;
+
+        // Soft stretch envelope (linear punch, not squared) + slow ease in/out.
+        // Geometry stays at base depth; group.scale.z does the rubber-band.
+        const stretchTarget =
+            knobs.roadStretch && roadArmed ? roadPunch : 0;
+        const stretchRate = stretchTarget > stretchSmooth.current ? 2.2 : 1.4;
+        const stretchEase = Math.exp(-Math.max(0, dt) * stretchRate);
+        stretchSmooth.current =
+            stretchTarget +
+            (stretchSmooth.current - stretchTarget) * stretchEase;
+
+        const baseDepth = roadDepth(knobs.roadLength);
+        const depth = roadDepthStretched(
+            knobs.roadLength,
+            knobs.roadStretch,
+            roadArmed,
+            stretchSmooth.current,
+        );
+        liveRoadDepthRef.current = depth;
+        const stretchScale = baseDepth > 1e-4 ? depth / baseDepth : 1;
+        if (groupRef.current) {
+            groupRef.current.scale.set(1, 1, stretchScale);
+        }
+
+        // Mesh built at base depth only — stretch is scale, no per-kick rebuild.
+        const depthBuild = baseDepth;
+        const cellsV = depthBuild / CELL;
+        const depthSegs = Math.max(2, Math.round(depthBuild / CELL));
+        const cellU = CELL * CELL_SQUASH;
 
         // Idle dim when glow channel is armed so peaks read as a flash
         const glowArmed = reactive && knobs.glowChannel !== "off";
@@ -236,13 +264,13 @@ export function NeonGrid({
             builtRef.current &&
             Math.abs(leanDeg - lastAngleRef.current) < 0.05 &&
             offsetCells === lastOffsetRef.current &&
-            Math.abs(depth - lastLengthRef.current) < 0.01
+            Math.abs(depthBuild - lastLengthRef.current) < 0.01
         ) {
             return;
         }
         lastAngleRef.current = leanDeg;
         lastOffsetRef.current = offsetCells;
-        lastLengthRef.current = depth;
+        lastLengthRef.current = depthBuild;
         builtRef.current = true;
 
         const floorCellsU = Math.max(1, offsetCells) * 2;
@@ -254,14 +282,14 @@ export function NeonGrid({
         wallM.uniforms.uCellsV!.value = cellsV;
 
         const zNear = Z_PAD;
-        const zFar = -(depth - Z_PAD);
+        const zFar = -(depthBuild - Z_PAD);
         const zCenter = (zNear + zFar) / 2;
 
         floor.geometry.dispose();
         {
             const g = new THREE.PlaneGeometry(
                 floorW,
-                depth,
+                depthBuild,
                 Math.max(1, floorCellsU),
                 depthSegs,
             );

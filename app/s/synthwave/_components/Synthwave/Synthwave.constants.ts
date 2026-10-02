@@ -35,6 +35,26 @@ export function roadDepth(length01: number) {
 }
 
 /**
+ * When stretch is armed, grow depth toward DEPTH_MAX with roadKick (0…1).
+ * kick already squared in the grid frame — peaks stretch, idle snaps back to base.
+ */
+export function roadDepthStretched(
+    length01: number,
+    stretchOn: boolean,
+    roadArmed: boolean,
+    roadKick: number,
+): number {
+    const base = roadDepth(length01);
+    if (!stretchOn || !roadArmed) return base;
+    const kick = Math.min(1, Math.max(0, roadKick));
+    return base + (DEPTH_MAX - base) * kick * 0.85;
+}
+
+/** Latest stretched depth — Grid writes, Sun reads (1-frame ok). */
+export const liveRoadDepthRef = { current: DEPTH_MIN };
+
+
+/**
  * wallPerspective (0…40) → how hard the camera looks into the vanishing point.
  *  0 = higher / flatter, 40 = lower / stronger foreshortening.
  */
