@@ -25,6 +25,7 @@ export const HEXAGONS_DEFAULTS: HexagonsPlaceLive = {
     capGridIdle: "#1a4a20",
     capGridPeak: "#6dff4a",
     gridChannel: "beat",
+    gridDrive: 1,
     gridScale: 1,
     garland: false,
     caps: false,
@@ -37,6 +38,7 @@ export const HEXAGONS_DEFAULTS: HexagonsPlaceLive = {
     capFogIdle: "#0c1a2e",
     capFogPeak: "#1a4a9e",
     fogChannel: "beat",
+    fogDrive: 1,
     colorSpeed: 40,
     cameraAngle: 25,
     cameraHeight: 8,
@@ -47,7 +49,7 @@ export const HEXAGONS_DEFAULTS: HexagonsPlaceLive = {
     spinLeft: true,
     spinSpeed: 1,
     spinChannel: "beat",
-    spinAccel: 2,
+    spinDrive: 2,
     fogHeight: 2,
     fogDensity: 0.7,
     lightIntensity: 1,
@@ -161,6 +163,20 @@ function readPrefs(): HexagonsPlaceLive {
     ) {
         cached.spinChannel = HEXAGONS_DEFAULTS.spinChannel;
     }
+    const clampDrive = (v: unknown, fallback: number) => {
+        if (typeof v !== "number" || !Number.isFinite(v)) return fallback;
+        return Math.min(8, Math.max(0, v));
+    };
+    cached.gridDrive = clampDrive(cached.gridDrive, HEXAGONS_DEFAULTS.gridDrive);
+    cached.fogDrive = clampDrive(cached.fogDrive, HEXAGONS_DEFAULTS.fogDrive);
+    const legacySpinAccel = (loaded as { spinAccel?: unknown }).spinAccel;
+    cached.spinDrive = clampDrive(
+        typeof cached.spinDrive === "number"
+            ? cached.spinDrive
+            : legacySpinAccel,
+        HEXAGONS_DEFAULTS.spinDrive,
+    );
+    delete (cached as { spinAccel?: number }).spinAccel;
     // Legacy dolly zoom was ~6–40; scene scale lives in 0.25–2.5
     if (cached.cameraZoom > 3) cached.cameraZoom = HEXAGONS_DEFAULTS.cameraZoom;
     if (
@@ -237,6 +253,8 @@ export default function useHexagonsPlaceHook() {
             setGridChannel: (
                 gridChannel: HexagonsPlaceLive["gridChannel"],
             ) => commit({ gridChannel }),
+            gridDrive: live.gridDrive,
+            setGridDrive: (gridDrive: number) => commit({ gridDrive }),
             gridScale: live.gridScale,
             setGridScale: (gridScale: number) => commit({ gridScale }),
             garland: live.garland,
@@ -264,6 +282,8 @@ export default function useHexagonsPlaceHook() {
             fogChannel: live.fogChannel,
             setFogChannel: (fogChannel: HexagonsPlaceLive["fogChannel"]) =>
                 commit({ fogChannel }),
+            fogDrive: live.fogDrive,
+            setFogDrive: (fogDrive: number) => commit({ fogDrive }),
             colorSpeed: live.colorSpeed,
             setColorSpeed: (colorSpeed: number) => commit({ colorSpeed }),
             cameraAngle: live.cameraAngle,
@@ -285,8 +305,8 @@ export default function useHexagonsPlaceHook() {
             spinChannel: live.spinChannel,
             setSpinChannel: (spinChannel: HexagonsPlaceLive["spinChannel"]) =>
                 commit({ spinChannel }),
-            spinAccel: live.spinAccel,
-            setSpinAccel: (spinAccel: number) => commit({ spinAccel }),
+            spinDrive: live.spinDrive,
+            setSpinDrive: (spinDrive: number) => commit({ spinDrive }),
             fogHeight: live.fogHeight,
             setFogHeight: (fogHeight: number) => commit({ fogHeight }),
             fogDensity: live.fogDensity,

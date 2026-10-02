@@ -1,4 +1,4 @@
-export { ControlPanel, ControlSection } from "./ControlPanel";
+export { ControlPanel, ControlSection, ControlSubSection } from "./ControlPanel";
 export { PanelButton, panelButtonClassName } from "./PanelButton";
 export { Toggle } from "./Toggle";
 export { Slider } from "./Slider";

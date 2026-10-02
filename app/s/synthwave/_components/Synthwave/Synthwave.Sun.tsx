@@ -9,8 +9,8 @@ import {
     neonSunFragmentShader,
     neonSunVertexShader,
 } from "./shaders/neonsun";
-import { channelLevel, hueWalkHex, lerpHex } from "./Synthwave.audio";
-import { DEPTH_MIN, roadDepth, Z_PAD } from "./Synthwave.constants";
+import { channelLevel, hueWalkHex, lerpHex, drivenLevel } from "./Synthwave.audio";
+import { DEPTH_MIN, liveRoadDepthRef, roadDepth, Z_PAD } from "./Synthwave.constants";
 import type { SynthwaveLive } from "./Synthwave.types";
 
 export function NeonSun({
@@ -89,7 +89,7 @@ export function NeonSun({
         const sunRaw = reactive ? channelLevel(viz!, knobs.sunChannel) : 0;
         const decay = Math.exp(-Math.max(0, dt) * 5.5);
         sunHold.current = Math.max(sunRaw, sunHold.current * decay);
-        const punch = Math.min(1, sunHold.current);
+        const punch = drivenLevel(sunHold.current, knobs.sunDrive);
 
         const sunArmed = reactive && knobs.sunChannel !== "off";
         const idle = sunArmed && !knobs.sunTwinkle ? 0.58 : 1;
@@ -128,7 +128,10 @@ export function NeonSun({
         const s = base * knobs.sunSize;
         if (scaleRef.current) scaleRef.current.scale.setScalar(s);
 
-        const depth = roadDepth(knobs.roadLength);
+        const depth =
+            liveRoadDepthRef.current > 0
+                ? liveRoadDepthRef.current
+                : roadDepth(knobs.roadLength);
         const zFar = -(depth - Z_PAD);
         if (groupRef.current) {
             groupRef.current.position.set(0, 0.22, zFar - 0.12);

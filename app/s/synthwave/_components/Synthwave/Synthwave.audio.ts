@@ -22,6 +22,12 @@ export function channelLevel(viz: VizBands, ch: ReactiveChannel): number {
     return sliceBands(viz.bands, 2000, 10000);
 }
 
+/** Scale a 0…1 channel envelope by drive, soft-clipped. */
+export function drivenLevel(level: number, drive: number): number {
+    const d = Number.isFinite(drive) ? Math.max(0, drive) : 1;
+    return Math.min(1, Math.max(0, level) * d);
+}
+
 export function hexToVec3(hex: string, target: THREE.Color) {
     return target.set(hex);
 }

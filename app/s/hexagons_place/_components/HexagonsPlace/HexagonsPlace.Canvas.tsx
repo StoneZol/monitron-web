@@ -533,7 +533,11 @@ function City({
                 if (knobs.gridFixed) {
                     c = _gridColor.set(knobs.gridColor);
                 } else if (flicker && viz && knobs.gridChannel !== "off") {
-                    const level = channelLevel(viz, knobs.gridChannel);
+                    const level = Math.min(
+                        1,
+                        channelLevel(viz, knobs.gridChannel) *
+                            Math.max(0, knobs.gridDrive),
+                    );
                     _fogIdle.setHex(
                         cssHexToInt(knobs.capGridIdle, 0x1a4a20),
                     );
@@ -564,7 +568,11 @@ function City({
                 _fogIdle.setHex(cssHexToInt(knobs.capFogIdle, 0x0c1a2e));
                 _fogPeak.setHex(cssHexToInt(knobs.capFogPeak, 0x1a4a9e));
                 if (flicker && viz && knobs.fogChannel !== "off") {
-                    const level = channelLevel(viz, knobs.fogChannel);
+                    const level = Math.min(
+                        1,
+                        channelLevel(viz, knobs.fogChannel) *
+                            Math.max(0, knobs.fogDrive),
+                    );
                     fog.color.copy(_fogIdle).lerp(_fogPeak, level);
                 } else {
                     fog.color.copy(_fogIdle);
@@ -744,7 +752,7 @@ function City({
                     spinImpulse.current * Math.exp(-dt * SPIN_IMPULSE_DECAY),
                     Math.pow(level, 1.45) * 0.55,
                 );
-                const accel = Math.max(0, knobs.spinAccel);
+                const accel = Math.max(0, knobs.spinDrive);
                 tempoMul =
                     1 + Math.pow(spinImpulse.current, 1.55) * accel;
             } else {
