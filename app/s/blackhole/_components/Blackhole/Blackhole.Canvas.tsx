@@ -1,10 +1,17 @@
 "use client";
 
-import { useEffect, useMemo, type RefObject } from "react";
+import { useEffect, useMemo, useRef, type RefObject } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import type { VizBands } from "@/lib/audioBus";
-import { channelLevel, drivenLevel } from "./Blackhole.audio";
+import {
+  channelLevel,
+  drivenLevel,
+  hexToVec3,
+  hueWalkHex,
+  lerpHex,
+  pulseBrightness,
+} from "./Blackhole.audio";
 import type { BlackholeLive } from "./Blackhole.types";
 import {
   blackholeFragmentShader,
@@ -23,6 +30,11 @@ function BlackholeQuad({
   liveRef: RefObject<BlackholeLive>;
   vizRef: RefObject<VizBands>;
 }) {
+  const yawAcc = useRef(0);
+  const hueOff = useRef(0);
+  const lastT = useRef(0);
+  const holeColor = useMemo(() => new THREE.Color("#ffcc00"), []);
+
   const mat = useMemo(
     () =>
       new THREE.ShaderMaterial({
@@ -37,6 +49,8 @@ function BlackholeQuad({
           uYaw: { value: 0 },
           uPitch: { value: (2 * Math.PI) / 180 },
           uSpeed: { value: 0.2 },
+          uHoleColor: { value: new THREE.Color("#ffcc00") },
+          uHoleBoost: { value: 0 },
         },
       }),
     [],
@@ -52,16 +66,51 @@ function BlackholeQuad({
   useFrame(({ clock }) => {
     const live = liveRef.current;
     const viz = vizRef.current;
-    const punch = viz?.enabled
-      ? drivenLevel(channelLevel(viz, live.spaceChannel), live.spaceDrive)
-      : 0;
     const t = clock.elapsedTime;
-    mat.uniforms.iTime!.value =
-      t * Math.max(0.05, live.flightSpeed) * (1 + punch * 0.35);
-    mat.uniforms.uSize!.value = Math.max(0.05, live.blackHoleSize);
-    mat.uniforms.uYaw!.value = t * live.yawSpeed;
-    mat.uniforms.uPitch!.value = (live.pitch * Math.PI) / 180;
+    const dt = Math.min(0.05, Math.max(0, t - lastT.current));
+    lastT.current = t;
+
+    const reactive = Boolean(viz?.enabled);
+    const holeRaw = reactive ? channelLevel(viz!, live.holeChannel) : 0;
+    const yawRaw = reactive ? channelLevel(viz!, live.yawChannel) : 0;
+    const holePunch = drivenLevel(holeRaw, live.holeDrive);
+    const yawPunch = drivenLevel(yawRaw, live.yawDrive);
+
+    mat.uniforms.iTime!.value = t * Math.max(0.05, live.flightSpeed);
+
+    const holeArmed = reactive && live.holeChannel !== "off";
+    const scalePunchOn = live.scalePunch && holeArmed;
+    const scalePunch = scalePunchOn
+      ? drivenLevel(holeRaw, live.scaleDrive)
+      : 0;
+
+    // Idle dips a touch when armed; peaks swell + micro camera shake
+    const sizeMul = scalePunchOn ? 0.92 + scalePunch * 0.55 : 1;
+    mat.uniforms.uSize!.value = Math.max(0.05, live.blackHoleSize * sizeMul);
+    const shake = scalePunchOn ? scalePunch : 0;
+    mat.uniforms.uPitch!.value =
+      ((live.pitch + Math.sin(t * 28) * shake * 4) * Math.PI) / 180;
     mat.uniforms.uSpeed!.value = Math.max(0.05, live.diskRotationSpeed);
+
+    const yawArmed = reactive && live.yawChannel !== "off";
+    const yawMul = yawArmed ? 1 + yawPunch * 1.2 : 1;
+    yawAcc.current +=
+      dt * live.yawSpeed * yawMul +
+      (scalePunchOn ? Math.sin(t * 37) * shake * 0.015 * dt * 60 : 0);
+    mat.uniforms.uYaw!.value = yawAcc.current;
+
+    if (live.holeTwinkle) {
+      hueOff.current =
+        (hueOff.current + live.colorSpeed * Math.max(0, dt)) % 360;
+      hueWalkHex(live.holeColor, hueOff.current, holeColor);
+      if (holeArmed) pulseBrightness(holeColor, holePunch);
+    } else if (holeArmed) {
+      lerpHex(live.holeColor, live.holeColorPeak, holePunch, holeColor);
+    } else {
+      hexToVec3(live.holeColor, holeColor);
+    }
+    mat.uniforms.uHoleColor!.value.copy(holeColor);
+    mat.uniforms.uHoleBoost!.value = holeArmed ? holePunch * 0.85 : 0;
   });
 
   return (

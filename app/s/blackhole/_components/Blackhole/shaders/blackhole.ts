@@ -29,6 +29,8 @@ uniform float uSize;
 uniform float uYaw;
 uniform float uPitch;
 uniform float uSpeed;
+uniform vec3 uHoleColor;
+uniform float uHoleBoost;
 
 // Shadertoy custom params (defaults from the public Brayns remake of this shader)
 #define _Size uSize
@@ -116,10 +118,10 @@ vec4 raymarchDisk(vec3 ray, vec3 zeroPos)
     redShift = clamp(redShift, 0., 1.);
 
     float disMix = clamp((lengthPos - _Size * 2.)*(1./_Size)*0.24, 0., 1.);
-    vec3 insideCol =  mix(vec3(1.0,0.8,0.0), vec3(0.5,0.13,0.02)*0.2, disMix);
+    vec3 insideCol = mix(uHoleColor, uHoleColor * 0.18, disMix);
 
     insideCol *= mix(vec3(0.4, 0.2, 0.1), vec3(1.6, 2.4, 4.0), redShift);
-	insideCol *= 1.25;
+	insideCol *= 1.25 * (1.0 + uHoleBoost);
     redShift += 0.12;
     redShift *= redShift;
 
@@ -220,7 +222,7 @@ void mainImage( out vec4 colOut, in vec2 fragCoord )
                 ray =  normalize(ray - (bendForce * invDist )*pos);  //bend ray towards BH
                 pos += stepDist * ray;
 
-                glow += vec4(1.2,1.1,1, 1.0) *(0.01*stepDist * invDistSqr * invDistSqr *clamp( centDist*(2.) - 1.2,0.,1.)); //adds fairly cheap glow
+                glow += vec4(uHoleColor * vec3(1.2,1.1,1.0), 1.0) *(0.01*stepDist * invDistSqr * invDistSqr *clamp( centDist*(2.) - 1.2,0.,1.) * (1.0 + uHoleBoost)); //adds fairly cheap glow
             }
 
             float dist2 = length(pos);
