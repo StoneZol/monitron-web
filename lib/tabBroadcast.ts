@@ -2,7 +2,7 @@
 
 import { saveScreenPrefs } from "@/lib/screenPrefs";
 
-export const TAB_SYNC_VERSION = 2 as const;
+export const TAB_SYNC_VERSION = 3 as const;
 
 /** How far ahead of "now" all tabs aim to reload together. */
 export const TAB_SYNC_LEAD_MS = 1000;
@@ -15,8 +15,6 @@ export type TabSyncMessage = {
   senderId: string;
   /** Full prefs snapshot (incl. micGate / peakGain / audioSource). */
   prefs: Record<string, unknown>;
-  /** Receivers force-hide HUD; sender keeps its overlay. */
-  hideOverlay: true;
   /** Absolute Date.now() deadline — all tabs reload at/after this. */
   reloadAt: number;
 };
@@ -37,7 +35,8 @@ export function tabSyncChannelName(path: string) {
   return `monitron:tab-sync:${path}`;
 }
 
-export function hudStorageKey(screenId: string) {
+/** Per-tab HUD hide key (sessionStorage). Same string was once in localStorage. */
+export function hudSessionKey(screenId: string) {
   return `monitron:${screenId}:hudHidden`;
 }
 
@@ -50,8 +49,8 @@ export function scheduleReloadAt(reloadAt: number): void {
 }
 
 /**
- * Push full prefs + shared reload deadline. Returns reloadAt so the sender
- * can wait on the same tick without applying hideOverlay.
+ * Push full prefs + shared reload deadline. Does not touch HUD visibility.
+ * Returns reloadAt so the sender can reload on the same tick.
  */
 export function broadcastTabSync(
   screenId: string,
@@ -68,7 +67,6 @@ export function broadcastTabSync(
     screenId,
     senderId: getTabSyncSenderId(),
     prefs: { ...prefs },
-    hideOverlay: true,
     reloadAt,
   };
   const ch = new BroadcastChannel(tabSyncChannelName(path));
@@ -102,20 +100,68 @@ export function subscribeTabSync(
 }
 
 /**
- * Persist prefs + force-hide HUD, then wait for shared reloadAt.
- * (Late message → reload ASAP.)
+ * Persist prefs, then wait for shared reloadAt.
+ * Does not change this tab's HUD (open stays open, hidden stays hidden).
  */
 export function applyIncomingTabSync(
   screenId: string,
   msg: TabSyncMessage,
 ): void {
   saveScreenPrefs(screenId, msg.prefs);
-  try {
-    window.localStorage.setItem(hudStorageKey(screenId), "1");
-  } catch {
-    /* ignore */
-  }
   scheduleReloadAt(msg.reloadAt);
+}
+
+// ── HUD hide: broadcast to all tabs; show stays local ───────────────
+
+type HudHideMsg = {
+  kind: "hud-hide";
+  screenId: string;
+  senderId: string;
+};
+
+function hudHideChannelName(path: string) {
+  return `monitron:hud-hide:${path}`;
+}
+
+/** Tell every sibling tab on this path+screen to hide the overlay. */
+export function broadcastHudHide(screenId: string): void {
+  if (typeof window === "undefined" || typeof BroadcastChannel === "undefined") {
+    return;
+  }
+  const path = window.location.pathname;
+  const msg: HudHideMsg = {
+    kind: "hud-hide",
+    screenId,
+    senderId: getTabSyncSenderId(),
+  };
+  const ch = new BroadcastChannel(hudHideChannelName(path));
+  ch.postMessage(msg);
+  ch.close();
+}
+
+/** Apply remote hide requests (show is never broadcast). */
+export function subscribeHudHide(
+  screenId: string,
+  onHide: () => void,
+): () => void {
+  if (typeof window === "undefined" || typeof BroadcastChannel === "undefined") {
+    return () => {};
+  }
+  const path = window.location.pathname;
+  const ch = new BroadcastChannel(hudHideChannelName(path));
+  ch.onmessage = (ev: MessageEvent) => {
+    const data = ev.data as HudHideMsg;
+    if (
+      !data ||
+      data.kind !== "hud-hide" ||
+      data.screenId !== screenId ||
+      data.senderId === getTabSyncSenderId()
+    ) {
+      return;
+    }
+    onHide();
+  };
+  return () => ch.close();
 }
 
 // ── Presence: other tabs on the same path + screenId ───────────────

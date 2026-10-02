@@ -5,11 +5,13 @@ import { bindFullscreenEscape } from "@/lib/fullscreen";
 import { readScreenPrefsRaw } from "@/lib/screenPrefs";
 import {
   applyIncomingTabSync,
+  broadcastHudHide,
   broadcastTabSync,
   getTabHasPeers,
   getTabSyncSenderId,
-  hudStorageKey,
+  hudSessionKey,
   scheduleReloadAt,
+  subscribeHudHide,
   subscribeTabPresence,
   subscribeTabSync,
 } from "@/lib/tabBroadcast";
@@ -35,21 +37,27 @@ function subscribe(screenId: string, listener: () => void) {
   };
 }
 
-/** Always hit localStorage on client — never cache SSR/false poison. */
+/**
+ * HUD visibility lives in sessionStorage (per-tab persistence across reload).
+ * Hide is broadcast to siblings; show is local only.
+ */
 function readHidden(screenId: string): boolean {
   if (typeof window === "undefined") return false;
   try {
-    return window.localStorage.getItem(hudStorageKey(screenId)) === "1";
+    return window.sessionStorage.getItem(hudSessionKey(screenId)) === "1";
   } catch {
     return false;
   }
 }
 
-function writeHidden(screenId: string, hidden: boolean) {
+function writeHiddenLocal(screenId: string, hidden: boolean) {
   if (typeof window !== "undefined") {
     try {
-      if (hidden) window.localStorage.setItem(hudStorageKey(screenId), "1");
-      else window.localStorage.removeItem(hudStorageKey(screenId));
+      const key = hudSessionKey(screenId);
+      if (hidden) window.sessionStorage.setItem(key, "1");
+      else window.sessionStorage.removeItem(key);
+      // Drop legacy shared localStorage so hide can't leak via storage events.
+      window.localStorage.removeItem(key);
     } catch {
       /* private mode */
     }
@@ -80,7 +88,21 @@ const useScreensOverlayHook = (screenId: string) => {
 
   useEffect(() => bindFullscreenEscape(), []);
 
-  // Cross-tab sync — any screen under ScreensOverlay gets this for free.
+  // One-shot: clear shared localStorage hide leftover from older builds.
+  useEffect(() => {
+    try {
+      window.localStorage.removeItem(hudSessionKey(screenId));
+    } catch {
+      /* ignore */
+    }
+  }, [screenId]);
+
+  // Remote hide → close this tab's overlay; show is never received.
+  useEffect(() => {
+    return subscribeHudHide(screenId, () => writeHiddenLocal(screenId, true));
+  }, [screenId]);
+
+  // Cross-tab sync — prefs only; does not force-hide.
   useEffect(() => {
     return subscribeTabSync(screenId, (msg) => {
       if (msg.senderId === getTabSyncSenderId()) return;
@@ -91,7 +113,6 @@ const useScreensOverlayHook = (screenId: string) => {
   const sync = () => {
     if (!getTabHasPeers(screenId)) return;
     const reloadAt = broadcastTabSync(screenId, readScreenPrefsRaw(screenId));
-    // Same deadline as peers; keep this tab's HUD (receivers force-hide).
     scheduleReloadAt(reloadAt);
   };
 
@@ -99,8 +120,11 @@ const useScreensOverlayHook = (screenId: string) => {
     ready: isClient,
     hideHud,
     hasPeers,
-    hide: () => writeHidden(screenId, true),
-    show: () => writeHidden(screenId, false),
+    hide: () => {
+      writeHiddenLocal(screenId, true);
+      broadcastHudHide(screenId);
+    },
+    show: () => writeHiddenLocal(screenId, false),
     sync,
   };
 };
