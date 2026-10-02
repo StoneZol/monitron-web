@@ -8,7 +8,7 @@ import {
     neonGridFragmentShader,
     neonGridVertexShader,
 } from "./shaders/neongrid";
-import { channelLevel, hexToVec3, hueWalkHex, lerpHex } from "./Synthwave.audio";
+import { channelLevel, hexToVec3, hueWalkHex, lerpHex, drivenLevel } from "./Synthwave.audio";
 import {
     CELL,
     CELL_SQUASH,
@@ -174,19 +174,21 @@ export function NeonGrid({
         const depthSegs = Math.max(2, Math.round(depth / CELL));
         const cellU = CELL * CELL_SQUASH;
 
-        // Idle a bit slower when road channel is armed; peaks punch with Drive
+        // Idle a bit slower when road channel is armed; peaks punch with roadDrive
         const roadArmed = reactive && knobs.roadChannel !== "off";
         const speedMul = roadArmed
-            ? 0.7 + roadKick * (0.3 + knobs.drive * 0.9)
+            ? 0.7 + roadKick * (0.3 + knobs.roadDrive * 0.9)
             : 1;
         const rate = 2 * knobs.roadSpeed * speedMul;
         scrollRef.current += Math.max(0, dt) * rate;
 
         // Idle dim when glow channel is armed so peaks read as a flash
         const glowArmed = reactive && knobs.glowChannel !== "off";
+        const glowFlash = drivenLevel(flash, knobs.glowDrive);
         const glowUi = Math.min(
             40,
-            knobs.roadGlow * (glowArmed ? 0.7 + flash * 0.3 : 1) + flash * 8,
+            knobs.roadGlow * (glowArmed ? 0.7 + glowFlash * 0.3 : 1) +
+                glowFlash * 8,
         );
 
         const syncUniforms = (
@@ -211,7 +213,7 @@ export function NeonGrid({
                     hexToVec3(knobs.roadFar, far);
                 }
             } else {
-                const level = glowArmed ? flash : 0;
+                const level = glowArmed ? glowFlash : 0;
                 lerpHex(knobs.roadColor, knobs.roadColorPeak, level, near);
                 lerpHex(knobs.roadFar, knobs.roadFarPeak, level, far);
             }

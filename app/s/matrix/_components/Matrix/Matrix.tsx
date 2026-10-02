@@ -7,6 +7,7 @@ import {
     ColorField,
     ControlPanel,
     ControlSection,
+    ControlSubSection,
     PanelButton,
     Slider,
     Toggle,
@@ -95,16 +96,18 @@ const Matrix = ({ showOverlay = true }: { showOverlay?: boolean }) => {
                             info={INFO.visualizer}
                         >
                             {visualizer.reactive && (
-                                <Slider
-                                    label="Drive"
-                                    value={controls.drive}
-                                    min={0}
-                                    max={controls.driveMax}
-                                    step={0.5}
-                                    onChange={controls.setDrive}
-                                    format={(v) => v.toFixed(1)}
-                                    info={INFO.drive}
-                                />
+                                <ControlSubSection label="drive">
+                                    <Slider
+                                        label="Drive"
+                                        value={controls.drive}
+                                        min={0}
+                                        max={controls.driveMax}
+                                        step={0.5}
+                                        onChange={controls.setDrive}
+                                        format={(v) => v.toFixed(1)}
+                                        info={INFO.drive}
+                                    />
+                                </ControlSubSection>
                             )}
                         </VisualizerSection>
                     </ControlPanel>

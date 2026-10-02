@@ -9,6 +9,7 @@ import {
     ColorTable,
     ControlPanel,
     ControlSection,
+    ControlSubSection,
     PanelButton,
     Select,
     Slider,
@@ -470,39 +471,46 @@ const HexagonsPlace = ({ showOverlay = true }: HexagonsPlaceProps) => {
                             </div>
                             {visualizer.reactive && (
                                 <>
-                                    <Select
-                                        label="Grid channel"
-                                        value={controls.gridChannel}
-                                        options={[...REACTIVE_CHANNEL_OPTIONS]}
-                                        onChange={controls.setGridChannel}
-                                        info={INFO.gridChannel}
-                                    />
-                                    <Select
-                                        label="Fog channel"
-                                        value={controls.fogChannel}
-                                        options={[...REACTIVE_CHANNEL_OPTIONS]}
-                                        onChange={controls.setFogChannel}
-                                        info={INFO.fogChannel}
-                                    />
-                                    <Select
-                                        label="Spin channel"
-                                        value={controls.spinChannel}
-                                        options={[...REACTIVE_CHANNEL_OPTIONS]}
-                                        onChange={controls.setSpinChannel}
-                                        info={INFO.spinChannel}
-                                    />
-                                    {controls.spin && controls.spinChannel !== "off" && (
-                                        <Slider
-                                            label="Spin accel"
-                                            value={controls.spinAccel}
-                                            min={0}
-                                            max={8}
-                                            step={0.1}
-                                            onChange={controls.setSpinAccel}
-                                            format={(v) => `×${v.toFixed(1)}`}
-                                            info={INFO.spinAccel}
+                                    <ControlSubSection label="channels">
+                                        <Select
+                                            label="Grid"
+                                            value={controls.gridChannel}
+                                            options={[...REACTIVE_CHANNEL_OPTIONS]}
+                                            onChange={controls.setGridChannel}
+                                            info={INFO.gridChannel}
                                         />
-                                    )}
+                                        <Select
+                                            label="Fog"
+                                            value={controls.fogChannel}
+                                            options={[...REACTIVE_CHANNEL_OPTIONS]}
+                                            onChange={controls.setFogChannel}
+                                            info={INFO.fogChannel}
+                                        />
+                                        <Select
+                                            label="Spin"
+                                            value={controls.spinChannel}
+                                            options={[...REACTIVE_CHANNEL_OPTIONS]}
+                                            onChange={controls.setSpinChannel}
+                                            info={INFO.spinChannel}
+                                        />
+                                    </ControlSubSection>
+                                    {controls.spin &&
+                                        controls.spinChannel !== "off" && (
+                                            <ControlSubSection label="drive">
+                                                <Slider
+                                                    label="Spin accel"
+                                                    value={controls.spinAccel}
+                                                    min={0}
+                                                    max={8}
+                                                    step={0.1}
+                                                    onChange={controls.setSpinAccel}
+                                                    format={(v) =>
+                                                        `×${v.toFixed(1)}`
+                                                    }
+                                                    info={INFO.spinAccel}
+                                                />
+                                            </ControlSubSection>
+                                        )}
                                 </>
                             )}
                         </VisualizerSection>

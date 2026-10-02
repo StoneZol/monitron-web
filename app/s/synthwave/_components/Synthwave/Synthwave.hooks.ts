@@ -49,14 +49,16 @@ export const SYNTHWAVE_DEFAULTS: SynthwaveLive = {
     skySpeed: 2,
     skyDirection: 0,
     roadChannel: "bass",
+    roadDrive: 2,
     glowChannel: "bass",
+    glowDrive: 1,
     sunChannel: "bass",
+    sunDrive: 1,
     sunTwinkle: false,
     sunGlowTwinkle: false,
     gridTwinkle: false,
     skyTwinkle: false,
     colorSpeed: 40,
-    drive: 2,
     audioSource: "off",
     micGate: MIC_GATE_DEFAULT,
     peakGain: PEAK_GAIN_DEFAULT,
@@ -65,6 +67,11 @@ export const SYNTHWAVE_DEFAULTS: SynthwaveLive = {
 const SCREEN_ID = "synthwave";
 const DRIVE_MAX = 8;
 const CHANNELS = new Set(["off", "bass", "mid", "high", "beat"]);
+
+function clampDrive(value: number): number {
+    if (!Number.isFinite(value)) return 0;
+    return Math.min(DRIVE_MAX, Math.max(0, value));
+}
 
 function migratePrefs(
     raw: SynthwaveLive & Record<string, unknown>,
@@ -93,11 +100,25 @@ function migratePrefs(
         audioSource,
         micGate: normalizeMicGate(raw.micGate),
         peakGain: normalizePeakGain(raw.peakGain),
-        drive:
-            typeof raw.drive === "number" && Number.isFinite(raw.drive)
-                ? Math.min(DRIVE_MAX, Math.max(0, raw.drive))
-                : SYNTHWAVE_DEFAULTS.drive,
+        roadDrive: clampDrive(
+            typeof raw.roadDrive === "number"
+                ? raw.roadDrive
+                : typeof raw.drive === "number"
+                  ? raw.drive
+                  : SYNTHWAVE_DEFAULTS.roadDrive,
+        ),
+        glowDrive: clampDrive(
+            typeof raw.glowDrive === "number"
+                ? raw.glowDrive
+                : SYNTHWAVE_DEFAULTS.glowDrive,
+        ),
+        sunDrive: clampDrive(
+            typeof raw.sunDrive === "number"
+                ? raw.sunDrive
+                : SYNTHWAVE_DEFAULTS.sunDrive,
+        ),
     };
+    delete (next as { drive?: number }).drive;
     if (!CHANNELS.has(next.roadChannel))
         next.roadChannel = SYNTHWAVE_DEFAULTS.roadChannel;
     if (!CHANNELS.has(next.glowChannel))
@@ -354,16 +375,21 @@ export default function useSynthwaveHook() {
         setSkyDirection: (skyDirection: number) => commit({ skyDirection }),
         setRoadChannel: (roadChannel: SynthwaveLive["roadChannel"]) =>
             commit({ roadChannel }),
+        setRoadDrive: (roadDrive: number) =>
+            commit({ roadDrive: clampDrive(roadDrive) }),
         setGlowChannel: (glowChannel: SynthwaveLive["glowChannel"]) =>
             commit({ glowChannel }),
+        setGlowDrive: (glowDrive: number) =>
+            commit({ glowDrive: clampDrive(glowDrive) }),
         setSunChannel: (sunChannel: SynthwaveLive["sunChannel"]) =>
             commit({ sunChannel }),
+        setSunDrive: (sunDrive: number) =>
+            commit({ sunDrive: clampDrive(sunDrive) }),
         setSunTwinkle: (sunTwinkle: boolean) => commit({ sunTwinkle }),
         setSunGlowTwinkle: (sunGlowTwinkle: boolean) => commit({ sunGlowTwinkle }),
         setGridTwinkle: (gridTwinkle: boolean) => commit({ gridTwinkle }),
         setSkyTwinkle: (skyTwinkle: boolean) => commit({ skyTwinkle }),
         setColorSpeed: (colorSpeed: number) => commit({ colorSpeed }),
-        setDrive: (drive: number) => commit({ drive }),
         reset: () => writePrefs({ ...SYNTHWAVE_DEFAULTS }),
         fullscreen: () => void toggleFullscreen(),
     };

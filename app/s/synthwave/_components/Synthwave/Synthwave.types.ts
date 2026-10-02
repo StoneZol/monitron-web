@@ -67,10 +67,16 @@ export type SynthwaveLive = {
   skyDirection: number;
   /** Band that accelerates road scroll */
   roadChannel: ReactiveChannel;
+  /** How hard road channel punches scroll (legacy single `drive`) */
+  roadDrive: number;
   /** Band that flashes grid glow / line brightness */
   glowChannel: ReactiveChannel;
+  /** Multiplier on glow channel level (1 = previous hardcoded feel) */
+  glowDrive: number;
   /** Band that punches sun / glow brightness */
   sunChannel: ReactiveChannel;
+  /** Multiplier on sun channel level (1 = previous hardcoded feel) */
+  sunDrive: number;
   /** Garland hue walk on sun (from idle); peak unused while on */
   sunTwinkle: boolean;
   /** Hue walk on sun glow (halo) color */
@@ -81,7 +87,6 @@ export type SynthwaveLive = {
   skyTwinkle: boolean;
   /** Hue degrees per second while any twinkle is on */
   colorSpeed: number;
-  drive: number;
   audioSource: AudioSource;
   micGate: number;
   peakGain: number;

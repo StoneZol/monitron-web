@@ -62,10 +62,12 @@ const INFO = {
         "Camera foreshortening only (0 = higher eye, 40 = lower + wider FOV). Does not warp the grid mesh.",
     roadLength:
         "How far the neon road runs toward the sun. Default is short (~⅓ of the view); slide up to extend.",
-    drive: "How hard peaks punch road scroll (idle dips a bit when channel is on).",
     roadChannel: "Band that punches scroll speed.",
+    roadDrive: "Scroll punch strength for the road channel (was the single Drive).",
     glowChannel: "Band that flashes grid glow / line brightness (bass kicks).",
+    glowDrive: "Glow / palette flash strength (1 = previous feel).",
     sunChannel: "Band that punches sun / glow brightness (idle dips a bit).",
+    sunDrive: "Sun punch strength (1 = previous feel).",
     sunTwinkle:
         "Garland hue walk from sun idle colors. Peak column locked while on.",
     gridTwinkle:
@@ -429,37 +431,61 @@ const Synthwave = ({ showOverlay = true }: SynthwaveProps) => {
                         <VisualizerSection visualizer={visualizer} info={INFO.visualizer}>
                             {visualizer.reactive && (
                                 <>
-                                    <Slider
-                                        label="Drive"
-                                        value={controls.drive}
-                                        min={0}
-                                        max={controls.driveMax}
-                                        step={0.5}
-                                        onChange={controls.setDrive}
-                                        format={(v) => v.toFixed(1)}
-                                        info={INFO.drive}
-                                    />
-                                    <Select
-                                        label="Road channel"
-                                        value={controls.roadChannel}
-                                        options={[...REACTIVE_CHANNEL_OPTIONS]}
-                                        onChange={controls.setRoadChannel}
-                                        info={INFO.roadChannel}
-                                    />
-                                    <Select
-                                        label="Glow channel"
-                                        value={controls.glowChannel}
-                                        options={[...REACTIVE_CHANNEL_OPTIONS]}
-                                        onChange={controls.setGlowChannel}
-                                        info={INFO.glowChannel}
-                                    />
-                                    <Select
-                                        label="Sun channel"
-                                        value={controls.sunChannel}
-                                        options={[...REACTIVE_CHANNEL_OPTIONS]}
-                                        onChange={controls.setSunChannel}
-                                        info={INFO.sunChannel}
-                                    />
+                                    <ControlSubSection label="channels">
+                                        <Select
+                                            label="Road"
+                                            value={controls.roadChannel}
+                                            options={[...REACTIVE_CHANNEL_OPTIONS]}
+                                            onChange={controls.setRoadChannel}
+                                            info={INFO.roadChannel}
+                                        />
+                                        <Select
+                                            label="Glow"
+                                            value={controls.glowChannel}
+                                            options={[...REACTIVE_CHANNEL_OPTIONS]}
+                                            onChange={controls.setGlowChannel}
+                                            info={INFO.glowChannel}
+                                        />
+                                        <Select
+                                            label="Sun"
+                                            value={controls.sunChannel}
+                                            options={[...REACTIVE_CHANNEL_OPTIONS]}
+                                            onChange={controls.setSunChannel}
+                                            info={INFO.sunChannel}
+                                        />
+                                    </ControlSubSection>
+                                    <ControlSubSection label="drive">
+                                        <Slider
+                                            label="Road"
+                                            value={controls.roadDrive}
+                                            min={0}
+                                            max={controls.driveMax}
+                                            step={0.5}
+                                            onChange={controls.setRoadDrive}
+                                            format={(v) => `×${v.toFixed(1)}`}
+                                            info={INFO.roadDrive}
+                                        />
+                                        <Slider
+                                            label="Glow"
+                                            value={controls.glowDrive}
+                                            min={0}
+                                            max={controls.driveMax}
+                                            step={0.5}
+                                            onChange={controls.setGlowDrive}
+                                            format={(v) => `×${v.toFixed(1)}`}
+                                            info={INFO.glowDrive}
+                                        />
+                                        <Slider
+                                            label="Sun"
+                                            value={controls.sunDrive}
+                                            min={0}
+                                            max={controls.driveMax}
+                                            step={0.5}
+                                            onChange={controls.setSunDrive}
+                                            format={(v) => `×${v.toFixed(1)}`}
+                                            info={INFO.sunDrive}
+                                        />
+                                    </ControlSubSection>
                                 </>
                             )}
                         </VisualizerSection>
