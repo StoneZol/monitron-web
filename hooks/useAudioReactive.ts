@@ -9,11 +9,11 @@ import {
   AUDIO_BAND_COUNT,
   emptyVizBands,
   postHelloRequest,
-  postVisualizerToggle,
   subscribeAudioBus,
   type VizBands,
 } from "@/lib/audioBus";
 import { MicCapture, gateMicFrame, MIC_GATE_DEFAULT, MIC_GATE_MAX, clampMicGate, normalizeMicGate } from "@/lib/audioMic";
+import { setPluginVizWanted } from "@/lib/pluginVizLease";
 
 export { MIC_GATE_DEFAULT, MIC_GATE_MAX, normalizeMicGate };
 
@@ -108,7 +108,6 @@ export function useAudioReactive({
   const preferredRef = useRef<AudioSource>(normalizeSource(preferredSource));
   const micGateRef = useRef(clampMicGate(preferredMicGate));
   const peakGainRef = useRef(clampPeakGain(preferredPeakGain));
-  const lastToggleRef = useRef<boolean | null>(null);
   const onSourceChangeRef = useRef(onSourceChange);
   const onMicGateChangeRef = useRef(onMicGateChange);
   const onPeakGainChangeRef = useRef(onPeakGainChange);
@@ -178,9 +177,7 @@ export function useAudioReactive({
     setSourceState(resolved);
 
     const sendPluginToggle = (enabled: boolean) => {
-      if (lastToggleRef.current === enabled) return;
-      lastToggleRef.current = enabled;
-      postVisualizerToggle(enabled);
+      setPluginVizWanted(enabled);
     };
 
     const clearBusUi = () => {
@@ -364,8 +361,7 @@ export function useAudioReactive({
       syncPoll();
 
       if (!next) {
-        if (lastToggleRef.current) postVisualizerToggle(false);
-        lastToggleRef.current = false;
+        setPluginVizWanted(false);
         if (sourceRef.current === "plugin") {
           applySourceRef.current("off", true);
         }
@@ -427,7 +423,7 @@ export function useAudioReactive({
       document.removeEventListener("visibilitychange", onVisible);
       window.removeEventListener("focus", tick);
       void micRef.current.stop();
-      if (lastToggleRef.current) postVisualizerToggle(false);
+      setPluginVizWanted(false);
       pluginRef.current = false;
       setPluginPresent(false);
     };

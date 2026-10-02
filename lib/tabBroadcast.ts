@@ -5,7 +5,7 @@ import { saveScreenPrefs } from "@/lib/screenPrefs";
 export const TAB_SYNC_VERSION = 2 as const;
 
 /** How far ahead of "now" all tabs aim to reload together. */
-export const TAB_SYNC_LEAD_MS = 350;
+export const TAB_SYNC_LEAD_MS = 1000;
 
 export type TabSyncMessage = {
   v: typeof TAB_SYNC_VERSION;
