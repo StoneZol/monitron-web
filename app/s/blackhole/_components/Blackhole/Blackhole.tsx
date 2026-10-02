@@ -3,21 +3,32 @@
 import { ScreensOverlay } from "@/components/ScreensOverlay";
 import { NavBackButton } from "@/components/NavBackButton";
 import { VisualizerSection } from "@/components/VisualizerSection";
-import { ControlPanel, PanelButton } from "@/components/ControlPanel";
+import {
+  ControlPanel,
+  ControlSection,
+  PanelButton,
+  Slider,
+} from "@/components/ControlPanel";
 import BlackholeCanvas from "./Blackhole.Canvas";
 import useBlackholeHook from "./Blackhole.hooks";
-import type { BlackholeProps } from "./Blackhole.types";
+import {
+  BLACKHOLE_RANGES,
+  type BlackholeProps,
+} from "./Blackhole.types";
 
 const SOURCES = [
   {
-    label: "Gargantua (sonicether)",
-    href: "https://www.shadertoy.com/view/lstSRS",
-  },
-  {
-    label: "flight (tsBXW3)",
+    label: "tsBXW3 · accretion disk",
     href: "https://www.shadertoy.com/view/tsBXW3",
   },
 ] as const;
+
+const INFO = {
+  camera: "Orbit + BH scale — ranges temporary until dialed in.",
+  yaw: "Horizontal orbit (degrees).",
+  pitch: "Shadertoy mouseY — tilts the disk (0..1).",
+  scale: "Black hole / disk radius (_Size).",
+} as const;
 
 const Blackhole = ({ showOverlay = true }: BlackholeProps) => {
   const { liveRef, vizRef, visualizer, controls } = useBlackholeHook();
@@ -60,6 +71,39 @@ const Blackhole = ({ showOverlay = true }: BlackholeProps) => {
               </div>
             }
           >
+            <ControlSection label="camera" info={INFO.camera}>
+              <Slider
+                label="Yaw"
+                value={controls.yaw}
+                min={BLACKHOLE_RANGES.yaw.min}
+                max={BLACKHOLE_RANGES.yaw.max}
+                step={BLACKHOLE_RANGES.yaw.step}
+                onChange={controls.setYaw}
+                format={(v) => `${v.toFixed(0)}°`}
+                info={INFO.yaw}
+              />
+              <Slider
+                label="Pitch"
+                value={controls.pitch}
+                min={BLACKHOLE_RANGES.pitch.min}
+                max={BLACKHOLE_RANGES.pitch.max}
+                step={BLACKHOLE_RANGES.pitch.step}
+                onChange={controls.setPitch}
+                format={(v) => v.toFixed(2)}
+                info={INFO.pitch}
+              />
+              <Slider
+                label="Scale"
+                value={controls.blackHoleSize}
+                min={BLACKHOLE_RANGES.blackHoleSize.min}
+                max={BLACKHOLE_RANGES.blackHoleSize.max}
+                step={BLACKHOLE_RANGES.blackHoleSize.step}
+                onChange={controls.setBlackHoleSize}
+                format={(v) => v.toFixed(2)}
+                info={INFO.scale}
+              />
+            </ControlSection>
+
             <VisualizerSection visualizer={visualizer} />
           </ControlPanel>
         </ScreensOverlay>

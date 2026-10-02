@@ -5,50 +5,54 @@ export type BlackholeProps = {
 /** Audio band that drives a motion/look slot (same vocabulary as synthwave). */
 export type ReactiveChannel = "off" | "bass" | "mid" | "high" | "beat";
 
-/** Live knobs read each frame — v1: defaults only, no panel wiring yet. */
+/**
+ * Live knobs.
+ * Camera yaw/pitch + BH scale — ranges are temporary wide; tune after dial-in.
+ */
 export type BlackholeLive = {
-  /** Accretion disk warm / inner tint */
   diskInner: string;
-  /** Accretion disk cool / outer tint */
   diskOuter: string;
-  /** Soft haze around the photon ring */
-  hazeColor: string;
-  /** Distant starfield tint */
   starTint: string;
-  /** Base space-flight speed (star scroll / approach) */
+  /** Advances disk swirl / star drift */
   flightSpeed: number;
-  /** Disc rotation rate */
-  diskSpeed: number;
-  /** Raymarch iterations (Gargantua ~200; lite default still readable) */
-  steps: number;
-  /** Multiplier on step length vs far/steps baseline */
-  stepScale: number;
-  /** Schwarzschild radius in ST units */
-  ssRadius: number;
-  /** Light-bending strength */
-  warpAmount: number;
-  /** Band → space flight punch */
+  exposure: number;
+  /** Outer march steps (×6 inner) — Shadertoy/Brayns default ~20 */
+  nbDisks: number;
+  diskRotationSpeed: number;
+  diskTextureLayers: number;
+  /** Horizon / disk radius (_Size in shader) */
+  blackHoleSize: number;
+  /** Camera yaw in degrees → angle.x */
+  yaw: number;
+  /** Shadertoy mouseY (0..1) → pitch */
+  pitch: number;
   spaceChannel: ReactiveChannel;
   spaceDrive: number;
-  /** Band → disk glow / warp punch */
   holeChannel: ReactiveChannel;
   holeDrive: number;
 };
 
 export const BLACKHOLE_DEFAULTS: BlackholeLive = {
-  diskInner: "#ff9a4a",
-  diskOuter: "#6a8cff",
-  hazeColor: "#ffc28a",
+  diskInner: "#ffcc00",
+  diskOuter: "#802108",
   starTint: "#c8d6ff",
-  flightSpeed: 0.35,
-  diskSpeed: 0.08,
-  // ~10× lighter than Gargantua 200 — 2 was unreadable (horizon ate the frame)
-  steps: 24,
-  stepScale: 1,
-  ssRadius: 0.3,
-  warpAmount: 5,
+  flightSpeed: 1,
+  exposure: 1,
+  nbDisks: 20,
+  diskRotationSpeed: 3,
+  diskTextureLayers: 12,
+  blackHoleSize: 0.3,
+  yaw: 0,
+  pitch: 0.36,
   spaceChannel: "beat",
   spaceDrive: 1.4,
   holeChannel: "bass",
   holeDrive: 1.2,
 };
+
+/** Temporary wide ranges — replace once dialed in. */
+export const BLACKHOLE_RANGES = {
+  yaw: { min: -180, max: 180, step: 1 },
+  pitch: { min: 0, max: 1, step: 0.01 },
+  blackHoleSize: { min: 0.05, max: 2, step: 0.01 },
+} as const;

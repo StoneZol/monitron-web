@@ -39,11 +39,7 @@ export const placeholders: PlaceholderMeta[] = [
         reactive: true,
         sources: [
             {
-                label: "Gargantua · sonicether",
-                href: "https://www.shadertoy.com/view/lstSRS",
-            },
-            {
-                label: "flight · tsBXW3",
+                label: "tsBXW3 · accretion disk",
                 href: "https://www.shadertoy.com/view/tsBXW3",
             },
         ],

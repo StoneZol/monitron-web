@@ -1,17 +1,17 @@
 /**
- * Black hole fullscreen shader — hybrid of:
- * - Gargantua / lstSRS (sonicether) — disk + warp + horizon
- *   via NamaIazi Unity port of https://www.shadertoy.com/view/lstSRS
- * - Flight / star scroll vibe from https://www.shadertoy.com/view/tsBXW3
+ * 1:1 port of Shadertoy https://www.shadertoy.com/view/tsBXW3
+ * “Black hole with accretion disk”
  *
- * License note (Gargantua lineage): Shadertoy default CC BY-NC-SA 3.0 — attribute.
- * Adapted for Monitron: fixed camera, low default steps, procedural noise (no textures),
- * tunable uniforms for colors / flight / quality / reactive punch.
+ * Changes from original:
+ * - iMouse → uniforms uYaw / uPitch (+ fixed MOUSE_X zoom)
+ * - _Size → uniform uSize (panel scale)
+ * - iChannel0 nebula texture → stub (procedural stars kept)
+ * - iTime / iResolution wired as uniforms
+ * - AA=1 for monitor perf (was typically 2+)
  */
 
 export const blackholeVertexShader = /* glsl */ `
 varying vec2 vUv;
-
 void main() {
   vUv = uv;
   gl_Position = vec4(position.xy, 0.0, 1.0);
@@ -23,239 +23,244 @@ precision highp float;
 
 varying vec2 vUv;
 
-uniform float uTime;
-uniform vec2 uResolution;
-uniform vec3 uDiskInner;
-uniform vec3 uDiskOuter;
-uniform vec3 uHazeColor;
-uniform vec3 uStarTint;
-uniform float uFlightSpeed;
-uniform float uDiskSpeed;
-uniform int uSteps;
-uniform float uStepScale;
-uniform float uSsRadius;
-uniform float uWarpAmount;
-uniform float uSpacePunch;
-uniform float uHolePunch;
+uniform vec3 iResolution;
+uniform float iTime;
+uniform float uSize;
+uniform float uYaw;
+uniform float uPitch;
 
-const float ST_REF = 7.5;
-const int MAX_STEPS = 64;
+// Shadertoy custom params (defaults from the public Brayns remake of this shader)
+#define _Size uSize
+const float _Steps = 12.0;
+const float _Speed = 3.0;
+const int AA = 1;
 
-float hash21(vec2 p) {
-  p = fract(p * vec2(123.34, 456.21));
-  p += dot(p, p + 45.32);
-  return fract(p.x * p.y);
+// Fixed zoom — was iMouse.x / iResolution.y (0 → camera z ≈ -5)
+const float MOUSE_X = 0.0;
+
+float hash(float x){ return fract(sin(x)*152754.742);}
+float hash(vec2 x){	return hash(x.x + hash(x.y));}
+
+float value(vec2 p, float f) //value noise
+{
+    float bl = hash(floor(p*f + vec2(0.,0.)));
+    float br = hash(floor(p*f + vec2(1.,0.)));
+    float tl = hash(floor(p*f + vec2(0.,1.)));
+    float tr = hash(floor(p*f + vec2(1.,1.)));
+
+    vec2 fr = fract(p*f);
+    fr = (3. - 2.*fr)*fr*fr;
+    float b = mix(bl, br, fr.x);
+    float t = mix(tl, tr, fr.x);
+    return  mix(b,t, fr.y);
 }
 
-float hash31(vec3 p) {
-  p = fract(p * 0.3183099 + vec3(0.1, 0.2, 0.3));
-  p += dot(p, p.yzx + 19.19);
-  return fract(p.x * p.y * p.z);
+vec4 background(vec3 ray)
+{
+    vec2 uv = ray.xy;
+
+    if( abs(ray.x) > 0.5)
+        uv.x = ray.z;
+    else if( abs(ray.y) > 0.5)
+        uv.y = ray.z;
+
+
+    float brightness = value( uv*3., 100.); //(poor quality) "stars" created from value noise
+    float color = value( uv*2., 20.);
+    brightness = pow(brightness, 256.);
+
+    brightness = brightness*100.;
+    brightness = clamp(brightness, 0., 1.);
+
+    vec3 stars = brightness * mix(vec3(1., .6, .2), vec3(.2, .6, 1), color);
+
+    // Stub for iChannel0 nebula texture — soft procedural wash instead
+    float n0 = value(uv * 1.5, 4.0);
+    float n1 = value(uv * 1.5 + 17.0, 8.0);
+    float n2 = value(uv * 1.5 - 9.0, 6.0);
+    vec4 nebulae = vec4(n0, n1, n2, 1.0);
+    nebulae.xyz += nebulae.xxx + nebulae.yyy + nebulae.zzz; //average color
+    nebulae.xyz *= 0.25;
+
+    nebulae*= nebulae;
+    nebulae*= nebulae;
+    nebulae*= nebulae;
+    nebulae*= nebulae;
+
+	nebulae.xyz += stars;
+	return nebulae;
 }
 
-float noise3(vec3 x) {
-  vec3 p = floor(x);
-  vec3 f = fract(x);
-  f = f * f * (3.0 - 2.0 * f);
-  float n =
-    mix(
-      mix(
-        mix(hash31(p), hash31(p + vec3(1.0, 0.0, 0.0)), f.x),
-        mix(hash31(p + vec3(0.0, 1.0, 0.0)), hash31(p + vec3(1.0, 1.0, 0.0)), f.x),
-        f.y
-      ),
-      mix(
-        mix(hash31(p + vec3(0.0, 0.0, 1.0)), hash31(p + vec3(1.0, 0.0, 1.0)), f.x),
-        mix(hash31(p + vec3(0.0, 1.0, 1.0)), hash31(p + vec3(1.0, 1.0, 1.0)), f.x),
-        f.y
-      ),
-      f.z
-    );
-  return -1.0 + 2.0 * n;
-}
+vec4 raymarchDisk(vec3 ray, vec3 zeroPos)
+{
+    //return vec4(1.,1.,1.,0.); //no disk
 
-float pcurve(float x, float a, float b) {
-  float k = pow(a + b, a + b) / (pow(a, a) * pow(b, b));
-  return k * pow(x, a) * pow(1.0 - x, b);
-}
+	vec3 position = zeroPos;
+    float lengthPos = length(position.xz);
+    float dist = min(1., lengthPos*(1./_Size) *0.5) * _Size * 0.4 *(1./_Steps) /( abs(ray.y) );
 
-float sdTorus(vec3 p, vec2 t) {
-  vec2 q = vec2(length(p.xz) - t.x, p.y);
-  return length(q) - t.y;
-}
+    position += dist*_Steps*ray*0.5;
 
-void warpSpace(inout vec3 eyevec, inout vec3 currentRayPos, float stepsF) {
-  float singularityDist = max(length(currentRayPos), 0.05);
-  float warpFactor = 1.0 / (pow(singularityDist, 2.0) + 0.000001);
-  vec3 singularityVector = normalize(-currentRayPos);
-  // Soften warp at low step counts so rays don't dive into the hole in 1–2 ticks
-  float warpScale = uWarpAmount * (1.0 + uHolePunch * 0.35) / max(stepsF, 8.0);
-  eyevec = normalize(eyevec + singularityVector * warpFactor * warpScale);
-}
+    vec2 deltaPos;
+    deltaPos.x = -zeroPos.z*0.01 + zeroPos.x;
+    deltaPos.y = zeroPos.x*0.01 + zeroPos.z;
+    deltaPos = normalize(deltaPos - zeroPos.xz);
 
-void gasDisc(
-  float stStepSize,
-  float stepsF,
-  inout vec3 color,
-  inout float alpha,
-  vec3 pos
-) {
-  float discWidth = 5.3;
-  float discRadius = 3.2;
-  float discInner = max(0.0, discRadius - discWidth * 0.5);
-  // Thicker slab when few samples — otherwise the disc is a coin toss to hit
-  float discThickness = 0.12 * clamp(28.0 / stepsF, 1.0, 6.0);
+    float parallel = dot(ray.xz, deltaPos);
+    parallel /= sqrt(lengthPos);
+    parallel *= 0.5;
+    float redShift = parallel +0.3;
+    redShift *= redShift;
 
-  float distFromCenter = length(pos);
-  float distFromDisc = pos.y;
-  float radialGradient = 1.0 - clamp((distFromCenter - discInner) / discWidth * 0.5, 0.0, 1.0);
+    redShift = clamp(redShift, 0., 1.);
 
-  float coverage = pcurve(max(radialGradient, 0.0), 4.0, 0.9);
-  discThickness *= max(radialGradient, 0.15);
-  coverage *= clamp(1.0 - abs(distFromDisc) / max(discThickness, 1e-4), 0.0, 1.0);
+    float disMix = clamp((lengthPos - _Size * 2.)*(1./_Size)*0.24, 0., 1.);
+    vec3 insideCol =  mix(vec3(1.0,0.8,0.0), vec3(0.5,0.13,0.02)*0.2, disMix);
 
-  vec3 dustColorLit = mix(uDiskOuter, uDiskInner, pow(clamp(radialGradient, 0.0, 1.0), 0.65));
-  float dustGlow = 1.0 / (pow(1.0 - radialGradient, 2.0) * 290.0 + 0.002);
-  vec3 dustColor = dustColorLit * dustGlow * 8.2;
+    insideCol *= mix(vec3(0.4, 0.2, 0.1), vec3(1.6, 2.4, 4.0), redShift);
+	insideCol *= 1.25;
+    redShift += 0.12;
+    redShift *= redShift;
 
-  coverage = clamp(coverage * 0.7, 0.0, 1.0);
+    vec4 o = vec4(0.);
 
-  float fade = pow(abs(distFromCenter - discInner) + 0.4, 4.0) * 0.04;
-  float bloomFactor = 1.0 / (pow(distFromDisc, 2.0) * 40.0 + fade + 0.00002);
-  vec3 b = dustColorLit * pow(bloomFactor, 1.5);
-  b *= mix(vec3(1.7, 1.1, 1.0), vec3(0.5, 0.6, 1.0), pow(radialGradient, 2.0));
-  b *= mix(vec3(1.7, 0.5, 0.1), vec3(1.0), pow(radialGradient, 0.5));
+    for(float i = 0. ; i < _Steps; i++)
+    {
+        position -= dist * ray ;
 
-  dustColor = mix(dustColor, b * 150.0, clamp(1.0 - coverage, 0.0, 1.0));
-  coverage = clamp(coverage + bloomFactor * bloomFactor * 0.1, 0.0, 1.0);
+        float intensity =clamp( 1. - abs((i - 0.8) * (1./_Steps) * 2.), 0., 1.);
+        float lengthPos = length(position.xz);
+        float distMult = 1.;
 
-  if (coverage < 0.0001) return;
+        distMult *=  clamp((lengthPos -  _Size * 0.75) * (1./_Size) * 1.5, 0., 1.);
+        distMult *= clamp(( _Size * 10. -lengthPos) * (1./_Size) * 0.20, 0., 1.);
+        distMult *= distMult;
 
-  vec3 radialCoords;
-  radialCoords.x = distFromCenter * 1.5 + 0.55;
-  radialCoords.y = atan(pos.x, pos.z) * 1.5;
-  radialCoords.z = distFromDisc * 1.5;
-  radialCoords *= 0.95;
+        float u = lengthPos + iTime* _Size*0.3 + intensity * _Size * 0.2;
 
-  float speed = uDiskSpeed * (1.0 + uHolePunch * 0.8);
-  float t = uTime;
+        vec2 xy ;
+        float rot = mod(iTime*_Speed, 8192.);
+        xy.x = -position.z*sin(rot) + position.x*cos(rot);
+        xy.y = position.x*sin(rot) + position.z*cos(rot);
 
-  float noise1 = 1.0;
-  vec3 rc = radialCoords;
-  rc.y += t * speed;
-  noise1 *= noise3(rc * 3.0) * 0.5 + 0.5;
-  rc.y -= t * speed;
-  noise1 *= noise3(rc * 6.0) * 0.5 + 0.5;
-  rc.y += t * speed;
-  noise1 *= noise3(rc * 12.0) * 0.5 + 0.5;
+        float x = abs( xy.x/(xy.y));
+		float angle = 0.02*atan(x);
 
-  float noise2 = 2.0;
-  rc = radialCoords + 30.0;
-  noise2 *= noise3(rc * 3.0) * 0.5 + 0.5;
-  rc.y += t * speed;
-  noise2 *= noise3(rc * 6.0) * 0.5 + 0.5;
-  rc.y -= t * speed;
-  noise2 *= noise3(rc * 12.0) * 0.5 + 0.5;
-  rc.y += t * speed;
-  noise2 *= noise3(rc * 24.0) * 0.5 + 0.5;
+        const float f = 70.;
+        float noise = value( vec2( angle, u * (1./_Size) * 0.05), f);
+        noise = noise*0.66 + 0.33*value( vec2( angle, u * (1./_Size) * 0.05), f*2.);
 
-  dustColor *= noise1 * 0.85 + 0.15;
-  coverage *= clamp(noise2, 0.0, 1.0);
-  // Normalize vs step count without blowing out at low steps
-  coverage = clamp(coverage * (28.0 / max(stepsF, 1.0)), 0.0, 1.0);
-  coverage *= pcurve(max(radialGradient, 0.0), 4.0, 0.9);
-  coverage = clamp(coverage * (1.0 + uHolePunch * 0.55), 0.0, 1.0);
+        float extraWidth =  noise * 1. * (1. -  clamp(i * (1./_Steps)*2. - 1., 0., 1.));
 
-  color = (1.0 - alpha) * max(dustColor, vec3(0.0)) * coverage + color;
-  alpha = (1.0 - alpha) * coverage + alpha;
-}
+        float alpha = clamp(noise*(intensity + extraWidth)*( (1./_Size) * 10.  + 0.01 ) *  dist * distMult , 0., 1.);
 
-void haze(inout vec3 color, vec3 pos, float alpha, float stepsF) {
-  float torusDist = abs(sdTorus(pos + vec3(0.0, -0.05, 0.0), vec2(1.0, 0.01)));
-  float bloomDisc = 1.0 / (pow(torusDist, 2.0) + 0.001);
-  bloomDisc *= length(pos) < 0.5 ? 0.0 : 1.0;
-  color += uHazeColor * bloomDisc * (2.9 / max(stepsF, 8.0)) * (1.0 - alpha) * (1.0 + uHolePunch * 0.4);
-}
+        vec3 col = 2.*mix(vec3(0.3,0.2,0.15)*insideCol, insideCol, min(1.,intensity*2.));
+        o = clamp(vec4(col*alpha + o.rgb*(1.-alpha), o.a*(1.-alpha) + alpha), vec4(0.), vec4(1.));
 
-/** Cheap streaking starfield — flight layer (tsBXW3 vibe), not Kerr. */
-vec3 starField(vec3 rayDir, float flight) {
-  vec3 col = vec3(0.02, 0.025, 0.05);
-  for (int i = 0; i < 3; i++) {
-    float fi = float(i);
-    vec3 p = rayDir * (2.0 + fi * 1.7);
-    p.z += uTime * flight * (0.55 + fi * 0.2);
-    vec3 cell = floor(p * (18.0 + fi * 9.0));
-    float n = hash31(cell);
-    if (n > 0.985) {
-      float twinkle = 0.55 + 0.45 * sin(uTime * (3.0 + fi) + n * 40.0);
-      float streak = 1.0 + flight * (0.5 + uSpacePunch * 3.0);
-      vec2 q = fract(p.xy * (18.0 + fi * 9.0)) - 0.5;
-      float d = length(vec2(q.x, q.y / streak));
-      float star = smoothstep(0.04, 0.0, d) * twinkle;
-      col += uStarTint * star * (0.55 + 0.45 * n);
+        lengthPos *= (1./_Size);
+
+        o.rgb+= redShift*(intensity*1. + 0.5)* (1./_Steps) * 100.*distMult/(lengthPos*lengthPos);
     }
-  }
-  float neb = noise3(rayDir * 3.0 + vec3(0.0, 0.0, uTime * flight * 0.05));
-  col += uStarTint * 0.05 * max(neb, 0.0);
-  return col;
+
+    o.rgb = clamp(o.rgb - 0.005, 0., 1.);
+    return o ;
+}
+
+
+void Rotate( inout vec3 vector, vec2 angle )
+{
+	vector.yz = cos(angle.y)*vector.yz
+				+sin(angle.y)*vec2(-1,1)*vector.zy;
+	vector.xz = cos(angle.x)*vector.xz
+				+sin(angle.x)*vec2(-1,1)*vector.zx;
+}
+
+void mainImage( out vec4 colOut, in vec2 fragCoord )
+{
+    colOut = vec4(0.);;
+
+    vec2 fragCoordRot;
+    fragCoordRot.x = fragCoord.x*0.985 + fragCoord.y * 0.174;
+    fragCoordRot.y = fragCoord.y*0.985 - fragCoord.x * 0.174;
+    fragCoordRot += vec2(-0.06, 0.12) * iResolution.xy;
+
+    for( int j=0; j<AA; j++ )
+    for( int i=0; i<AA; i++ )
+    {
+        //setting up camera
+        vec3 ray = normalize( vec3((fragCoordRot-iResolution.xy*.5  + vec2(i,j)/(float(AA)))/iResolution.x, 1 ));
+        // Zoom from fixed MOUSE_X; yaw/pitch from panel uniforms
+        vec3 pos = vec3(0.,0.05,-(20.*MOUSE_X-10.)*(20.*MOUSE_X-10.)*.05);
+        vec2 angle = vec2(uYaw, .2);
+        angle.y = (2.*uPitch)*3.14 + 0.1 + 3.14;
+        float dist = length(pos);
+        Rotate(pos,angle);
+        angle.xy -= min(.3/dist , 3.14) * vec2(1, 0.5);
+        Rotate(ray,angle);
+
+        vec4 col = vec4(0.);
+        vec4 glow = vec4(0.);
+        vec4 outCol =vec4(100.);
+
+        for(int disks = 0; disks< 20; disks++) //steps
+        {
+
+            for (int h = 0; h < 6; h++) //reduces tests for exit conditions (to minimise branching)
+            {
+                float dotpos = dot(pos,pos);
+                float invDist = inversesqrt(dotpos); //1/distance to BH
+                float centDist = dotpos * invDist; 	//distance to BH
+                float stepDist = 0.92 * abs(pos.y /(ray.y));  //conservative distance to disk (y==0)
+                float farLimit = centDist * 0.5; //limit step size far from to BH
+                float closeLimit = centDist*0.1 + 0.05*centDist*centDist*(1./_Size); //limit step size closse to BH
+                stepDist = min(stepDist, min(farLimit, closeLimit));
+
+                float invDistSqr = invDist * invDist;
+                float bendForce = stepDist * invDistSqr * _Size * 0.625;  //bending force
+                ray =  normalize(ray - (bendForce * invDist )*pos);  //bend ray towards BH
+                pos += stepDist * ray;
+
+                glow += vec4(1.2,1.1,1, 1.0) *(0.01*stepDist * invDistSqr * invDistSqr *clamp( centDist*(2.) - 1.2,0.,1.)); //adds fairly cheap glow
+            }
+
+            float dist2 = length(pos);
+
+            if(dist2 < _Size * 0.1) //ray sucked in to BH
+            {
+                outCol =  vec4( col.rgb * col.a + glow.rgb *(1.-col.a ) ,1.) ;
+                break;
+            }
+
+            else if(dist2 > _Size * 1000.) //ray escaped BH
+            {
+                vec4 bg = background (ray);
+                outCol = vec4(col.rgb*col.a + bg.rgb*(1.-col.a)  + glow.rgb *(1.-col.a    ), 1.);
+                break;
+            }
+
+            else if (abs(pos.y) <= _Size * 0.002 ) //ray hit accretion disk
+            {
+                vec4 diskCol = raymarchDisk(ray, pos);   //render disk
+                pos.y = 0.;
+                pos += abs(_Size * 0.001 /ray.y) * ray;
+                col = vec4(diskCol.rgb*(1.-col.a) + col.rgb, col.a + diskCol.a*(1.-col.a));
+            }
+        }
+
+        //if the ray never escaped or got sucked in
+        if(outCol.r == 100.)
+            outCol = vec4(col.rgb + glow.rgb *(col.a +  glow.a) , 1.);
+
+        col = outCol;
+        col.rgb =  pow( col.rgb, vec3(0.6) );
+
+        colOut += col/float(AA*AA);
+    }
 }
 
 void main() {
-  vec2 uv = (vUv - 0.5) * vec2(uResolution.x / uResolution.y, 1.0);
-
-  // Fixed camera — elevation so the accretion ring reads clearly.
-  float flight = max(0.0, uFlightSpeed) * (1.0 + uSpacePunch);
-  vec3 camPos = vec3(0.0, 1.25, 8.0 - min(flight * 0.25, 1.5));
-  vec3 lookAt = vec3(0.0, 0.0, 0.0);
-  vec3 forward = normalize(lookAt - camPos);
-  vec3 right = normalize(cross(forward, vec3(0.0, 1.0, 0.0)));
-  vec3 up = cross(right, forward);
-  vec3 rayDir = normalize(forward + uv.x * right * 0.8 + uv.y * up * 0.8);
-
-  int steps = clamp(uSteps, 1, MAX_STEPS);
-  float stepsF = float(steps);
-  // Cap step length — low steps must NOT inflate step to ~7.5 (that ate the frame).
-  float stStepSize = min((ST_REF * 2.0) / stepsF * max(uStepScale, 0.25), 0.35);
-
-  float dither = hash21(gl_FragCoord.xy);
-  vec3 stRayPos = camPos + rayDir * dither * stStepSize;
-  vec3 stRayDir = rayDir;
-
-  float alpha = 0.0;
-  vec3 color = vec3(0.0);
-  float blackHoleMask = 0.0;
-  float maxTravel = 18.0;
-  float traveled = 0.0;
-
-  for (int i = 0; i < MAX_STEPS; i++) {
-    if (i >= steps) break;
-    if (traveled > maxTravel) break;
-
-    float r = length(stRayPos);
-    // Only paint horizon when we are actually there — never "distance < stepSize"
-    if (r <= uSsRadius) {
-      blackHoleMask = 1.0;
-      break;
-    }
-
-    warpSpace(stRayDir, stRayPos, stepsF);
-    float stepLen = min(stStepSize, max(r - uSsRadius * 0.98, 0.02));
-    stRayPos += stRayDir * stepLen;
-    traveled += stepLen;
-
-    gasDisc(stStepSize, stepsF, color, alpha, stRayPos);
-    haze(color, stRayPos, alpha, stepsF);
-  }
-
-  vec3 background = starField(normalize(stRayDir), max(flight, 0.05));
-  background *= 1.0 - blackHoleMask;
-
-  vec3 outCol = mix(background, max(color, vec3(0.0)), clamp(alpha, 0.0, 1.0));
-  outCol = mix(outCol, vec3(0.0), blackHoleMask * 0.92);
-
-  outCol = outCol / (1.0 + outCol * 0.2);
-  outCol = pow(max(outCol, 0.0), vec3(0.9));
-
-  gl_FragColor = vec4(outCol, 1.0);
+  vec4 col;
+  mainImage(col, vUv * iResolution.xy);
+  gl_FragColor = col;
 }
 `;
