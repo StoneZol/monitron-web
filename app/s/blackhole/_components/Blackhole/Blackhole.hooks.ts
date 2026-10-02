@@ -172,12 +172,13 @@ function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
         ? STORED_DEFAULTS.scalePunch
         : legacy.scalePunch,
     ),
-    scaleDrive: clamp(
-      Number(legacy.scaleDrive),
-      0,
-      BLACKHOLE_DRIVE_MAX,
-      STORED_DEFAULTS.scaleDrive,
-    ),
+    scaleDrive: (() => {
+      const v = Number(legacy.scaleDrive);
+      if (!Number.isFinite(v)) return STORED_DEFAULTS.scaleDrive;
+      // Legacy raw punch (0.01…0.05) → UI units (1 ≡ 0.01)
+      if (v < 1) return clamp(v / 0.01, 1, 2, STORED_DEFAULTS.scaleDrive);
+      return clamp(v, 1, 2, STORED_DEFAULTS.scaleDrive);
+    })(),
   };
 }
 

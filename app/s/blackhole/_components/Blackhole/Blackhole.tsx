@@ -260,9 +260,9 @@ const Blackhole = ({ showOverlay = true }: BlackholeProps) => {
                                 <Slider
                                     label="Scale punch drive"
                                     value={controls.scaleDrive}
-                                    min={BLACKHOLE_RANGES.drive.min}
-                                    max={controls.driveMax}
-                                    step={BLACKHOLE_RANGES.drive.step}
+                                    min={BLACKHOLE_RANGES.scaleDrive.min}
+                                    max={BLACKHOLE_RANGES.scaleDrive.max}
+                                    step={BLACKHOLE_RANGES.scaleDrive.step}
                                     onChange={controls.setScaleDrive}
                                     format={(v) => `×${v.toFixed(2)}`}
                                     info={INFO.scaleDrive}

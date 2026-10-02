@@ -71,7 +71,8 @@ export const BLACKHOLE_DEFAULTS: BlackholeLive = {
     diskTextureLayers: 12,
     blackHoleSize: 0.2,
     scalePunch: false,
-    scaleDrive: 0.05,
+    /** UI 1…2 — internal punch uses ×0.01 (so 1 ≡ old 0.01) */
+    scaleDrive: 1,
     yawSpeed: 0.1,
     /** Was mouseY 0.49 → angle.y ≈ 2° (mod 360) */
     pitch: 2,
@@ -83,7 +84,9 @@ export const BLACKHOLE_DEFAULTS: BlackholeLive = {
     nebulaDrive: 1.2,
 };
 
-export const BLACKHOLE_DRIVE_MAX = 2;
+export const BLACKHOLE_DRIVE_MAX = 8;
+/** scaleDrive UI → drivenLevel multiplier */
+export const SCALE_DRIVE_UNIT = 0.01;
 
 /** Temporary wide ranges — replace once dialed in. */
 export const BLACKHOLE_RANGES = {
@@ -93,5 +96,6 @@ export const BLACKHOLE_RANGES = {
     diskRotationSpeed: { min: 0.05, max: 5, step: 0.05 },
     colorSpeed: { min: 1, max: 180, step: 1 },
     nebulaIntensity: { min: 0, max: 3, step: 0.05 },
-    drive: { min: 0, max: BLACKHOLE_DRIVE_MAX, step: 0.01 },
+    drive: { min: 0, max: BLACKHOLE_DRIVE_MAX, step: 0.1 },
+    scaleDrive: { min: 1, max: 16, step: 1 },
 } as const;

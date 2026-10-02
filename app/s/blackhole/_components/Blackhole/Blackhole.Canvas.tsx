@@ -12,7 +12,7 @@ import {
   lerpHex,
   pulseBrightness,
 } from "./Blackhole.audio";
-import type { BlackholeLive } from "./Blackhole.types";
+import { SCALE_DRIVE_UNIT, type BlackholeLive } from "./Blackhole.types";
 import {
   blackholeFragmentShader,
   blackholeVertexShader,
@@ -88,7 +88,7 @@ function BlackholeQuad({
     const nebulaArmed = reactive && live.nebulaChannel !== "off";
     const scalePunchOn = live.scalePunch && holeArmed;
     const scalePunch = scalePunchOn
-      ? drivenLevel(holeRaw, live.scaleDrive)
+      ? drivenLevel(holeRaw, live.scaleDrive * SCALE_DRIVE_UNIT)
       : 0;
 
     const sizeMul = scalePunchOn ? 0.92 + scalePunch * 0.55 : 1;
