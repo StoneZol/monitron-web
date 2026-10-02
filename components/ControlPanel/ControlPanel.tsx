@@ -32,9 +32,14 @@ export function ControlPanel({
       <div className="flex shrink-0 items-center justify-between gap-2 border-b border-line px-3 py-2">
         <span className="text-[10px] uppercase tracking-[0.28em]">{title}</span>
         {overlay ? (
-          <PanelButton onClick={overlay.hide} className="px-2 py-1">
-            hide
-          </PanelButton>
+          <div className="flex items-center gap-1.5">
+            <PanelButton onClick={overlay.sync} className="px-2 py-1">
+              sync
+            </PanelButton>
+            <PanelButton onClick={overlay.hide} className="px-2 py-1">
+              hide
+            </PanelButton>
+          </div>
         ) : null}
       </div>
       {actions ? (

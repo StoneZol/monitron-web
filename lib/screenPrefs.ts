@@ -18,3 +18,19 @@ export function saveScreenPrefs<T extends Record<string, unknown>>(
 ): void {
   saveLocal(screenPrefsKey(screenId), prefs);
 }
+
+/** Raw stored controls for this screen (empty object if missing). */
+export function readScreenPrefsRaw(screenId: string): Record<string, unknown> {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = window.localStorage.getItem(screenPrefsKey(screenId));
+    if (!raw) return {};
+    const parsed: unknown = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return {};
+    }
+    return { ...(parsed as object) } as Record<string, unknown>;
+  } catch {
+    return {};
+  }
+}

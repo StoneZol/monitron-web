@@ -2,10 +2,14 @@
 
 import { useEffect, useSyncExternalStore } from "react";
 import { bindFullscreenEscape } from "@/lib/fullscreen";
-
-function hudKey(screenId: string) {
-  return `monitron:${screenId}:hudHidden`;
-}
+import { readScreenPrefsRaw } from "@/lib/screenPrefs";
+import {
+  applyIncomingTabSync,
+  broadcastTabSync,
+  getTabSyncSenderId,
+  hudStorageKey,
+  subscribeTabSync,
+} from "@/lib/tabBroadcast";
 
 const listeners = new Map<string, Set<() => void>>();
 
@@ -32,7 +36,7 @@ function subscribe(screenId: string, listener: () => void) {
 function readHidden(screenId: string): boolean {
   if (typeof window === "undefined") return false;
   try {
-    return window.localStorage.getItem(hudKey(screenId)) === "1";
+    return window.localStorage.getItem(hudStorageKey(screenId)) === "1";
   } catch {
     return false;
   }
@@ -41,8 +45,8 @@ function readHidden(screenId: string): boolean {
 function writeHidden(screenId: string, hidden: boolean) {
   if (typeof window !== "undefined") {
     try {
-      if (hidden) window.localStorage.setItem(hudKey(screenId), "1");
-      else window.localStorage.removeItem(hudKey(screenId));
+      if (hidden) window.localStorage.setItem(hudStorageKey(screenId), "1");
+      else window.localStorage.removeItem(hudStorageKey(screenId));
     } catch {
       /* private mode */
     }
@@ -67,11 +71,26 @@ const useScreensOverlayHook = (screenId: string) => {
 
   useEffect(() => bindFullscreenEscape(), []);
 
+  // Cross-tab sync — any screen under ScreensOverlay gets this for free.
+  useEffect(() => {
+    return subscribeTabSync(screenId, (msg) => {
+      if (msg.senderId === getTabSyncSenderId()) return;
+      applyIncomingTabSync(screenId, msg);
+    });
+  }, [screenId]);
+
+  const sync = () => {
+    broadcastTabSync(screenId, readScreenPrefsRaw(screenId));
+    // Restart with peers; keep this tab's HUD (receivers force-hide).
+    window.location.reload();
+  };
+
   return {
     ready: isClient,
     hideHud,
     hide: () => writeHidden(screenId, true),
     show: () => writeHidden(screenId, false),
+    sync,
   };
 };
 

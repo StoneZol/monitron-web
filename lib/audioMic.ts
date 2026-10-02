@@ -14,7 +14,7 @@ type MicCaptureHandlers = {
  * Mic RMS often sits tiny (~0.01–0.05 even when “loud”) — keep the
  * usable range tight so 0.03 doesn’t eat the whole signal.
  */
-export const MIC_GATE_DEFAULT = 0.008;
+export const MIC_GATE_DEFAULT = 0.02;
 export const MIC_GATE_MAX = 0.05;
 
 /** Clamp live slider / prefs into the mic-gate window */
@@ -28,8 +28,12 @@ export function normalizeMicGate(value: unknown): number {
   if (typeof value !== "number" || !Number.isFinite(value)) {
     return MIC_GATE_DEFAULT;
   }
-  // Old default was 0.05 with max 0.3 — too hot for real mic RMS
-  if (value > MIC_GATE_MAX || Math.abs(value - 0.05) < 1e-6) {
+  // Old defaults (0.05 max-scale / 0.008 tight) → current default
+  if (
+    Math.abs(value - 0.05) < 1e-6 ||
+    Math.abs(value - 0.008) < 1e-6 ||
+    value > MIC_GATE_MAX
+  ) {
     return MIC_GATE_DEFAULT;
   }
   return clampMicGate(value);

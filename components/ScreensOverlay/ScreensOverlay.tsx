@@ -5,12 +5,12 @@ import { ScreensOverlayContext } from "./ScreensOverlay.context";
 import type { ScreensOverlayProps } from "./ScreensOverlay.types";
 
 /**
- * HUD shell. Hide lives in ControlPanel title row; tap empty screen to wake.
- * Back / reset / fullscreen live in ControlPanel.actions (fixed under the title).
- * HUD hidden state is persisted per screenId in localStorage.
+ * HUD shell for every saver. Hide / cross-tab sync live here — screens only
+ * pass screenId and render ControlPanel; no per-screen sync wiring.
+ * Tap empty screen to wake when HUD is hidden.
  */
 const ScreensOverlay = ({ screenId, children }: ScreensOverlayProps) => {
-  const { ready, hideHud, hide, show } = useScreensOverlayHook(screenId);
+  const { ready, hideHud, hide, show, sync } = useScreensOverlayHook(screenId);
 
   // Wait for client prefs — avoids HUD flash on reload when it was hidden.
   if (!ready) return null;
@@ -31,7 +31,7 @@ const ScreensOverlay = ({ screenId, children }: ScreensOverlayProps) => {
   }
 
   return (
-    <ScreensOverlayContext.Provider value={{ hide }}>
+    <ScreensOverlayContext.Provider value={{ hide, sync }}>
       <div className="absolute inset-0 z-10 flex h-screen w-screen items-center justify-center">
         <div className="relative z-20 w-80">{children}</div>
       </div>
