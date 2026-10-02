@@ -31,9 +31,11 @@ function BlackholeQuad({
   vizRef: RefObject<VizBands>;
 }) {
   const yawAcc = useRef(0);
-  const hueOff = useRef(0);
+  const holeHueOff = useRef(0);
+  const nebulaHueOff = useRef(0);
   const lastT = useRef(0);
   const holeColor = useMemo(() => new THREE.Color("#ffcc00"), []);
+  const nebulaColor = useMemo(() => new THREE.Color("#4a2a6e"), []);
 
   const mat = useMemo(
     () =>
@@ -51,6 +53,8 @@ function BlackholeQuad({
           uSpeed: { value: 0.2 },
           uHoleColor: { value: new THREE.Color("#ffcc00") },
           uHoleBoost: { value: 0 },
+          uNebulaColor: { value: new THREE.Color("#4a2a6e") },
+          uNebulaIntensity: { value: 1 },
         },
       }),
     [],
@@ -73,18 +77,20 @@ function BlackholeQuad({
     const reactive = Boolean(viz?.enabled);
     const holeRaw = reactive ? channelLevel(viz!, live.holeChannel) : 0;
     const yawRaw = reactive ? channelLevel(viz!, live.yawChannel) : 0;
+    const nebulaRaw = reactive ? channelLevel(viz!, live.nebulaChannel) : 0;
     const holePunch = drivenLevel(holeRaw, live.holeDrive);
     const yawPunch = drivenLevel(yawRaw, live.yawDrive);
+    const nebulaPunch = drivenLevel(nebulaRaw, live.nebulaDrive);
 
     mat.uniforms.iTime!.value = t * Math.max(0.05, live.flightSpeed);
 
     const holeArmed = reactive && live.holeChannel !== "off";
+    const nebulaArmed = reactive && live.nebulaChannel !== "off";
     const scalePunchOn = live.scalePunch && holeArmed;
     const scalePunch = scalePunchOn
       ? drivenLevel(holeRaw, live.scaleDrive)
       : 0;
 
-    // Idle dips a touch when armed; peaks swell + micro camera shake
     const sizeMul = scalePunchOn ? 0.92 + scalePunch * 0.55 : 1;
     mat.uniforms.uSize!.value = Math.max(0.05, live.blackHoleSize * sizeMul);
     const shake = scalePunchOn ? scalePunch : 0;
@@ -100,9 +106,9 @@ function BlackholeQuad({
     mat.uniforms.uYaw!.value = yawAcc.current;
 
     if (live.holeTwinkle) {
-      hueOff.current =
-        (hueOff.current + live.colorSpeed * Math.max(0, dt)) % 360;
-      hueWalkHex(live.holeColor, hueOff.current, holeColor);
+      holeHueOff.current =
+        (holeHueOff.current + live.colorSpeed * Math.max(0, dt)) % 360;
+      hueWalkHex(live.holeColor, holeHueOff.current, holeColor);
       if (holeArmed) pulseBrightness(holeColor, holePunch);
     } else if (holeArmed) {
       lerpHex(live.holeColor, live.holeColorPeak, holePunch, holeColor);
@@ -111,6 +117,31 @@ function BlackholeQuad({
     }
     mat.uniforms.uHoleColor!.value.copy(holeColor);
     mat.uniforms.uHoleBoost!.value = holeArmed ? holePunch * 0.85 : 0;
+
+    if (!live.nebulaEnabled) {
+      mat.uniforms.uNebulaIntensity!.value = 0;
+    } else {
+      if (live.nebulaTwinkle) {
+        nebulaHueOff.current =
+          (nebulaHueOff.current + live.colorSpeed * Math.max(0, dt)) % 360;
+        hueWalkHex(live.nebulaColor, nebulaHueOff.current, nebulaColor);
+        if (nebulaArmed) pulseBrightness(nebulaColor, nebulaPunch);
+      } else if (nebulaArmed) {
+        lerpHex(
+          live.nebulaColor,
+          live.nebulaColorPeak,
+          nebulaPunch,
+          nebulaColor,
+        );
+      } else {
+        hexToVec3(live.nebulaColor, nebulaColor);
+      }
+      mat.uniforms.uNebulaColor!.value.copy(nebulaColor);
+      const intens = Math.max(0, live.nebulaIntensity);
+      mat.uniforms.uNebulaIntensity!.value = nebulaArmed
+        ? intens * (0.55 + nebulaPunch * 0.9)
+        : intens;
+    }
   });
 
   return (

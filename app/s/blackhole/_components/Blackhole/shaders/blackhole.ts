@@ -5,7 +5,7 @@
  * Changes from original:
  * - iMouse → uniforms uYaw / uPitch (+ fixed MOUSE_X zoom)
  * - _Size → uniform uSize (panel scale)
- * - iChannel0 nebula texture → removed (seams under lensing); stars kept
+ * - iChannel0 nebula → seamless 3D noise on ray dir (no cubemap UV seams)
  * - iTime / iResolution wired as uniforms
  * - AA=1 for monitor perf (was typically 2+)
  */
@@ -31,6 +31,8 @@ uniform float uPitch;
 uniform float uSpeed;
 uniform vec3 uHoleColor;
 uniform float uHoleBoost;
+uniform vec3 uNebulaColor;
+uniform float uNebulaIntensity;
 
 // Shadertoy custom params (defaults from the public Brayns remake of this shader)
 #define _Size uSize
@@ -43,6 +45,9 @@ const float MOUSE_X = 0.0;
 
 float hash(float x){ return fract(sin(x)*152754.742);}
 float hash(vec2 x){	return hash(x.x + hash(x.y));}
+float hash3(vec3 p){
+  return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453);
+}
 
 float value(vec2 p, float f) //value noise
 {
@@ -56,6 +61,39 @@ float value(vec2 p, float f) //value noise
     float b = mix(bl, br, fr.x);
     float t = mix(tl, tr, fr.x);
     return  mix(b,t, fr.y);
+}
+
+// Seamless 3D value noise — sample on ray direction, no cubemap seams
+float value3(vec3 p)
+{
+    vec3 i = floor(p);
+    vec3 f = fract(p);
+    f = f*f*(3.0 - 2.0*f);
+
+    float n000 = hash3(i + vec3(0.,0.,0.));
+    float n100 = hash3(i + vec3(1.,0.,0.));
+    float n010 = hash3(i + vec3(0.,1.,0.));
+    float n110 = hash3(i + vec3(1.,1.,0.));
+    float n001 = hash3(i + vec3(0.,0.,1.));
+    float n101 = hash3(i + vec3(1.,0.,1.));
+    float n011 = hash3(i + vec3(0.,1.,1.));
+    float n111 = hash3(i + vec3(1.,1.,1.));
+
+    float nx00 = mix(n000, n100, f.x);
+    float nx10 = mix(n010, n110, f.x);
+    float nx01 = mix(n001, n101, f.x);
+    float nx11 = mix(n011, n111, f.x);
+    float nxy0 = mix(nx00, nx10, f.y);
+    float nxy1 = mix(nx01, nx11, f.y);
+    return mix(nxy0, nxy1, f.z);
+}
+
+float fbm3(vec3 p)
+{
+    float a = 0.5 * value3(p);
+    a += 0.25 * value3(p * 2.03);
+    a += 0.125 * value3(p * 4.07);
+    return a;
 }
 
 vec4 background(vec3 ray)
@@ -77,8 +115,18 @@ vec4 background(vec3 ray)
 
     vec3 stars = brightness * mix(vec3(1., .6, .2), vec3(.2, .6, 1), color);
 
-    // Nebula (iChannel0) dropped — cubemap UV seams stretch like a cropped PNG under lensing
-    return vec4(stars, 1.0);
+    // Seamless nebula — light wash; color/intensity from panel uniforms
+    vec3 nebulae = vec3(0.0);
+    if (uNebulaIntensity > 0.001) {
+        vec3 dir = normalize(ray);
+        float n0 = fbm3(dir * 1.4 + vec3(0.0, 7.2, 0.0));
+        float n1 = fbm3(dir * 1.4 + vec3(19.0, 0.0, 3.1));
+        float dens = smoothstep(0.42, 0.78, (n0 + n1) * 0.55);
+        dens *= dens;
+        nebulae = uNebulaColor * dens * 0.22 * uNebulaIntensity;
+    }
+
+    return vec4(nebulae + stars, 1.0);
 }
 
 vec4 raymarchDisk(vec3 ray, vec3 zeroPos)

@@ -16,7 +16,17 @@ export type BlackholeLive = {
     holeColorPeak: string;
     /** Hue walk from holeColor while on */
     holeTwinkle: boolean;
-    /** Hue walk rate while twinkle is on */
+    /** Seamless background nebula wash */
+    nebulaEnabled: boolean;
+    /** Hue walk from nebulaColor while on */
+    nebulaTwinkle: boolean;
+    /** Nebula tint — idle */
+    nebulaColor: string;
+    /** Nebula tint — audio peak target */
+    nebulaColorPeak: string;
+    /** Base nebula strength (1 ≈ current subtle wash) */
+    nebulaIntensity: number;
+    /** Hue walk rate while any twinkle is on */
     colorSpeed: number;
     /** Advances disk swirl / star drift */
     flightSpeed: number;
@@ -40,12 +50,19 @@ export type BlackholeLive = {
     holeDrive: number;
     yawChannel: ReactiveChannel;
     yawDrive: number;
+    nebulaChannel: ReactiveChannel;
+    nebulaDrive: number;
 };
 
 export const BLACKHOLE_DEFAULTS: BlackholeLive = {
     holeColor: "#ffcc00",
     holeColorPeak: "#ff6600",
     holeTwinkle: false,
+    nebulaEnabled: true,
+    nebulaTwinkle: false,
+    nebulaColor: "#4a2a6e",
+    nebulaColorPeak: "#7a48a8",
+    nebulaIntensity: 1,
     colorSpeed: 40,
     flightSpeed: 1,
     exposure: 1,
@@ -53,8 +70,8 @@ export const BLACKHOLE_DEFAULTS: BlackholeLive = {
     diskRotationSpeed: 0.2,
     diskTextureLayers: 12,
     blackHoleSize: 0.2,
-    scalePunch: true,
-    scaleDrive: 0.1,
+    scalePunch: false,
+    scaleDrive: 0.05,
     yawSpeed: 0.1,
     /** Was mouseY 0.49 → angle.y ≈ 2° (mod 360) */
     pitch: 2,
@@ -62,9 +79,11 @@ export const BLACKHOLE_DEFAULTS: BlackholeLive = {
     holeDrive: 1.2,
     yawChannel: "beat",
     yawDrive: 1.4,
+    nebulaChannel: "bass",
+    nebulaDrive: 1.2,
 };
 
-export const BLACKHOLE_DRIVE_MAX = 8;
+export const BLACKHOLE_DRIVE_MAX = 2;
 
 /** Temporary wide ranges — replace once dialed in. */
 export const BLACKHOLE_RANGES = {
@@ -73,5 +92,6 @@ export const BLACKHOLE_RANGES = {
     blackHoleSize: { min: 0.05, max: 2, step: 0.01 },
     diskRotationSpeed: { min: 0.05, max: 5, step: 0.05 },
     colorSpeed: { min: 1, max: 180, step: 1 },
-    drive: { min: 0, max: BLACKHOLE_DRIVE_MAX, step: 0.1 },
+    nebulaIntensity: { min: 0, max: 3, step: 0.05 },
+    drive: { min: 0, max: BLACKHOLE_DRIVE_MAX, step: 0.01 },
 } as const;

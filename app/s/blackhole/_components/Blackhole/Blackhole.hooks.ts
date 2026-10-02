@@ -50,6 +50,11 @@ function isHex(v: unknown): v is string {
   return typeof v === "string" && /^#?[0-9a-fA-F]{6}$/.test(v);
 }
 
+function asHex(v: unknown, fallback: string): string {
+  if (!isHex(v)) return fallback;
+  return v.startsWith("#") ? v : `#${v}`;
+}
+
 /** Old prefs used Shadertoy mouseY 0..1 — map to degrees once. */
 function migratePitch(raw: Record<string, unknown>): number {
   const pitch = Number(raw.pitch);
@@ -70,25 +75,14 @@ function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
       : fallback;
 
   const legacy = raw as Record<string, unknown>;
-  const holeColor = isHex(legacy.holeColor)
-    ? legacy.holeColor.startsWith("#")
-      ? legacy.holeColor
-      : `#${legacy.holeColor}`
-    : isHex(legacy.diskInner)
-      ? (legacy.diskInner as string).startsWith("#")
-        ? (legacy.diskInner as string)
-        : `#${legacy.diskInner}`
-      : STORED_DEFAULTS.holeColor;
-
-  const holeColorPeak = isHex(legacy.holeColorPeak)
-    ? legacy.holeColorPeak.startsWith("#")
-      ? legacy.holeColorPeak
-      : `#${legacy.holeColorPeak}`
-    : isHex(legacy.diskOuter)
-      ? (legacy.diskOuter as string).startsWith("#")
-        ? (legacy.diskOuter as string)
-        : `#${legacy.diskOuter}`
-      : STORED_DEFAULTS.holeColorPeak;
+  const holeColor = asHex(
+    legacy.holeColor ?? legacy.diskInner,
+    STORED_DEFAULTS.holeColor,
+  );
+  const holeColorPeak = asHex(
+    legacy.holeColorPeak ?? legacy.diskOuter,
+    STORED_DEFAULTS.holeColorPeak,
+  );
 
   const yawChannel = channel(
     legacy.yawChannel ?? legacy.spaceChannel,
@@ -110,6 +104,22 @@ function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
     holeColor,
     holeColorPeak,
     holeTwinkle: Boolean(legacy.holeTwinkle),
+    nebulaEnabled:
+      legacy.nebulaEnabled === undefined
+        ? STORED_DEFAULTS.nebulaEnabled
+        : Boolean(legacy.nebulaEnabled),
+    nebulaTwinkle: Boolean(legacy.nebulaTwinkle),
+    nebulaColor: asHex(legacy.nebulaColor, STORED_DEFAULTS.nebulaColor),
+    nebulaColorPeak: asHex(
+      legacy.nebulaColorPeak,
+      STORED_DEFAULTS.nebulaColorPeak,
+    ),
+    nebulaIntensity: clamp(
+      Number(legacy.nebulaIntensity),
+      0,
+      3,
+      STORED_DEFAULTS.nebulaIntensity,
+    ),
     colorSpeed: clamp(
       Number(legacy.colorSpeed),
       1,
@@ -150,6 +160,13 @@ function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
     ),
     yawChannel,
     yawDrive,
+    nebulaChannel: channel(legacy.nebulaChannel, STORED_DEFAULTS.nebulaChannel),
+    nebulaDrive: clamp(
+      Number(legacy.nebulaDrive),
+      0,
+      BLACKHOLE_DRIVE_MAX,
+      STORED_DEFAULTS.nebulaDrive,
+    ),
     scalePunch: Boolean(
       legacy.scalePunch === undefined
         ? STORED_DEFAULTS.scalePunch
@@ -227,11 +244,18 @@ export default function useBlackholeHook() {
       holeColor: live.holeColor,
       holeColorPeak: live.holeColorPeak,
       holeTwinkle: live.holeTwinkle,
+      nebulaEnabled: live.nebulaEnabled,
+      nebulaTwinkle: live.nebulaTwinkle,
+      nebulaColor: live.nebulaColor,
+      nebulaColorPeak: live.nebulaColorPeak,
+      nebulaIntensity: live.nebulaIntensity,
       colorSpeed: live.colorSpeed,
       holeChannel: live.holeChannel,
       holeDrive: live.holeDrive,
       yawChannel: live.yawChannel,
       yawDrive: live.yawDrive,
+      nebulaChannel: live.nebulaChannel,
+      nebulaDrive: live.nebulaDrive,
       scalePunch: live.scalePunch,
       scaleDrive: live.scaleDrive,
       driveMax: BLACKHOLE_DRIVE_MAX,
@@ -243,11 +267,21 @@ export default function useBlackholeHook() {
       setHoleColor: (holeColor: string) => commit({ holeColor }),
       setHoleColorPeak: (holeColorPeak: string) => commit({ holeColorPeak }),
       setHoleTwinkle: (holeTwinkle: boolean) => commit({ holeTwinkle }),
+      setNebulaEnabled: (nebulaEnabled: boolean) => commit({ nebulaEnabled }),
+      setNebulaTwinkle: (nebulaTwinkle: boolean) => commit({ nebulaTwinkle }),
+      setNebulaColor: (nebulaColor: string) => commit({ nebulaColor }),
+      setNebulaColorPeak: (nebulaColorPeak: string) =>
+        commit({ nebulaColorPeak }),
+      setNebulaIntensity: (nebulaIntensity: number) =>
+        commit({ nebulaIntensity }),
       setColorSpeed: (colorSpeed: number) => commit({ colorSpeed }),
       setHoleChannel: (holeChannel: ReactiveChannel) => commit({ holeChannel }),
       setHoleDrive: (holeDrive: number) => commit({ holeDrive }),
       setYawChannel: (yawChannel: ReactiveChannel) => commit({ yawChannel }),
       setYawDrive: (yawDrive: number) => commit({ yawDrive }),
+      setNebulaChannel: (nebulaChannel: ReactiveChannel) =>
+        commit({ nebulaChannel }),
+      setNebulaDrive: (nebulaDrive: number) => commit({ nebulaDrive }),
       setScalePunch: (scalePunch: boolean) => commit({ scalePunch }),
       setScaleDrive: (scaleDrive: number) => commit({ scaleDrive }),
       fullscreen: () => void toggleFullscreen(),
