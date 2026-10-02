@@ -3,7 +3,9 @@
 import {
     createContext,
     useContext,
+    useEffect,
     useId,
+    useRef,
     useState,
     type ReactNode,
 } from "react";
@@ -13,6 +15,11 @@ import {
     readPanelSections,
     writePanelSection,
 } from "@/lib/screenPrefs";
+import {
+    applyScreenShare,
+    encodeScreenShare,
+    type ShareDecodeError,
+} from "@/lib/screenShare";
 import { FieldInfo } from "./FieldInfo";
 import { PanelButton } from "./PanelButton";
 
@@ -24,6 +31,46 @@ type ControlPanelProps = {
     className?: string;
 };
 
+const SHARE_FLASH: Record<ShareDecodeError | "copied" | "fail", string> = {
+    copied: "copied",
+    empty: "empty",
+    format: "bad key",
+    screen: "wrong screen",
+    decrypt: "bad key",
+    fail: "fail",
+};
+
+function ChromePair({
+    label,
+    info,
+    status,
+    children,
+}: {
+    label: string;
+    info: string;
+    status?: string | null;
+    children: ReactNode;
+}) {
+    return (
+        <div className="flex min-w-0 flex-1 flex-col gap-1 border border-line/50 p-1">
+            <div className="flex items-center gap-1 px-0.5">
+                <span className="text-[8px] uppercase tracking-[0.22em] text-muted">
+                    {label}
+                </span>
+                <FieldInfo text={info} />
+                {status ? (
+                    <span className="ml-auto text-[8px] uppercase tracking-[0.18em] text-cyan">
+                        {status}
+                    </span>
+                ) : null}
+            </div>
+            <div className="flex w-full items-stretch gap-1 *:min-w-0 *:flex-1">
+                {children}
+            </div>
+        </div>
+    );
+}
+
 export function ControlPanel({
     title,
     children,
@@ -31,6 +78,46 @@ export function ControlPanel({
     className,
 }: ControlPanelProps) {
     const overlay = useScreensOverlay();
+    const [shareFlash, setShareFlash] = useState<string | null>(null);
+    const flashTimer = useRef<number | null>(null);
+
+    useEffect(() => {
+        return () => {
+            if (flashTimer.current != null) window.clearTimeout(flashTimer.current);
+        };
+    }, []);
+
+    const flash = (msg: string) => {
+        setShareFlash(msg);
+        if (flashTimer.current != null) window.clearTimeout(flashTimer.current);
+        flashTimer.current = window.setTimeout(() => setShareFlash(null), 1400);
+    };
+
+    const onCopyShare = async () => {
+        if (!overlay) return;
+        try {
+            const key = encodeScreenShare(overlay.screenId);
+            await navigator.clipboard.writeText(key);
+            flash(SHARE_FLASH.copied);
+        } catch {
+            flash(SHARE_FLASH.fail);
+        }
+    };
+
+    const onPasteShare = async () => {
+        if (!overlay) return;
+        try {
+            const text = await navigator.clipboard.readText();
+            const result = applyScreenShare(overlay.screenId, text);
+            if (!result.ok) {
+                flash(SHARE_FLASH[result.error]);
+                return;
+            }
+            window.location.reload();
+        } catch {
+            flash(SHARE_FLASH.fail);
+        }
+    };
 
     return (
         <div
@@ -44,18 +131,46 @@ export function ControlPanel({
                     {title}
                 </span>
                 {overlay ? (
-                    <div className="flex w-full items-center justify-end gap-1.5">
-                        {overlay.hasPeers ? (
-                            <PanelButton
-                                onClick={overlay.sync}
-                                className="flex-1 p-1"
+                    <div className="flex w-full flex-col gap-1">
+                        <div className="flex w-full gap-1.5">
+                            <ChromePair
+                                label="display"
+                                info="Sync pushes this tab’s prefs to other open tabs of the same screen, then reloads. Hide clears the HUD on this tab only."
                             >
-                                sync
-                            </PanelButton>
-                        ) : null}
-                        <PanelButton onClick={overlay.hide} className="flex-1 p-1">
-                            hide
-                        </PanelButton>
+                                {overlay.hasPeers ? (
+                                    <PanelButton
+                                        onClick={overlay.sync}
+                                        className="p-1"
+                                    >
+                                        sync
+                                    </PanelButton>
+                                ) : null}
+                                <PanelButton
+                                    onClick={overlay.hide}
+                                    className="p-1"
+                                >
+                                    hide
+                                </PanelButton>
+                            </ChromePair>
+                            <ChromePair
+                                label="preset"
+                                info="Copy seals current look knobs into a monitron key (clipboard). Paste reads a key for this screen, applies it, and reloads. HUD fold state is not shared."
+                                status={shareFlash}
+                            >
+                                <PanelButton
+                                    onClick={onCopyShare}
+                                    className="p-1"
+                                >
+                                    copy
+                                </PanelButton>
+                                <PanelButton
+                                    onClick={onPasteShare}
+                                    className="p-1"
+                                >
+                                    paste
+                                </PanelButton>
+                            </ChromePair>
+                        </div>
                     </div>
                 ) : null}
             </div>
