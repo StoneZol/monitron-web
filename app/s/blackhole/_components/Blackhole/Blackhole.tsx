@@ -24,7 +24,8 @@ const SOURCES = [
 ] as const;
 
 const INFO = {
-  camera: "Pitch + BH scale. Yaw auto-orbits at a fixed rate.",
+  camera: "Orbit speeds + tilt + BH scale.",
+  yawSpeed: "Horizontal orbit rate (unitless, like disk spin).",
   pitch: "Camera tilt in degrees.",
   scale: "Black hole / disk radius (_Size).",
   diskSpin: "Accretion disk / horizon swirl speed.",
@@ -72,6 +73,16 @@ const Blackhole = ({ showOverlay = true }: BlackholeProps) => {
             }
           >
             <ControlSection label="camera" info={INFO.camera}>
+              <Slider
+                label="Yaw speed"
+                value={controls.yawSpeed}
+                min={BLACKHOLE_RANGES.yawSpeed.min}
+                max={BLACKHOLE_RANGES.yawSpeed.max}
+                step={BLACKHOLE_RANGES.yawSpeed.step}
+                onChange={controls.setYawSpeed}
+                format={(v) => v.toFixed(2)}
+                info={INFO.yawSpeed}
+              />
               <Slider
                 label="Pitch"
                 value={controls.pitch}

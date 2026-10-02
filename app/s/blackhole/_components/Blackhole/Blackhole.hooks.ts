@@ -84,6 +84,13 @@ function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
       STORED_DEFAULTS.blackHoleSize,
     ),
     pitch: migratePitch(raw),
+    yawSpeed: (() => {
+      const v = Number(raw.yawSpeed);
+      if (!Number.isFinite(v)) return STORED_DEFAULTS.yawSpeed;
+      // Legacy UI stored °/s (~6); new unit is Shadertoy coeff (~0.1)
+      if (v > 2) return clamp(v * (Math.PI / 180), 0, 2, STORED_DEFAULTS.yawSpeed);
+      return clamp(v, 0, 2, STORED_DEFAULTS.yawSpeed);
+    })(),
     diskRotationSpeed: clamp(
       Number(raw.diskRotationSpeed),
       0.05,
@@ -154,9 +161,11 @@ export default function useBlackholeHook() {
     vizRef: visualizer.vizRef,
     visualizer,
     controls: {
+      yawSpeed: live.yawSpeed,
       pitch: live.pitch,
       blackHoleSize: live.blackHoleSize,
       diskRotationSpeed: live.diskRotationSpeed,
+      setYawSpeed: (yawSpeed: number) => commit({ yawSpeed }),
       setPitch: (pitch: number) => commit({ pitch }),
       setBlackHoleSize: (blackHoleSize: number) => commit({ blackHoleSize }),
       setDiskRotationSpeed: (diskRotationSpeed: number) =>

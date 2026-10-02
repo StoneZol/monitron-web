@@ -5,7 +5,7 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import type { VizBands } from "@/lib/audioBus";
 import { channelLevel, drivenLevel } from "./Blackhole.audio";
-import { YAW_RAD_PER_SEC, type BlackholeLive } from "./Blackhole.types";
+import type { BlackholeLive } from "./Blackhole.types";
 import {
   blackholeFragmentShader,
   blackholeVertexShader,
@@ -59,7 +59,7 @@ function BlackholeQuad({
     mat.uniforms.iTime!.value =
       t * Math.max(0.05, live.flightSpeed) * (1 + punch * 0.35);
     mat.uniforms.uSize!.value = Math.max(0.05, live.blackHoleSize);
-    mat.uniforms.uYaw!.value = t * YAW_RAD_PER_SEC;
+    mat.uniforms.uYaw!.value = t * live.yawSpeed;
     mat.uniforms.uPitch!.value = (live.pitch * Math.PI) / 180;
     mat.uniforms.uSpeed!.value = Math.max(0.05, live.diskRotationSpeed);
   });
