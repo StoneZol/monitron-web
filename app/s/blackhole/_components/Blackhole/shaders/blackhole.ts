@@ -5,7 +5,7 @@
  * Changes from original:
  * - iMouse → uniforms uYaw / uPitch (+ fixed MOUSE_X zoom)
  * - _Size → uniform uSize (panel scale)
- * - iChannel0 nebula texture → stub (procedural stars kept)
+ * - iChannel0 nebula texture → removed (seams under lensing); stars kept
  * - iTime / iResolution wired as uniforms
  * - AA=1 for monitor perf (was typically 2+)
  */
@@ -77,21 +77,8 @@ vec4 background(vec3 ray)
 
     vec3 stars = brightness * mix(vec3(1., .6, .2), vec3(.2, .6, 1), color);
 
-    // Stub for iChannel0 nebula texture — soft procedural wash instead
-    float n0 = value(uv * 1.5, 4.0);
-    float n1 = value(uv * 1.5 + 17.0, 8.0);
-    float n2 = value(uv * 1.5 - 9.0, 6.0);
-    vec4 nebulae = vec4(n0, n1, n2, 1.0);
-    nebulae.xyz += nebulae.xxx + nebulae.yyy + nebulae.zzz; //average color
-    nebulae.xyz *= 0.25;
-
-    nebulae*= nebulae;
-    nebulae*= nebulae;
-    nebulae*= nebulae;
-    nebulae*= nebulae;
-
-	nebulae.xyz += stars;
-	return nebulae;
+    // Nebula (iChannel0) dropped — cubemap UV seams stretch like a cropped PNG under lensing
+    return vec4(stars, 1.0);
 }
 
 vec4 raymarchDisk(vec3 ray, vec3 zeroPos)
