@@ -117,3 +117,147 @@ export function applyIncomingTabSync(
   }
   scheduleReloadAt(msg.reloadAt);
 }
+
+// ── Presence: other tabs on the same path + screenId ───────────────
+
+const PRESENCE_TTL_MS = 4000;
+const PRESENCE_BEAT_MS = 1500;
+
+type PresenceMsg =
+  | { kind: "presence"; type: "hello" | "bye" | "ping"; id: string; screenId: string };
+
+type PresenceBucket = {
+  peers: Map<string, number>;
+  listeners: Set<() => void>;
+  channel: BroadcastChannel | null;
+  beatTimer: number | null;
+  pruneTimer: number | null;
+};
+
+const presenceByKey = new Map<string, PresenceBucket>();
+
+function presenceKey(path: string, screenId: string) {
+  return `${path}::${screenId}`;
+}
+
+function emitPresence(bucket: PresenceBucket) {
+  for (const listener of bucket.listeners) listener();
+}
+
+function prunePeers(bucket: PresenceBucket) {
+  const now = Date.now();
+  let changed = false;
+  for (const [id, seen] of bucket.peers) {
+    if (now - seen > PRESENCE_TTL_MS) {
+      bucket.peers.delete(id);
+      changed = true;
+    }
+  }
+  if (changed) emitPresence(bucket);
+}
+
+/**
+ * Track other tabs of this screen on the same pathname.
+ * hasPeers === true when at least one sibling is alive.
+ */
+export function subscribeTabPresence(
+  screenId: string,
+  onChange: () => void,
+): () => void {
+  if (typeof window === "undefined" || typeof BroadcastChannel === "undefined") {
+    return () => {};
+  }
+
+  const path = window.location.pathname;
+  const key = presenceKey(path, screenId);
+  let bucket = presenceByKey.get(key);
+  if (!bucket) {
+    const id = getTabSyncSenderId();
+    const channel = new BroadcastChannel(`monitron:tab-presence:${path}`);
+    bucket = {
+      peers: new Map(),
+      listeners: new Set(),
+      channel,
+      beatTimer: null,
+      pruneTimer: null,
+    };
+    presenceByKey.set(key, bucket);
+
+    const post = (type: PresenceMsg["type"]) => {
+      const msg: PresenceMsg = { kind: "presence", type, id, screenId };
+      channel.postMessage(msg);
+    };
+
+    channel.onmessage = (ev: MessageEvent) => {
+      const data = ev.data as PresenceMsg;
+      if (
+        !data ||
+        data.kind !== "presence" ||
+        data.screenId !== screenId ||
+        data.id === id
+      ) {
+        return;
+      }
+      if (data.type === "bye") {
+        if (bucket!.peers.delete(data.id)) emitPresence(bucket!);
+        return;
+      }
+      // hello | ping from peer
+      const before = bucket!.peers.size;
+      bucket!.peers.set(data.id, Date.now());
+      if (bucket!.peers.size !== before) emitPresence(bucket!);
+      if (data.type === "ping") post("hello");
+    };
+
+    const onHide = () => post("bye");
+    window.addEventListener("pagehide", onHide);
+
+    post("hello");
+    post("ping");
+    bucket.beatTimer = window.setInterval(() => post("hello"), PRESENCE_BEAT_MS);
+    bucket.pruneTimer = window.setInterval(
+      () => prunePeers(bucket!),
+      PRESENCE_BEAT_MS,
+    );
+
+    // Stash cleanup on last unsubscribe via bucket meta — attach once
+    (bucket as PresenceBucket & { _onHide?: () => void })._onHide = onHide;
+  }
+
+  bucket.listeners.add(onChange);
+  return () => {
+    bucket!.listeners.delete(onChange);
+    if (bucket!.listeners.size > 0) return;
+
+    const id = getTabSyncSenderId();
+    try {
+      bucket!.channel?.postMessage({
+        kind: "presence",
+        type: "bye",
+        id,
+        screenId,
+      } satisfies PresenceMsg);
+    } catch {
+      /* ignore */
+    }
+    if (bucket!.beatTimer != null) window.clearInterval(bucket!.beatTimer);
+    if (bucket!.pruneTimer != null) window.clearInterval(bucket!.pruneTimer);
+    const hide = (bucket as PresenceBucket & { _onHide?: () => void })._onHide;
+    if (hide) window.removeEventListener("pagehide", hide);
+    bucket!.channel?.close();
+    presenceByKey.delete(key);
+  };
+}
+
+export function getTabHasPeers(screenId: string): boolean {
+  if (typeof window === "undefined") return false;
+  const key = presenceKey(window.location.pathname, screenId);
+  const bucket = presenceByKey.get(key);
+  if (!bucket) return false;
+  // Silent prune — never emit during React getSnapshot
+  const now = Date.now();
+  for (const [id, seen] of bucket.peers) {
+    if (now - seen > PRESENCE_TTL_MS) bucket.peers.delete(id);
+  }
+  return bucket.peers.size > 0;
+}

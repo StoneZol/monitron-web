@@ -6,6 +6,8 @@ type ScreensOverlayApi = {
   hide: () => void;
   /** Push localStorage prefs to same-path tabs + reload this tab. */
   sync: () => void;
+  /** Other tabs of this screen are open in the browser. */
+  hasPeers: boolean;
 };
 
 export const ScreensOverlayContext = createContext<ScreensOverlayApi | null>(

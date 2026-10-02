@@ -6,9 +6,11 @@ import { readScreenPrefsRaw } from "@/lib/screenPrefs";
 import {
   applyIncomingTabSync,
   broadcastTabSync,
+  getTabHasPeers,
   getTabSyncSenderId,
   hudStorageKey,
   scheduleReloadAt,
+  subscribeTabPresence,
   subscribeTabSync,
 } from "@/lib/tabBroadcast";
 
@@ -70,6 +72,12 @@ const useScreensOverlayHook = (screenId: string) => {
     () => false,
   );
 
+  const hasPeers = useSyncExternalStore(
+    (listener) => subscribeTabPresence(screenId, listener),
+    () => getTabHasPeers(screenId),
+    () => false,
+  );
+
   useEffect(() => bindFullscreenEscape(), []);
 
   // Cross-tab sync — any screen under ScreensOverlay gets this for free.
@@ -81,6 +89,7 @@ const useScreensOverlayHook = (screenId: string) => {
   }, [screenId]);
 
   const sync = () => {
+    if (!getTabHasPeers(screenId)) return;
     const reloadAt = broadcastTabSync(screenId, readScreenPrefsRaw(screenId));
     // Same deadline as peers; keep this tab's HUD (receivers force-hide).
     scheduleReloadAt(reloadAt);
@@ -89,6 +98,7 @@ const useScreensOverlayHook = (screenId: string) => {
   return {
     ready: isClient,
     hideHud,
+    hasPeers,
     hide: () => writeHidden(screenId, true),
     show: () => writeHidden(screenId, false),
     sync,

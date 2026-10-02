@@ -10,7 +10,8 @@ import type { ScreensOverlayProps } from "./ScreensOverlay.types";
  * Tap empty screen to wake when HUD is hidden.
  */
 const ScreensOverlay = ({ screenId, children }: ScreensOverlayProps) => {
-  const { ready, hideHud, hide, show, sync } = useScreensOverlayHook(screenId);
+  const { ready, hideHud, hide, show, sync, hasPeers } =
+    useScreensOverlayHook(screenId);
 
   // Wait for client prefs — avoids HUD flash on reload when it was hidden.
   if (!ready) return null;
@@ -31,7 +32,7 @@ const ScreensOverlay = ({ screenId, children }: ScreensOverlayProps) => {
   }
 
   return (
-    <ScreensOverlayContext.Provider value={{ hide, sync }}>
+    <ScreensOverlayContext.Provider value={{ hide, sync, hasPeers }}>
       <div className="absolute inset-0 z-10 flex h-screen w-screen items-center justify-center">
         <div className="relative z-20 w-80">{children}</div>
       </div>

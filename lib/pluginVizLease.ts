@@ -1,7 +1,7 @@
 /**
  * Plugin visualizer-toggle is global per extension. Multiple Monitron tabs
- * share a lease over BroadcastChannel so closing one tab does not kill the
- * stream for the others.
+ * coordinate via BroadcastChannel; this tab uses acquire/release so React
+ * remounts don't spuriously disable the stream.
  */
 
 import { postVisualizerToggle } from "@/lib/audioBus";
@@ -14,8 +14,8 @@ type LeaseMsg =
 
 let tabId: string | null = null;
 let channel: BroadcastChannel | null = null;
-let localWanted = false;
-/** Other tabs currently claiming the plugin stream */
+/** Active acquire() calls on this tab (useAudioReactive / applySource). */
+let holderCount = 0;
 const peersWanting = new Set<string>();
 let lastPosted: boolean | null = null;
 let started = false;
@@ -29,11 +29,33 @@ function getTabId(): string {
   return tabId;
 }
 
-function flushExtensionToggle() {
-  const enabled = localWanted || peersWanting.size > 0;
-  if (lastPosted === enabled) return;
+function localWantsStream(): boolean {
+  return holderCount > 0;
+}
+
+function extensionShouldEnable(): boolean {
+  return localWantsStream() || peersWanting.size > 0;
+}
+
+function flushExtensionToggle(force = false) {
+  const enabled = extensionShouldEnable();
+  if (!force && lastPosted === enabled) return;
   lastPosted = enabled;
   postVisualizerToggle(enabled);
+}
+
+function broadcastWant(wanted: boolean) {
+  if (!channel) return;
+  channel.postMessage({
+    type: "want",
+    id: getTabId(),
+    wanted,
+  } satisfies LeaseMsg);
+}
+
+function syncPeerState(forceToggle = false) {
+  broadcastWant(localWantsStream());
+  flushExtensionToggle(forceToggle);
 }
 
 function onMessage(ev: MessageEvent) {
@@ -41,13 +63,7 @@ function onMessage(ev: MessageEvent) {
   if (!data || typeof data !== "object") return;
   if (data.type === "ping") {
     if (data.id === getTabId()) return;
-    if (localWanted && channel) {
-      channel.postMessage({
-        type: "want",
-        id: getTabId(),
-        wanted: true,
-      } satisfies LeaseMsg);
-    }
+    if (localWantsStream()) broadcastWant(true);
     return;
   }
   if (data.type !== "want" || data.id === getTabId()) return;
@@ -58,42 +74,36 @@ function onMessage(ev: MessageEvent) {
 
 function ensureChannel() {
   if (started || typeof window === "undefined") return;
-  if (typeof BroadcastChannel === "undefined") {
-    started = true;
-    return;
-  }
   started = true;
-  channel = new BroadcastChannel(CHANNEL);
-  channel.onmessage = onMessage;
+  if (typeof BroadcastChannel !== "undefined") {
+    channel = new BroadcastChannel(CHANNEL);
+    channel.onmessage = onMessage;
+    channel.postMessage({ type: "ping", id: getTabId() } satisfies LeaseMsg);
+  }
   window.addEventListener("pagehide", onPageHide);
-  // Learn who already holds the lease
-  channel.postMessage({ type: "ping", id: getTabId() } satisfies LeaseMsg);
 }
 
 function onPageHide() {
-  if (!localWanted) return;
-  localWanted = false;
-  if (channel) {
-    channel.postMessage({
-      type: "want",
-      id: getTabId(),
-      wanted: false,
-    } satisfies LeaseMsg);
-  }
+  if (holderCount === 0) return;
+  holderCount = 0;
+  broadcastWant(false);
   flushExtensionToggle();
 }
 
-/** This tab wants (or releases) the plugin audio stream. */
-export function setPluginVizWanted(wanted: boolean) {
+/**
+ * This tab needs plugin frames. Call the returned release when done.
+ * Safe across React Strict Mode remounts (pair acquire/release per hook instance).
+ */
+export function acquirePluginViz(): () => void {
   ensureChannel();
-  if (localWanted === wanted) return;
-  localWanted = wanted;
-  if (channel) {
-    channel.postMessage({
-      type: "want",
-      id: getTabId(),
-      wanted,
-    } satisfies LeaseMsg);
-  }
-  flushExtensionToggle();
+  const wasEmpty = holderCount === 0;
+  holderCount += 1;
+  syncPeerState(wasEmpty);
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    holderCount = Math.max(0, holderCount - 1);
+    syncPeerState();
+  };
 }

@@ -13,7 +13,7 @@ import {
   type VizBands,
 } from "@/lib/audioBus";
 import { MicCapture, gateMicFrame, MIC_GATE_DEFAULT, MIC_GATE_MAX, clampMicGate, normalizeMicGate } from "@/lib/audioMic";
-import { setPluginVizWanted } from "@/lib/pluginVizLease";
+import { acquirePluginViz } from "@/lib/pluginVizLease";
 
 export { MIC_GATE_DEFAULT, MIC_GATE_MAX, normalizeMicGate };
 
@@ -112,6 +112,7 @@ export function useAudioReactive({
   const onMicGateChangeRef = useRef(onMicGateChange);
   const onPeakGainChangeRef = useRef(onPeakGainChange);
   const micRef = useRef(new MicCapture());
+  const pluginVizReleaseRef = useRef<(() => void) | null>(null);
   const applySourceRef = useRef<(next: AudioSource, notify: boolean) => void>(
     () => {},
   );
@@ -177,7 +178,14 @@ export function useAudioReactive({
     setSourceState(resolved);
 
     const sendPluginToggle = (enabled: boolean) => {
-      setPluginVizWanted(enabled);
+      if (enabled) {
+        if (!pluginVizReleaseRef.current) {
+          pluginVizReleaseRef.current = acquirePluginViz();
+        }
+      } else {
+        pluginVizReleaseRef.current?.();
+        pluginVizReleaseRef.current = null;
+      }
     };
 
     const clearBusUi = () => {
@@ -316,6 +324,9 @@ export function useAudioReactive({
     if (preferred === "plugin" && !pluginRef.current) {
       sourceRef.current = "plugin";
       setSourceState("plugin");
+      if (!pluginVizReleaseRef.current) {
+        pluginVizReleaseRef.current = acquirePluginViz();
+      }
       return;
     }
     applySourceRef.current(preferred, false);
@@ -361,7 +372,6 @@ export function useAudioReactive({
       syncPoll();
 
       if (!next) {
-        setPluginVizWanted(false);
         if (sourceRef.current === "plugin") {
           applySourceRef.current("off", true);
         }
@@ -423,7 +433,8 @@ export function useAudioReactive({
       document.removeEventListener("visibilitychange", onVisible);
       window.removeEventListener("focus", tick);
       void micRef.current.stop();
-      setPluginVizWanted(false);
+      pluginVizReleaseRef.current?.();
+      pluginVizReleaseRef.current = null;
       pluginRef.current = false;
       setPluginPresent(false);
     };
