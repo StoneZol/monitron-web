@@ -45,6 +45,20 @@ function clamp(n: number, min: number, max: number, fallback: number) {
   return Math.min(max, Math.max(min, n));
 }
 
+/** Old prefs used Shadertoy mouseY 0..1 — map to degrees once. */
+function migratePitch(raw: Record<string, unknown>): number {
+  const pitch = Number(raw.pitch);
+  if (!Number.isFinite(pitch)) return STORED_DEFAULTS.pitch;
+  // Legacy mouseY units were typically 0..1
+  if (pitch >= 0 && pitch <= 1 && !("pitchUnit" in raw)) {
+    const angleY = 2 * pitch * Math.PI + 0.1 + Math.PI;
+    let deg = (angleY * 180) / Math.PI;
+    deg = ((deg + 180) % 360) - 180;
+    return clamp(deg, -180, 180, STORED_DEFAULTS.pitch);
+  }
+  return clamp(pitch, -180, 180, STORED_DEFAULTS.pitch);
+}
+
 function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
   const channel = (v: unknown, fallback: ReactiveChannel): ReactiveChannel =>
     typeof v === "string" && CHANNELS.has(v as ReactiveChannel)
@@ -57,15 +71,25 @@ function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
     audioSource: migrateAudioSource(raw),
     micGate: normalizeMicGate(raw.micGate),
     peakGain: normalizePeakGain(raw.peakGain),
-    flightSpeed: clamp(Number(raw.flightSpeed), 0.05, 8, STORED_DEFAULTS.flightSpeed),
+    flightSpeed: clamp(
+      Number(raw.flightSpeed),
+      0.05,
+      8,
+      STORED_DEFAULTS.flightSpeed,
+    ),
     blackHoleSize: clamp(
       Number(raw.blackHoleSize),
       0.05,
       2,
       STORED_DEFAULTS.blackHoleSize,
     ),
-    yaw: clamp(Number(raw.yaw), -180, 180, STORED_DEFAULTS.yaw),
-    pitch: clamp(Number(raw.pitch), 0, 1, STORED_DEFAULTS.pitch),
+    pitch: migratePitch(raw),
+    diskRotationSpeed: clamp(
+      Number(raw.diskRotationSpeed),
+      0.05,
+      5,
+      STORED_DEFAULTS.diskRotationSpeed,
+    ),
     spaceChannel: channel(raw.spaceChannel, STORED_DEFAULTS.spaceChannel),
     holeChannel: channel(raw.holeChannel, STORED_DEFAULTS.holeChannel),
     spaceDrive: clamp(Number(raw.spaceDrive), 0, 8, STORED_DEFAULTS.spaceDrive),
@@ -98,9 +122,10 @@ function readPrefs(): Stored {
 }
 
 function writePrefs(next: Stored) {
-  cached = next;
-  liveRef.current = next;
-  saveScreenPrefs(SCREEN_ID, next);
+  // Mark degrees so migratePitch won't re-map 0..1 forever
+  cached = { ...next, pitchUnit: "deg" } as Stored & { pitchUnit: string };
+  liveRef.current = cached;
+  saveScreenPrefs(SCREEN_ID, cached);
   emit();
 }
 
@@ -129,12 +154,13 @@ export default function useBlackholeHook() {
     vizRef: visualizer.vizRef,
     visualizer,
     controls: {
-      yaw: live.yaw,
       pitch: live.pitch,
       blackHoleSize: live.blackHoleSize,
-      setYaw: (yaw: number) => commit({ yaw }),
+      diskRotationSpeed: live.diskRotationSpeed,
       setPitch: (pitch: number) => commit({ pitch }),
       setBlackHoleSize: (blackHoleSize: number) => commit({ blackHoleSize }),
+      setDiskRotationSpeed: (diskRotationSpeed: number) =>
+        commit({ diskRotationSpeed }),
       fullscreen: () => void toggleFullscreen(),
       reset: () => {
         writePrefs({ ...STORED_DEFAULTS });

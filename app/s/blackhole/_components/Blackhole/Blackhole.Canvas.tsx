@@ -5,7 +5,7 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import type { VizBands } from "@/lib/audioBus";
 import { channelLevel, drivenLevel } from "./Blackhole.audio";
-import type { BlackholeLive } from "./Blackhole.types";
+import { YAW_RAD_PER_SEC, type BlackholeLive } from "./Blackhole.types";
 import {
   blackholeFragmentShader,
   blackholeVertexShader,
@@ -33,9 +33,10 @@ function BlackholeQuad({
         uniforms: {
           iResolution: { value: new THREE.Vector3(1, 1, 1) },
           iTime: { value: 0 },
-          uSize: { value: 0.3 },
+          uSize: { value: 0.2 },
           uYaw: { value: 0 },
-          uPitch: { value: 0.36 },
+          uPitch: { value: (2 * Math.PI) / 180 },
+          uSpeed: { value: 0.2 },
         },
       }),
     [],
@@ -54,11 +55,13 @@ function BlackholeQuad({
     const punch = viz?.enabled
       ? drivenLevel(channelLevel(viz, live.spaceChannel), live.spaceDrive)
       : 0;
+    const t = clock.elapsedTime;
     mat.uniforms.iTime!.value =
-      clock.elapsedTime * Math.max(0.05, live.flightSpeed) * (1 + punch * 0.35);
+      t * Math.max(0.05, live.flightSpeed) * (1 + punch * 0.35);
     mat.uniforms.uSize!.value = Math.max(0.05, live.blackHoleSize);
-    mat.uniforms.uYaw!.value = (live.yaw * Math.PI) / 180;
-    mat.uniforms.uPitch!.value = live.pitch;
+    mat.uniforms.uYaw!.value = t * YAW_RAD_PER_SEC;
+    mat.uniforms.uPitch!.value = (live.pitch * Math.PI) / 180;
+    mat.uniforms.uSpeed!.value = Math.max(0.05, live.diskRotationSpeed);
   });
 
   return (

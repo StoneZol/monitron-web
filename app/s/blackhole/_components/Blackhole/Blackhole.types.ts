@@ -7,7 +7,7 @@ export type ReactiveChannel = "off" | "bass" | "mid" | "high" | "beat";
 
 /**
  * Live knobs.
- * Camera yaw/pitch + BH scale — ranges are temporary wide; tune after dial-in.
+ * Pitch in degrees; yaw auto-orbits at a fixed linear rate (no speed slider).
  */
 export type BlackholeLive = {
   diskInner: string;
@@ -18,19 +18,21 @@ export type BlackholeLive = {
   exposure: number;
   /** Outer march steps (×6 inner) — Shadertoy/Brayns default ~20 */
   nbDisks: number;
+  /** Accretion disk / horizon swirl (_Speed) */
   diskRotationSpeed: number;
   diskTextureLayers: number;
   /** Horizon / disk radius (_Size in shader) */
   blackHoleSize: number;
-  /** Camera yaw in degrees → angle.x */
-  yaw: number;
-  /** Shadertoy mouseY (0..1) → pitch */
+  /** Camera pitch in degrees → angle.y */
   pitch: number;
   spaceChannel: ReactiveChannel;
   spaceDrive: number;
   holeChannel: ReactiveChannel;
   holeDrive: number;
 };
+
+/** Fixed yaw orbit — original tsBXW3 `iTime * 0.1` rad/s */
+export const YAW_RAD_PER_SEC = 0.1;
 
 export const BLACKHOLE_DEFAULTS: BlackholeLive = {
   diskInner: "#ffcc00",
@@ -39,11 +41,11 @@ export const BLACKHOLE_DEFAULTS: BlackholeLive = {
   flightSpeed: 1,
   exposure: 1,
   nbDisks: 20,
-  diskRotationSpeed: 3,
+  diskRotationSpeed: 0.2,
   diskTextureLayers: 12,
-  blackHoleSize: 0.3,
-  yaw: 0,
-  pitch: 0.36,
+  blackHoleSize: 0.2,
+  /** Was mouseY 0.49 → angle.y ≈ 2° (mod 360) */
+  pitch: 2,
   spaceChannel: "beat",
   spaceDrive: 1.4,
   holeChannel: "bass",
@@ -52,7 +54,7 @@ export const BLACKHOLE_DEFAULTS: BlackholeLive = {
 
 /** Temporary wide ranges — replace once dialed in. */
 export const BLACKHOLE_RANGES = {
-  yaw: { min: -180, max: 180, step: 1 },
-  pitch: { min: 0, max: 1, step: 0.01 },
+  pitch: { min: -180, max: 180, step: 1 },
   blackHoleSize: { min: 0.05, max: 2, step: 0.01 },
+  diskRotationSpeed: { min: 0.05, max: 5, step: 0.05 },
 } as const;

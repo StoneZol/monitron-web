@@ -24,10 +24,10 @@ const SOURCES = [
 ] as const;
 
 const INFO = {
-  camera: "Orbit + BH scale — ranges temporary until dialed in.",
-  yaw: "Horizontal orbit (degrees).",
-  pitch: "Shadertoy mouseY — tilts the disk (0..1).",
+  camera: "Pitch + BH scale. Yaw auto-orbits at a fixed rate.",
+  pitch: "Camera tilt in degrees.",
   scale: "Black hole / disk radius (_Size).",
+  diskSpin: "Accretion disk / horizon swirl speed.",
 } as const;
 
 const Blackhole = ({ showOverlay = true }: BlackholeProps) => {
@@ -73,23 +73,13 @@ const Blackhole = ({ showOverlay = true }: BlackholeProps) => {
           >
             <ControlSection label="camera" info={INFO.camera}>
               <Slider
-                label="Yaw"
-                value={controls.yaw}
-                min={BLACKHOLE_RANGES.yaw.min}
-                max={BLACKHOLE_RANGES.yaw.max}
-                step={BLACKHOLE_RANGES.yaw.step}
-                onChange={controls.setYaw}
-                format={(v) => `${v.toFixed(0)}°`}
-                info={INFO.yaw}
-              />
-              <Slider
                 label="Pitch"
                 value={controls.pitch}
                 min={BLACKHOLE_RANGES.pitch.min}
                 max={BLACKHOLE_RANGES.pitch.max}
                 step={BLACKHOLE_RANGES.pitch.step}
                 onChange={controls.setPitch}
-                format={(v) => v.toFixed(2)}
+                format={(v) => `${v.toFixed(0)}°`}
                 info={INFO.pitch}
               />
               <Slider
@@ -101,6 +91,16 @@ const Blackhole = ({ showOverlay = true }: BlackholeProps) => {
                 onChange={controls.setBlackHoleSize}
                 format={(v) => v.toFixed(2)}
                 info={INFO.scale}
+              />
+              <Slider
+                label="Disk spin"
+                value={controls.diskRotationSpeed}
+                min={BLACKHOLE_RANGES.diskRotationSpeed.min}
+                max={BLACKHOLE_RANGES.diskRotationSpeed.max}
+                step={BLACKHOLE_RANGES.diskRotationSpeed.step}
+                onChange={controls.setDiskRotationSpeed}
+                format={(v) => v.toFixed(2)}
+                info={INFO.diskSpin}
               />
             </ControlSection>
 

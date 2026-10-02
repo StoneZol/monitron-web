@@ -28,11 +28,12 @@ uniform float iTime;
 uniform float uSize;
 uniform float uYaw;
 uniform float uPitch;
+uniform float uSpeed;
 
 // Shadertoy custom params (defaults from the public Brayns remake of this shader)
 #define _Size uSize
+#define _Speed uSpeed
 const float _Steps = 12.0;
-const float _Speed = 3.0;
 const int AA = 1;
 
 // Fixed zoom — was iMouse.x / iResolution.y (0 → camera z ≈ -5)
@@ -189,10 +190,9 @@ void mainImage( out vec4 colOut, in vec2 fragCoord )
     {
         //setting up camera
         vec3 ray = normalize( vec3((fragCoordRot-iResolution.xy*.5  + vec2(i,j)/(float(AA)))/iResolution.x, 1 ));
-        // Zoom from fixed MOUSE_X; yaw/pitch from panel uniforms
+        // Zoom from fixed MOUSE_X; yaw auto + pitch in radians from panel
         vec3 pos = vec3(0.,0.05,-(20.*MOUSE_X-10.)*(20.*MOUSE_X-10.)*.05);
-        vec2 angle = vec2(uYaw, .2);
-        angle.y = (2.*uPitch)*3.14 + 0.1 + 3.14;
+        vec2 angle = vec2(uYaw, uPitch);
         float dist = length(pos);
         Rotate(pos,angle);
         angle.xy -= min(.3/dist , 3.14) * vec2(1, 0.5);
