@@ -42,8 +42,7 @@ const INFO = {
     fogColors: "Fog idle / peak colors. Peak needs a live audio source.",
     fogHeight: "How tall the fog volume sits above the ground.",
     fogDensity: "How opaque the fog reads (0 = clear).",
-    light: "Scene lighting.",
-    lightIntensity: "Overall light multiplier on the hex field.",
+    lightIntensity: "Scene light multiplier (most visible with Caps).",
     camera: "Orbit camera — angle, height, frame, spin.",
     cameraAngle: "Pitch toward the field (degrees).",
     cameraHeight: "How high the camera sits above the ground.",
@@ -63,7 +62,9 @@ const INFO = {
     gridChannel: "Which bus band drives grid peak / reaction.",
     fogChannel: "Which bus band drives fog peak / reaction.",
     spinChannel: "Which bus band boosts camera spin (beat punches hard).",
-    spinAccel: "How hard the spin channel multiplies orbit speed.",
+    gridDrive: "Grid palette punch strength (1 = previous feel).",
+    fogDrive: "Fog palette punch strength (1 = previous feel).",
+    spinDrive: "How hard the spin channel multiplies orbit speed.",
     visualizer: {
         section: "Audio in → bus meters → peak gain for reactive screens.",
         source:
@@ -106,411 +107,474 @@ const HexagonsPlace = ({ showOverlay = true }: HexagonsPlaceProps) => {
                         }
                     >
                         <ControlSection label="look" info={INFO.look}>
-                            <div className="flex gap-2">
-                                <Toggle
-                                    label="Garland"
-                                    checked={controls.garland}
-                                    onChange={controls.setGarland}
-                                    info={INFO.garland}
-                                />
-                                <Toggle
-                                    label="Caps"
-                                    checked={controls.caps}
-                                    onChange={controls.setCaps}
-                                    info={INFO.caps}
-                                />
-                            </div>
-                            {!controls.caps && (
-                                <ColorField
-                                    label="Edge"
-                                    value={controls.edgeColor}
-                                    onChange={controls.setEdgeColor}
-                                    info={INFO.edge}
-                                />
-                            )}
-
-                            {controls.garland && (
+                            <ControlSubSection label="mode">
+                                <div className="flex flex-wrap gap-1.5">
+                                    <Toggle
+                                        label="Garland"
+                                        checked={controls.garland}
+                                        onChange={controls.setGarland}
+                                        info={INFO.garland}
+                                    />
+                                    <Toggle
+                                        label="Caps"
+                                        checked={controls.caps}
+                                        onChange={controls.setCaps}
+                                        info={INFO.caps}
+                                    />
+                                </div>
+                                {!controls.caps && (
+                                    <ColorField
+                                        label="Edge"
+                                        value={controls.edgeColor}
+                                        onChange={controls.setEdgeColor}
+                                        info={INFO.edge}
+                                    />
+                                )}
+                                {controls.garland && (
+                                    <Slider
+                                        label="Color speed"
+                                        value={controls.colorSpeed}
+                                        min={1}
+                                        max={180}
+                                        step={1}
+                                        onChange={controls.setColorSpeed}
+                                        info={INFO.colorSpeed}
+                                    />
+                                )}
                                 <Slider
-                                    label="Color speed"
-                                    value={controls.colorSpeed}
-                                    min={1}
-                                    max={180}
-                                    step={1}
-                                    onChange={controls.setColorSpeed}
-                                    info={INFO.colorSpeed}
+                                    label="Light"
+                                    value={controls.lightIntensity}
+                                    min={0}
+                                    max={2}
+                                    step={0.05}
+                                    onChange={controls.setLightIntensity}
+                                    format={(v) => `×${v.toFixed(2)}`}
+                                    info={INFO.lightIntensity}
                                 />
-                            )}
-                            {controls.caps && (
-                                <ColorTable
-                                    label="caps palette"
-                                    info={INFO.capsPalette}
-                                    columns={["idle", "peak"]}
-                                    lockedColumns={peakLocked ? ["peak"] : []}
-                                    columnStamps={peakStamp}
-                                    rows={[
-                                        {
-                                            label: "bass",
-                                            cells: [
-                                                {
-                                                    value: controls.capBassIdle,
-                                                    onChange: controls.setCapBassIdle,
-                                                },
-                                                {
-                                                    value: controls.capBassPeak,
-                                                    onChange: controls.setCapBassPeak,
-                                                },
-                                            ],
-                                        },
-                                        {
-                                            label: "mid",
-                                            cells: [
-                                                {
-                                                    value: controls.capMidIdle,
-                                                    onChange: controls.setCapMidIdle,
-                                                },
-                                                {
-                                                    value: controls.capMidPeak,
-                                                    onChange: controls.setCapMidPeak,
-                                                },
-                                            ],
-                                        },
-                                        {
-                                            label: "high",
-                                            cells: [
-                                                {
-                                                    value: controls.capHighIdle,
-                                                    onChange: controls.setCapHighIdle,
-                                                },
-                                                {
-                                                    value: controls.capHighPeak,
-                                                    onChange: controls.setCapHighPeak,
-                                                },
-                                            ],
-                                        },
-                                        {
-                                            label: "fog",
-                                            cells: [
-                                                {
-                                                    value: controls.capFogIdle,
-                                                    onChange: controls.setCapFogIdle,
-                                                },
-                                                {
-                                                    value: controls.capFogPeak,
-                                                    onChange: controls.setCapFogPeak,
-                                                },
-                                            ],
-                                        },
-                                        {
-                                            label: "grid",
-                                            cells: [
-                                                {
-                                                    value: controls.capGridIdle,
-                                                    onChange: controls.setCapGridIdle,
-                                                },
-                                                {
-                                                    value: controls.capGridPeak,
-                                                    onChange: controls.setCapGridPeak,
-                                                },
-                                            ],
-                                        },
-                                    ]}
-                                />
-                            )}
-                            <Slider
-                                label="Hex grid"
-                                value={controls.hexGrid}
-                                min={57}
-                                max={107}
-                                step={1}
-                                onChange={controls.setHexGrid}
-                                format={(v) => v.toFixed(0)}
-                                info={INFO.hexGrid}
-                            />
-                        </ControlSection>
+                            </ControlSubSection>
 
-                        <ControlSection label="fog" info={INFO.fog}>
-                            {controls.garland && !controls.caps && (
-                                <>
-                                    <div className="flex gap-2">
-                                        <Toggle
-                                            label="Fixed"
-                                            checked={controls.fogFixed}
-                                            onChange={controls.setFogFixed}
-                                            info={INFO.fogFixed}
-                                        />
-                                        <Toggle
-                                            label="Parallel"
-                                            checked={controls.fogParallel}
-                                            onChange={controls.setFogParallel}
-                                            info={INFO.fogParallel}
-                                        />
-                                    </div>
-                                    {controls.fogParallel && (
-                                        <Slider
-                                            label="Speed ×"
-                                            value={controls.fogParallelSpeed}
-                                            min={0.25}
-                                            max={4}
-                                            step={0.05}
-                                            onChange={controls.setFogParallelSpeed}
-                                            format={(v) => v.toFixed(2)}
-                                            info={INFO.fogParallelSpeed}
-                                        />
-                                    )}
-                                </>
-                            )}
-                            {!controls.caps &&
-                                (!controls.garland ||
-                                    controls.fogFixed ||
-                                    controls.fogParallel) && (
+                            {controls.caps && (
+                                <ControlSubSection label="caps">
                                     <ColorTable
-                                        info={INFO.fogColors}
+                                        label="caps palette"
+                                        info={INFO.capsPalette}
                                         columns={["idle", "peak"]}
-                                        lockedColumns={peakLocked ? ["peak"] : []}
+                                        lockedColumns={
+                                            peakLocked ? ["peak"] : []
+                                        }
                                         columnStamps={peakStamp}
                                         rows={[
                                             {
-                                                label: "",
+                                                label: "bass",
                                                 cells: [
                                                     {
-                                                        value: controls.fogIdle,
-                                                        onChange: controls.setFogIdle,
+                                                        value: controls.capBassIdle,
+                                                        onChange:
+                                                            controls.setCapBassIdle,
                                                     },
                                                     {
-                                                        value: controls.fogPeak,
-                                                        onChange: controls.setFogPeak,
+                                                        value: controls.capBassPeak,
+                                                        onChange:
+                                                            controls.setCapBassPeak,
                                                     },
                                                 ],
                                             },
-                                        ]}
-                                    />
-                                )}
-                            <Slider
-                                label="Height"
-                                value={controls.fogHeight}
-                                min={0.15}
-                                max={3}
-                                step={0.05}
-                                onChange={controls.setFogHeight}
-                                format={(v) => v.toFixed(2)}
-                                info={INFO.fogHeight}
-                            />
-                            <Slider
-                                label="Density"
-                                value={controls.fogDensity}
-                                min={0}
-                                max={1}
-                                step={0.01}
-                                onChange={controls.setFogDensity}
-                                format={(v) => v.toFixed(2)}
-                                info={INFO.fogDensity}
-                            />
-                        </ControlSection>
-
-                        <ControlSection label="light" info={INFO.light}>
-                            <Slider
-                                label="Intensity"
-                                value={controls.lightIntensity}
-                                min={0}
-                                max={2}
-                                step={0.05}
-                                onChange={controls.setLightIntensity}
-                                format={(v) => `×${v.toFixed(2)}`}
-                                info={INFO.lightIntensity}
-                            />
-                        </ControlSection>
-
-                        <ControlSection label="camera" info={INFO.camera}>
-                            <Slider
-                                label="Angle"
-                                value={controls.cameraAngle}
-                                min={20}
-                                max={70}
-                                step={1}
-                                onChange={controls.setCameraAngle}
-                                info={INFO.cameraAngle}
-                            />
-                            <Slider
-                                label="Height"
-                                value={controls.cameraHeight}
-                                min={4}
-                                max={20}
-                                step={0.1}
-                                onChange={controls.setCameraHeight}
-                                format={(v) => v.toFixed(1)}
-                                info={INFO.cameraHeight}
-                            />
-                            <Slider
-                                label="Offset"
-                                value={controls.cameraOffset}
-                                min={0}
-                                max={30}
-                                step={1}
-                                onChange={controls.setCameraOffset}
-                                format={(v) => v.toFixed(1)}
-                                info={INFO.cameraOffset}
-                            />
-                            <Slider
-                                label="Rotate"
-                                value={controls.cameraRotate}
-                                min={-45}
-                                max={45}
-                                step={1}
-                                onChange={controls.setCameraRotate}
-                                info={INFO.cameraRotate}
-                            />
-                            <Slider
-                                label="Zoom"
-                                value={controls.cameraZoom}
-                                min={1}
-                                max={3}
-                                step={0.1}
-                                onChange={controls.setCameraZoom}
-                                format={(v) => v.toFixed(2)}
-                                info={INFO.cameraZoom}
-                            />
-                            <div className="flex gap-2 py-2">
-                                <Toggle
-                                    label="Spin"
-                                    checked={controls.spin}
-                                    onChange={controls.setSpin}
-                                    info={INFO.spin}
-                                />
-                                <Toggle
-                                    label={controls.spinLeft ? "Left" : "Right"}
-                                    checked={controls.spinLeft}
-                                    onChange={controls.setSpinLeft}
-                                    disabled={!controls.spin}
-                                    info={INFO.spinDir}
-                                />
-                            </div>
-                            {controls.spin && (
-                                <Slider
-                                    label="Spin speed"
-                                    value={controls.spinSpeed}
-                                    min={0.1}
-                                    max={4}
-                                    step={0.05}
-                                    onChange={controls.setSpinSpeed}
-                                    format={(v) => v.toFixed(2)}
-                                    info={INFO.spinSpeed}
-                                />
-                            )}
-                        </ControlSection>
-
-                        <ControlSection label="grid" info={INFO.grid}>
-                            <Toggle
-                                label="Fixed"
-                                checked={controls.gridFixed}
-                                onChange={controls.setGridFixed}
-                                info={INFO.gridFixed}
-                            />
-                            {controls.gridFixed ? (
-                                <ColorField
-                                    label="Color"
-                                    value={controls.gridColor}
-                                    onChange={controls.setGridColor}
-                                    info={INFO.gridColor}
-                                />
-                            ) : (
-                                !controls.caps && (
-                                    <ColorTable
-                                        info={INFO.gridColors}
-                                        columns={["idle", "peak"]}
-                                        lockedColumns={peakLocked ? ["peak"] : []}
-                                        columnStamps={peakStamp}
-                                        rows={[
                                             {
-                                                label: "",
+                                                label: "mid",
+                                                cells: [
+                                                    {
+                                                        value: controls.capMidIdle,
+                                                        onChange:
+                                                            controls.setCapMidIdle,
+                                                    },
+                                                    {
+                                                        value: controls.capMidPeak,
+                                                        onChange:
+                                                            controls.setCapMidPeak,
+                                                    },
+                                                ],
+                                            },
+                                            {
+                                                label: "high",
+                                                cells: [
+                                                    {
+                                                        value: controls.capHighIdle,
+                                                        onChange:
+                                                            controls.setCapHighIdle,
+                                                    },
+                                                    {
+                                                        value: controls.capHighPeak,
+                                                        onChange:
+                                                            controls.setCapHighPeak,
+                                                    },
+                                                ],
+                                            },
+                                            {
+                                                label: "fog",
+                                                cells: [
+                                                    {
+                                                        value: controls.capFogIdle,
+                                                        onChange:
+                                                            controls.setCapFogIdle,
+                                                    },
+                                                    {
+                                                        value: controls.capFogPeak,
+                                                        onChange:
+                                                            controls.setCapFogPeak,
+                                                    },
+                                                ],
+                                            },
+                                            {
+                                                label: "grid",
                                                 cells: [
                                                     {
                                                         value: controls.capGridIdle,
-                                                        onChange: controls.setCapGridIdle,
+                                                        onChange:
+                                                            controls.setCapGridIdle,
                                                     },
                                                     {
                                                         value: controls.capGridPeak,
-                                                        onChange: controls.setCapGridPeak,
+                                                        onChange:
+                                                            controls.setCapGridPeak,
                                                     },
                                                 ],
                                             },
                                         ]}
                                     />
-                                )
+                                </ControlSubSection>
                             )}
-                            <Slider
-                                label="Scale ×"
-                                value={controls.gridScale}
-                                min={0.25}
-                                max={4}
-                                step={0.05}
-                                onChange={controls.setGridScale}
-                                format={(v) => v.toFixed(2)}
-                                info={INFO.gridScale}
-                            />
+
+                            <ControlSubSection label="field">
+                                <Slider
+                                    label="Hex grid"
+                                    value={controls.hexGrid}
+                                    min={57}
+                                    max={107}
+                                    step={1}
+                                    onChange={controls.setHexGrid}
+                                    format={(v) => v.toFixed(0)}
+                                    info={INFO.hexGrid}
+                                />
+                            </ControlSubSection>
+                        </ControlSection>
+
+                        <ControlSection label="fog" info={INFO.fog}>
+                            <ControlSubSection label="tint">
+                                {controls.garland && !controls.caps && (
+                                    <>
+                                        <div className="flex flex-wrap gap-1.5">
+                                            <Toggle
+                                                label="Fixed"
+                                                checked={controls.fogFixed}
+                                                onChange={controls.setFogFixed}
+                                                info={INFO.fogFixed}
+                                            />
+                                            <Toggle
+                                                label="Parallel"
+                                                checked={controls.fogParallel}
+                                                onChange={controls.setFogParallel}
+                                                info={INFO.fogParallel}
+                                            />
+                                        </div>
+                                        {controls.fogParallel && (
+                                            <Slider
+                                                label="Speed ×"
+                                                value={controls.fogParallelSpeed}
+                                                min={0.25}
+                                                max={4}
+                                                step={0.05}
+                                                onChange={
+                                                    controls.setFogParallelSpeed
+                                                }
+                                                format={(v) => v.toFixed(2)}
+                                                info={INFO.fogParallelSpeed}
+                                            />
+                                        )}
+                                    </>
+                                )}
+                                {!controls.caps &&
+                                    (!controls.garland ||
+                                        controls.fogFixed ||
+                                        controls.fogParallel) && (
+                                        <ColorTable
+                                            info={INFO.fogColors}
+                                            columns={["idle", "peak"]}
+                                            lockedColumns={
+                                                peakLocked ? ["peak"] : []
+                                            }
+                                            columnStamps={peakStamp}
+                                            rows={[
+                                                {
+                                                    label: "",
+                                                    cells: [
+                                                        {
+                                                            value: controls.fogIdle,
+                                                            onChange:
+                                                                controls.setFogIdle,
+                                                        },
+                                                        {
+                                                            value: controls.fogPeak,
+                                                            onChange:
+                                                                controls.setFogPeak,
+                                                        },
+                                                    ],
+                                                },
+                                            ]}
+                                        />
+                                    )}
+                            </ControlSubSection>
+                            <ControlSubSection label="volume">
+                                <Slider
+                                    label="Height"
+                                    value={controls.fogHeight}
+                                    min={0.15}
+                                    max={3}
+                                    step={0.05}
+                                    onChange={controls.setFogHeight}
+                                    format={(v) => v.toFixed(2)}
+                                    info={INFO.fogHeight}
+                                />
+                                <Slider
+                                    label="Density"
+                                    value={controls.fogDensity}
+                                    min={0}
+                                    max={1}
+                                    step={0.01}
+                                    onChange={controls.setFogDensity}
+                                    format={(v) => v.toFixed(2)}
+                                    info={INFO.fogDensity}
+                                />
+                            </ControlSubSection>
+                        </ControlSection>
+
+                        <ControlSection label="camera" info={INFO.camera}>
+                            <ControlSubSection label="framing">
+                                <Slider
+                                    label="Angle"
+                                    value={controls.cameraAngle}
+                                    min={20}
+                                    max={70}
+                                    step={1}
+                                    onChange={controls.setCameraAngle}
+                                    info={INFO.cameraAngle}
+                                />
+                                <Slider
+                                    label="Height"
+                                    value={controls.cameraHeight}
+                                    min={4}
+                                    max={20}
+                                    step={0.1}
+                                    onChange={controls.setCameraHeight}
+                                    format={(v) => v.toFixed(1)}
+                                    info={INFO.cameraHeight}
+                                />
+                                <Slider
+                                    label="Offset"
+                                    value={controls.cameraOffset}
+                                    min={0}
+                                    max={30}
+                                    step={1}
+                                    onChange={controls.setCameraOffset}
+                                    format={(v) => v.toFixed(1)}
+                                    info={INFO.cameraOffset}
+                                />
+                                <Slider
+                                    label="Rotate"
+                                    value={controls.cameraRotate}
+                                    min={-45}
+                                    max={45}
+                                    step={1}
+                                    onChange={controls.setCameraRotate}
+                                    info={INFO.cameraRotate}
+                                />
+                                <Slider
+                                    label="Zoom"
+                                    value={controls.cameraZoom}
+                                    min={1}
+                                    max={3}
+                                    step={0.1}
+                                    onChange={controls.setCameraZoom}
+                                    format={(v) => v.toFixed(2)}
+                                    info={INFO.cameraZoom}
+                                />
+                            </ControlSubSection>
+                            <ControlSubSection label="orbit">
+                                <div className="flex flex-wrap gap-1.5">
+                                    <Toggle
+                                        label="Spin"
+                                        checked={controls.spin}
+                                        onChange={controls.setSpin}
+                                        info={INFO.spin}
+                                    />
+                                    <Toggle
+                                        label={
+                                            controls.spinLeft ? "Left" : "Right"
+                                        }
+                                        checked={controls.spinLeft}
+                                        onChange={controls.setSpinLeft}
+                                        disabled={!controls.spin}
+                                        info={INFO.spinDir}
+                                    />
+                                </div>
+                                {controls.spin && (
+                                    <Slider
+                                        label="Spin speed"
+                                        value={controls.spinSpeed}
+                                        min={0.1}
+                                        max={4}
+                                        step={0.05}
+                                        onChange={controls.setSpinSpeed}
+                                        format={(v) => v.toFixed(2)}
+                                        info={INFO.spinSpeed}
+                                    />
+                                )}
+                            </ControlSubSection>
+                        </ControlSection>
+
+                        <ControlSection label="grid" info={INFO.grid}>
+                            <ControlSubSection label="tint">
+                                <Toggle
+                                    label="Fixed"
+                                    checked={controls.gridFixed}
+                                    onChange={controls.setGridFixed}
+                                    info={INFO.gridFixed}
+                                />
+                                {controls.gridFixed ? (
+                                    <ColorField
+                                        label="Color"
+                                        value={controls.gridColor}
+                                        onChange={controls.setGridColor}
+                                        info={INFO.gridColor}
+                                    />
+                                ) : (
+                                    !controls.caps && (
+                                        <ColorTable
+                                            info={INFO.gridColors}
+                                            columns={["idle", "peak"]}
+                                            lockedColumns={
+                                                peakLocked ? ["peak"] : []
+                                            }
+                                            columnStamps={peakStamp}
+                                            rows={[
+                                                {
+                                                    label: "",
+                                                    cells: [
+                                                        {
+                                                            value: controls.capGridIdle,
+                                                            onChange:
+                                                                controls.setCapGridIdle,
+                                                        },
+                                                        {
+                                                            value: controls.capGridPeak,
+                                                            onChange:
+                                                                controls.setCapGridPeak,
+                                                        },
+                                                    ],
+                                                },
+                                            ]}
+                                        />
+                                    )
+                                )}
+                            </ControlSubSection>
+                            <ControlSubSection label="scale">
+                                <Slider
+                                    label="Scale ×"
+                                    value={controls.gridScale}
+                                    min={0.25}
+                                    max={4}
+                                    step={0.05}
+                                    onChange={controls.setGridScale}
+                                    format={(v) => v.toFixed(2)}
+                                    info={INFO.gridScale}
+                                />
+                            </ControlSubSection>
                         </ControlSection>
 
                         <VisualizerSection
                             visualizer={visualizer}
                             info={INFO.visualizer}
                         >
-                            <div className="flex flex-wrap gap-2">
-                                <Toggle
-                                    label="Band bounce"
-                                    checked={controls.bandBounce}
-                                    onChange={controls.setBandBounce}
-                                    disabled={!visualizer.reactive}
-                                    info={INFO.bandBounce}
-                                />
-                                <Toggle
-                                    label="Flicker"
-                                    checked={controls.bandFlicker}
-                                    onChange={controls.setBandFlicker}
-                                    disabled={!visualizer.reactive}
-                                    info={INFO.bandFlicker}
-                                />
-                            </div>
+                            <ControlSubSection label="react">
+                                <div className="flex flex-wrap gap-1.5">
+                                    <Toggle
+                                        label="Band bounce"
+                                        checked={controls.bandBounce}
+                                        onChange={controls.setBandBounce}
+                                        disabled={!visualizer.reactive}
+                                        info={INFO.bandBounce}
+                                    />
+                                    <Toggle
+                                        label="Flicker"
+                                        checked={controls.bandFlicker}
+                                        onChange={controls.setBandFlicker}
+                                        disabled={!visualizer.reactive}
+                                        info={INFO.bandFlicker}
+                                    />
+                                </div>
+                            </ControlSubSection>
                             {visualizer.reactive && (
                                 <>
                                     <ControlSubSection label="channels">
                                         <Select
                                             label="Grid"
                                             value={controls.gridChannel}
-                                            options={[...REACTIVE_CHANNEL_OPTIONS]}
+                                            options={[
+                                                ...REACTIVE_CHANNEL_OPTIONS,
+                                            ]}
                                             onChange={controls.setGridChannel}
                                             info={INFO.gridChannel}
                                         />
                                         <Select
                                             label="Fog"
                                             value={controls.fogChannel}
-                                            options={[...REACTIVE_CHANNEL_OPTIONS]}
+                                            options={[
+                                                ...REACTIVE_CHANNEL_OPTIONS,
+                                            ]}
                                             onChange={controls.setFogChannel}
                                             info={INFO.fogChannel}
                                         />
                                         <Select
                                             label="Spin"
                                             value={controls.spinChannel}
-                                            options={[...REACTIVE_CHANNEL_OPTIONS]}
+                                            options={[
+                                                ...REACTIVE_CHANNEL_OPTIONS,
+                                            ]}
                                             onChange={controls.setSpinChannel}
                                             info={INFO.spinChannel}
                                         />
                                     </ControlSubSection>
-                                    {controls.spin &&
-                                        controls.spinChannel !== "off" && (
-                                            <ControlSubSection label="drive">
-                                                <Slider
-                                                    label="Spin accel"
-                                                    value={controls.spinAccel}
-                                                    min={0}
-                                                    max={8}
-                                                    step={0.1}
-                                                    onChange={controls.setSpinAccel}
-                                                    format={(v) =>
-                                                        `×${v.toFixed(1)}`
-                                                    }
-                                                    info={INFO.spinAccel}
-                                                />
-                                            </ControlSubSection>
-                                        )}
+                                    <ControlSubSection label="drive">
+                                        <Slider
+                                            label="Grid"
+                                            value={controls.gridDrive}
+                                            min={0}
+                                            max={8}
+                                            step={0.5}
+                                            onChange={controls.setGridDrive}
+                                            format={(v) => `×${v.toFixed(1)}`}
+                                            info={INFO.gridDrive}
+                                        />
+                                        <Slider
+                                            label="Fog"
+                                            value={controls.fogDrive}
+                                            min={0}
+                                            max={8}
+                                            step={0.5}
+                                            onChange={controls.setFogDrive}
+                                            format={(v) => `×${v.toFixed(1)}`}
+                                            info={INFO.fogDrive}
+                                        />
+                                        <Slider
+                                            label="Spin"
+                                            value={controls.spinDrive}
+                                            min={0}
+                                            max={8}
+                                            step={0.1}
+                                            onChange={controls.setSpinDrive}
+                                            format={(v) => `×${v.toFixed(1)}`}
+                                            info={INFO.spinDrive}
+                                        />
+                                    </ControlSubSection>
                                 </>
                             )}
                         </VisualizerSection>

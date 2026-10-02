@@ -41,7 +41,7 @@ export function VisualizerSection({
   info,
 }: VisualizerSectionProps) {
   return (
-    <ControlSection label="visualizer" info={info?.section} defaultOpen={false}>
+    <ControlSection label="visualizer" info={info?.section}>
       <div className="flex items-center justify-between gap-3 text-[10px] uppercase tracking-[0.2em]">
         <span className="text-muted">extension</span>
         <span

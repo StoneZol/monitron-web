@@ -157,12 +157,22 @@ function PanelFold({
                 >
                     <span
                         className={cn(
-                            "shrink-0 text-magenta",
-                            isSub ? "w-1.5" : "w-2",
+                            "inline-flex shrink-0 items-center justify-center text-magenta",
+                            isSub ? "size-3.5" : "size-4",
                         )}
                         aria-hidden
                     >
-                        {open ? "▾" : "▸"}
+                        <svg
+                            viewBox="0 0 12 12"
+                            className="size-full"
+                            fill="currentColor"
+                        >
+                            {open ? (
+                                <path d="M2 4.5 L6 8.5 L10 4.5" />
+                            ) : (
+                                <path d="M4.5 2 L8.5 6 L4.5 10" />
+                            )}
+                        </svg>
                     </span>
                     <span className="truncate">{label}</span>
                 </button>
@@ -206,7 +216,7 @@ type ControlSubSectionProps = ControlSectionProps;
  * Storage key = `parent/child` (e.g. `look/sky`).
  */
 export function ControlSubSection({
-    defaultOpen = false,
+    defaultOpen = true,
     ...props
 }: ControlSubSectionProps) {
     return <PanelFold {...props} depth="sub" defaultOpen={defaultOpen} />;

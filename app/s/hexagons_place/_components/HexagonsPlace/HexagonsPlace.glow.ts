@@ -89,7 +89,7 @@ export function applyGlow(
           : ch === "mid"
             ? audio.mid
             : audio.high;
-    return Math.max(0, Math.min(1, raw));
+    return Math.max(0, Math.min(1, raw * Math.max(0, live.fogDrive)));
   })();
 
   if (garland && !live.fogFixed && !live.fogParallel) {

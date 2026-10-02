@@ -32,6 +32,8 @@ export type HexagonsPlaceLive = {
   capGridPeak: string;
   /** Reactive: which audio band drives grid idle→peak; off = static idle */
   gridChannel: ReactiveChannel;
+  /** Multiplier on grid channel level (1 = previous feel) */
+  gridDrive: number;
   /** Scales the aux ground grid helper */
   gridScale: number;
   garland: boolean;
@@ -52,6 +54,8 @@ export type HexagonsPlaceLive = {
   capFogPeak: string;
   /** Reactive: which audio band drives caps/non-fixed fog idle→peak; off = static idle */
   fogChannel: ReactiveChannel;
+  /** Multiplier on fog channel level (1 = previous feel) */
+  fogDrive: number;
   /** Hue degrees per second when garland is on */
   colorSpeed: number;
   /** Pitch down in degrees — tips the view, does not move the camera */
@@ -73,7 +77,7 @@ export type HexagonsPlaceLive = {
   /** Reactive: which band punches spin speed; off = constant spinSpeed */
   spinChannel: ReactiveChannel;
   /** Multiplies spin channel punches (acceleration feel) */
-  spinAccel: number;
+  spinDrive: number;
   /** How high the fog layer sits above the grid (world Y at zoom=1) */
   fogHeight: number;
   /** 0 = clear, 1 = opaque haze inside the fog layer */
