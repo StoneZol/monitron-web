@@ -1,3 +1,4 @@
+"use client";
 import Image from "next/image";
 import Link from "next/link";
 import type { PlaceholderMeta } from "@/lib/placeholders";
@@ -13,6 +14,7 @@ export function PlaceholderCard({
 }: PlaceholderCardProps) {
     const channel = String(index + 1).padStart(2, "0");
     const hasPreview = Boolean(placeholder.previewSrc);
+    const primarySource = placeholder.sources?.[0];
 
     return (
         <Link
@@ -59,14 +61,39 @@ export function PlaceholderCard({
                 <div className="absolute top-2 left-2 z-10 font-mono text-[9px] tracking-[0.2em] text-signal/50 group-hover:text-signal">
                     CH-{channel}
                 </div>
-                {placeholder.reactive ? (
-                    <div
-                        className="stamp absolute top-2 right-2 z-10 px-1.5 py-0.5 text-[8px] tracking-[0.2em]"
-                        title="Works with Monitron Chrome extension"
-                    >
-                        reactive
-                    </div>
-                ) : null}
+                <div className="absolute top-2 right-2 z-10 flex flex-col items-end gap-1">
+                    {placeholder.reactive ? (
+                        <div
+                            className="stamp px-1.5 py-0.5 text-[8px] tracking-[0.2em]"
+                            title="Works with Monitron Chrome extension"
+                        >
+                            reactive
+                        </div>
+                    ) : null}
+                    {primarySource ? (
+                        <button
+                            type="button"
+                            title={
+                                placeholder.sources
+                                    ?.map((s) => s.label)
+                                    .join(" · ") ?? primarySource.label
+                            }
+                            onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                window.open(
+                                    primarySource.href,
+                                    "_blank",
+                                    "noopener,noreferrer",
+                                );
+                            }}
+                            onPointerDown={(e) => e.stopPropagation()}
+                            className="stamp px-1.5 py-0.5 text-[8px] tracking-[0.2em] text-cyan hover:border-cyan hover:text-signal"
+                        >
+                            sourced
+                        </button>
+                    ) : null}
+                </div>
                 <div className="absolute right-2 bottom-2 z-10 font-mono text-[9px] tracking-[0.18em] text-magenta/50 group-hover:text-magenta">
                     {hasPreview ? "ON" : "OFF"}
                 </div>

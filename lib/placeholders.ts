@@ -6,6 +6,8 @@ export type PlaceholderMeta = {
     previewSrc?: string;
     /** Compatible with Monitron Chrome extension audio-bus */
     reactive?: boolean;
+    /** Attribution links (Shadertoy etc.) — clickable badge on the card */
+    sources?: { label: string; href: string }[];
 };
 
 export const placeholders: PlaceholderMeta[] = [
@@ -29,5 +31,21 @@ export const placeholders: PlaceholderMeta[] = [
         href: "/s/synthwave",
         previewSrc: "/s/synthwave.webp",
         reactive: true,
+    },
+    {
+        id: "blackhole",
+        title: "Blackhole",
+        href: "/s/blackhole",
+        reactive: true,
+        sources: [
+            {
+                label: "Gargantua · sonicether",
+                href: "https://www.shadertoy.com/view/lstSRS",
+            },
+            {
+                label: "flight · tsBXW3",
+                href: "https://www.shadertoy.com/view/tsBXW3",
+            },
+        ],
     },
 ];
