@@ -105,8 +105,8 @@ function migratePrefs(
             typeof raw.roadDrive === "number"
                 ? raw.roadDrive
                 : typeof raw.drive === "number"
-                  ? raw.drive
-                  : SYNTHWAVE_DEFAULTS.roadDrive,
+                    ? raw.drive
+                    : SYNTHWAVE_DEFAULTS.roadDrive,
         ),
         glowDrive: clampDrive(
             typeof raw.glowDrive === "number"
