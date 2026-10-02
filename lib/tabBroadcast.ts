@@ -2,7 +2,10 @@
 
 import { saveScreenPrefs } from "@/lib/screenPrefs";
 
-export const TAB_SYNC_VERSION = 1 as const;
+export const TAB_SYNC_VERSION = 2 as const;
+
+/** How far ahead of "now" all tabs aim to reload together. */
+export const TAB_SYNC_LEAD_MS = 350;
 
 export type TabSyncMessage = {
   v: typeof TAB_SYNC_VERSION;
@@ -14,6 +17,8 @@ export type TabSyncMessage = {
   prefs: Record<string, unknown>;
   /** Receivers force-hide HUD; sender keeps its overlay. */
   hideOverlay: true;
+  /** Absolute Date.now() deadline — all tabs reload at/after this. */
+  reloadAt: number;
 };
 
 let tabSenderId: string | null = null;
@@ -36,13 +41,25 @@ export function hudStorageKey(screenId: string) {
   return `monitron:${screenId}:hudHidden`;
 }
 
-/** Push full prefs to other tabs on this path; they hide HUD + reload. */
+/** Wait until wall-clock `reloadAt`, then reload (0 delay if already past). */
+export function scheduleReloadAt(reloadAt: number): void {
+  const delay = Math.max(0, reloadAt - Date.now());
+  window.setTimeout(() => {
+    window.location.reload();
+  }, delay);
+}
+
+/**
+ * Push full prefs + shared reload deadline. Returns reloadAt so the sender
+ * can wait on the same tick without applying hideOverlay.
+ */
 export function broadcastTabSync(
   screenId: string,
   prefs: Record<string, unknown>,
-): void {
+): number {
+  const reloadAt = Date.now() + TAB_SYNC_LEAD_MS;
   if (typeof window === "undefined" || typeof BroadcastChannel === "undefined") {
-    return;
+    return reloadAt;
   }
   const path = window.location.pathname;
   const msg: TabSyncMessage = {
@@ -52,10 +69,12 @@ export function broadcastTabSync(
     senderId: getTabSyncSenderId(),
     prefs: { ...prefs },
     hideOverlay: true,
+    reloadAt,
   };
   const ch = new BroadcastChannel(tabSyncChannelName(path));
   ch.postMessage(msg);
   ch.close();
+  return reloadAt;
 }
 
 export function subscribeTabSync(
@@ -82,7 +101,10 @@ export function subscribeTabSync(
   return () => ch.close();
 }
 
-/** Persist full prefs + force-hide HUD, then reload — scene restarts on the new config. */
+/**
+ * Persist prefs + force-hide HUD, then wait for shared reloadAt.
+ * (Late message → reload ASAP.)
+ */
 export function applyIncomingTabSync(
   screenId: string,
   msg: TabSyncMessage,
@@ -93,5 +115,5 @@ export function applyIncomingTabSync(
   } catch {
     /* ignore */
   }
-  window.location.reload();
+  scheduleReloadAt(msg.reloadAt);
 }

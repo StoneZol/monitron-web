@@ -8,6 +8,7 @@ import {
   broadcastTabSync,
   getTabSyncSenderId,
   hudStorageKey,
+  scheduleReloadAt,
   subscribeTabSync,
 } from "@/lib/tabBroadcast";
 
@@ -80,9 +81,9 @@ const useScreensOverlayHook = (screenId: string) => {
   }, [screenId]);
 
   const sync = () => {
-    broadcastTabSync(screenId, readScreenPrefsRaw(screenId));
-    // Restart with peers; keep this tab's HUD (receivers force-hide).
-    window.location.reload();
+    const reloadAt = broadcastTabSync(screenId, readScreenPrefsRaw(screenId));
+    // Same deadline as peers; keep this tab's HUD (receivers force-hide).
+    scheduleReloadAt(reloadAt);
   };
 
   return {
