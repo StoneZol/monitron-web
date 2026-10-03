@@ -68,4 +68,18 @@ export const placeholders: PlaceholderMeta[] = [
             },
         ],
     },
+    {
+        id: "warpburst",
+        title: "Warpburst",
+        href: "/s/warpburst",
+        previewSrc: "/s/warpburst.webp",
+        reactive: true,
+        sources: [
+            {
+                author: "heidro",
+                title: "Warpburst 2",
+                href: "https://www.shadertoy.com/view/fXGGDV",
+            },
+        ],
+    },
 ];
