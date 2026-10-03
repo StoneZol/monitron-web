@@ -58,6 +58,7 @@ export const placeholders: PlaceholderMeta[] = [
         id: "hexacore",
         title: "Hexacore",
         href: "/s/hexacore",
+        previewSrc: "/s/hexacore.webp",
         reactive: true,
         sources: [
             {

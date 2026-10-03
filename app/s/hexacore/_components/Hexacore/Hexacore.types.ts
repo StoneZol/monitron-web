@@ -16,6 +16,8 @@ export type HexacoreLive = {
   garland: boolean;
   /** Iridescence / twinkle rate (1 ≈ default) */
   garlandSpeed: number;
+  /** Look chroma (0 = gray, 1 = default) */
+  saturation: number;
   colorChannel: ReactiveChannel;
   colorDrive: number;
   speedChannel: ReactiveChannel;
@@ -30,6 +32,7 @@ export const HEXACORE_DEFAULTS: HexacoreLive = {
   colorPeak: "#00eeff",
   garland: true,
   garlandSpeed: 1,
+  saturation: 1,
   colorChannel: "bass",
   colorDrive: 1.2,
   speedChannel: "bass",
@@ -39,5 +42,6 @@ export const HEXACORE_DEFAULTS: HexacoreLive = {
 export const HEXACORE_RANGES = {
   flightSpeed: { min: 0.1, max: 3, step: 0.05 },
   garlandSpeed: { min: 0, max: 4, step: 0.05 },
+  saturation: { min: 0, max: 2, step: 0.05 },
   drive: { min: 0, max: HEXACORE_DRIVE_MAX, step: 0.1 },
 } as const;

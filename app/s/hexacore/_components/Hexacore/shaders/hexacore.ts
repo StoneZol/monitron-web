@@ -9,6 +9,7 @@
  * - uWaveColor: garland tint (idle picker; not audio-modulated)
  * - uGarland: realtime iridescent emit on hex circuitry; off = solid uColor edges
  * - uGarlandSpeed: iridescence / twinkle rate multiplier
+ * - uSaturation: look chroma (0 = gray, 1 = default, >1 = boost)
  * - AA=1 for monitor perf
  */
 
@@ -32,6 +33,7 @@ uniform vec3 uColor;
 uniform vec3 uWaveColor;
 uniform float uGarland;
 uniform float uGarlandSpeed;
+uniform float uSaturation;
 
 #define MAX_STEPS    110
 #define MAX_DIST     28.0
@@ -63,13 +65,17 @@ float hash21(vec2 p){
 }
 
 vec3 pal(float t, vec3 a, vec3 b, vec3 c, vec3 d){ return a + b * cos(2.0 * PI * (c * t + d)); }
+vec3 satMix(vec3 c){
+  float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
+  return mix(vec3(l), c, uSaturation);
+}
 vec3 palCrystal(float t){
   vec3 c = pal(t, vec3(.50,.50,.55), vec3(.50,.45,.45), vec3(1.,1.,1.),  vec3(.00,.15,.35));
-  return c * mix(vec3(1.0), uColor * 1.35, 0.55);
+  return satMix(c * mix(vec3(1.0), uColor * 1.35, 0.55));
 }
 vec3 palEnergy (float t){
   vec3 c = pal(t, vec3(.60,.45,.50), vec3(.45,.45,.50), vec3(1.,.9,.8),   vec3(.55,.25,.05));
-  return c * mix(vec3(1.0), uWaveColor * 1.5, 0.7);
+  return satMix(c * mix(vec3(1.0), uWaveColor * 1.5, 0.7));
 }
 
 float sdHex2(vec2 p, float r){
@@ -195,9 +201,10 @@ vec3 aces(vec3 x){
     return clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14), 0.0, 1.0);
 }
 
-// Realtime iridescence — driven by time, not road Z (so flight doesn’t scrub the palette)
-vec3 energyCol(float cellSeed){
-    return palEnergy(0.55 * gGarlandT + cellSeed * 0.21);
+// Time-driven iridescence + mild lead along the path (ahead of cam = further in palette)
+vec3 energyCol(float cellSeed, float pathZ){
+    float lead = 0.032 * (pathZ - gCamZ);
+    return palEnergy(0.55 * gGarlandT + cellSeed * 0.21 + lead);
 }
 
 vec3 fogCol(vec3 rd){
@@ -216,8 +223,8 @@ float march(vec3 ro, vec3 rd, float pix, int steps, float tmax, inout vec3 vol, 
 
         if (volW > 0.0 && glowMul > 0.0){
             float e = gEmit;
-            float twinkle = 0.7 + 0.3 * sin(gGarlandT * 2.6 + e * 30.0);
-            vol += volW * energyCol(e * 10.0) * twinkle
+            float twinkle = 0.7 + 0.3 * sin(gGarlandT * 2.6 + e * 30.0 + 0.08 * (p.z - gCamZ));
+            vol += volW * energyCol(e * 10.0, p.z) * twinkle
                    * 0.0004 / (0.0004 + e * e * 300.0)
                    * exp(-0.07 * t) * min(ar, 0.15) * 0.6;
         }
@@ -266,19 +273,19 @@ vec3 shade(vec3 p, vec3 n, vec3 rd, float t, bool full, out vec3 F0out, out floa
     float ao  = full ? calcAO(p, n) : 0.6;
     float dif = max(dot(n, l), 0.0);
 
-    vec3 lc  = mix(vec3(1.0, 0.9, 0.8), energyCol(0.35), 0.35);
+    vec3 lc  = mix(vec3(1.0, 0.9, 0.8), energyCol(0.35, gCamZ + 4.0), 0.35);
     vec3 col = alb * (1.0 - F0) * dif * att * sh * lc / PI * 3.0;
     col     += ggx(n, v, l, rough, F0) * att * sh * lc * (mat < 0.5 ? 1.2 : 0.18);
 
-    col += alb * ao * (0.06 + 0.06 * n.y) * energyCol(0.55);
+    col += alb * ao * (0.06 + 0.06 * n.y) * energyCol(0.55, p.z);
 
-    // Hex emit: realtime iridescent garland (time-based), or solid tint when off
+    // Hex emit: time iridescence with a mild lead down the trail
     float em = smoothstep(0.003 + 0.002 * t, 0.0, emit);
     if (uGarland > 0.5) {
-        float twinkle = 0.75 + 0.35 * sin(gGarlandT * 2.8 + gCell2 * 6.2831);
-        col += em * energyCol(gCell2) * twinkle * 3.0;
+        float twinkle = 0.75 + 0.35 * sin(gGarlandT * 2.8 + gCell2 * 6.2831 + 0.1 * (p.z - gCamZ));
+        col += em * energyCol(gCell2, p.z) * twinkle * 3.0;
     } else {
-        col += em * uColor * 3.0;
+        col += em * satMix(uColor) * 3.0;
     }
 
     return col * mix(0.5, 1.0, ao);

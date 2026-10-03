@@ -57,6 +57,7 @@ function HexacoreQuad({
           uWaveColor: { value: new THREE.Color("#c8a0ff") },
           uGarland: { value: 1 },
           uGarlandSpeed: { value: 1 },
+          uSaturation: { value: 1 },
         },
       }),
     [],
@@ -126,6 +127,7 @@ function HexacoreQuad({
     m.uniforms.uCamZ!.value = camZ.current;
     m.uniforms.uGarland!.value = live.garland ? 1 : 0;
     m.uniforms.uGarlandSpeed!.value = Math.max(0, live.garlandSpeed);
+    m.uniforms.uSaturation!.value = Math.max(0, live.saturation);
     m.uniforms.uColor!.value.copy(tint);
     // Garland emit palette (palEnergy) reads uWaveColor — must follow audio tint
     m.uniforms.uWaveColor!.value.copy(tint);

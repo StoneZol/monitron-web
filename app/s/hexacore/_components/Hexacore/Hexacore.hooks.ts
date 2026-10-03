@@ -86,6 +86,12 @@ function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
       4,
       STORED_DEFAULTS.garlandSpeed,
     ),
+    saturation: clamp(
+      Number(raw.saturation),
+      0,
+      2,
+      STORED_DEFAULTS.saturation,
+    ),
     colorChannel: channel(raw.colorChannel, STORED_DEFAULTS.colorChannel),
     colorDrive: clamp(
       Number(raw.colorDrive),
@@ -164,6 +170,7 @@ export default function useHexacoreHook() {
       colorPeak: live.colorPeak,
       garland: live.garland,
       garlandSpeed: live.garlandSpeed,
+      saturation: live.saturation,
       colorChannel: live.colorChannel,
       colorDrive: live.colorDrive,
       speedChannel: live.speedChannel,
@@ -174,6 +181,7 @@ export default function useHexacoreHook() {
       setColorPeak: (colorPeak: string) => commit({ colorPeak }),
       setGarland: (garland: boolean) => commit({ garland }),
       setGarlandSpeed: (garlandSpeed: number) => commit({ garlandSpeed }),
+      setSaturation: (saturation: number) => commit({ saturation }),
       setColorChannel: (colorChannel: ReactiveChannel) =>
         commit({ colorChannel }),
       setColorDrive: (colorDrive: number) => commit({ colorDrive }),

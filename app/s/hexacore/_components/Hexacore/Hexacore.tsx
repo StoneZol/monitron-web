@@ -38,6 +38,7 @@ const INFO = {
   garland:
     "Realtime iridescent emit on the hex circuitry. Off: solid edge tint with idle→peak lerp.",
   garlandSpeed: "How fast the garland palette and twinkle cycle (1 ≈ default).",
+  saturation: "Look chroma — crystals, garland, and solid emit (0 = gray, 1 = default).",
   colorChannel: "Band that punches color (garland: hue/brightness; off: idle→peak).",
   speedChannel: "Band that punches flight speed.",
   colorDrive: "Color punch strength.",
@@ -109,6 +110,16 @@ const Hexacore = ({ showOverlay = true }: HexacoreProps) => {
                   info={INFO.garlandSpeed}
                 />
               ) : null}
+              <Slider
+                label="Saturation"
+                value={controls.saturation}
+                min={HEXACORE_RANGES.saturation.min}
+                max={HEXACORE_RANGES.saturation.max}
+                step={HEXACORE_RANGES.saturation.step}
+                onChange={controls.setSaturation}
+                format={(v) => `×${v.toFixed(2)}`}
+                info={INFO.saturation}
+              />
               <ColorTable
                 label="color palette"
                 info={INFO.colorPalette}
