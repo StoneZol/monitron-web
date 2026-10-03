@@ -44,10 +44,10 @@ const INFO = {
   fogDetail:
     "Fog structure — low = soft blobs, high = micro-filaments (1 ≈ default, 4 = max).",
   colorChannel:
-    "Band that punches color + peak flicker (off twinkle: idle→peak).",
+    "Band that punches color (twinkle: shared light pulse + fog flash; off: idle→peak).",
   speedChannel: "Band that punches flight speed.",
-  colorDrive: "Color / peak-flicker punch strength.",
-  speedDrive: "Speed punch strength.",
+  colorDrive: "Color / twinkle pulse boost (0…2).",
+  speedDrive: "Speed punch strength (0…8).",
   visualizer: {
     section: "Audio in → bus meters → peak gain for reactive screens.",
     source:
@@ -193,19 +193,19 @@ const Warpburst = ({ showOverlay = true }: WarpburstProps) => {
                     <Slider
                       label="Color"
                       value={controls.colorDrive}
-                      min={WARPBURST_RANGES.drive.min}
-                      max={controls.driveMax}
-                      step={WARPBURST_RANGES.drive.step}
+                      min={WARPBURST_RANGES.colorDrive.min}
+                      max={controls.colorDriveMax}
+                      step={WARPBURST_RANGES.colorDrive.step}
                       onChange={controls.setColorDrive}
-                      format={(v) => `×${v.toFixed(1)}`}
+                      format={(v) => `×${v.toFixed(2)}`}
                       info={INFO.colorDrive}
                     />
                     <Slider
                       label="Speed"
                       value={controls.speedDrive}
-                      min={WARPBURST_RANGES.drive.min}
-                      max={controls.driveMax}
-                      step={WARPBURST_RANGES.drive.step}
+                      min={WARPBURST_RANGES.speedDrive.min}
+                      max={controls.speedDriveMax}
+                      step={WARPBURST_RANGES.speedDrive.step}
                       onChange={controls.setSpeedDrive}
                       format={(v) => `×${v.toFixed(1)}`}
                       info={INFO.speedDrive}

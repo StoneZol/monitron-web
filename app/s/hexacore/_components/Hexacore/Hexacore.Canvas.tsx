@@ -6,12 +6,17 @@ import * as THREE from "three";
 import type { VizBands } from "@/lib/audioBus";
 import { risingEdge } from "@/lib/audioDerive";
 import {
+  advanceTwinkleHue,
+  createTwinklePulseEnv,
+  pulseTwinkleLight,
+  resolveTwinkleColor,
+  updateTwinklePulseEnv,
+} from "@/lib/twinkleHsl";
+import {
   channelLevel,
   drivenLevel,
   hexToVec3,
-  hueWalkHex,
   lerpHex,
-  pulseBrightness,
 } from "./Hexacore.audio";
 import type { HexacoreLive } from "./Hexacore.types";
 import {
@@ -41,6 +46,8 @@ function HexacoreQuad({
   const lastT = useRef(0);
   const colorEnv = useRef(0);
   const colorPrev = useRef(0);
+  const twinkleHue = useRef(0);
+  const twinklePulse = useRef(createTwinklePulseEnv());
 
   const mat = useMemo(
     () =>
@@ -55,8 +62,7 @@ function HexacoreQuad({
           uCamZ: { value: 0 },
           uColor: { value: new THREE.Color("#c8a0ff") },
           uWaveColor: { value: new THREE.Color("#c8a0ff") },
-          uGarland: { value: 1 },
-          uGarlandSpeed: { value: 1 },
+          uTwinkle: { value: 1 },
           uSaturation: { value: 1 },
         },
       }),
@@ -100,22 +106,28 @@ function HexacoreQuad({
     colorEnv.current *= Math.exp(-COLOR_DECAY * dt);
     if (colorEnv.current < 0.004) colorEnv.current = 0;
     colorPrev.current = colorHit;
-    // Garland: follow live level so bass pumps always tint the emit;
-    // envelope still adds rising-edge snaps on top.
-    const colorAmt = colorArmed
-      ? Math.max(
-          colorEnv.current,
-          live.garland ? Math.min(1, colorPunch) : 0,
-        )
-      : 0;
+    const colorAmt = colorArmed ? colorEnv.current : 0;
 
-    if (live.garland) {
-      if (colorArmed && colorAmt > 0.001) {
-        hueWalkHex(live.color, colorAmt * 90, tint);
-        // Mild boost — don't crush idle shimmer between hits
-        pulseBrightness(tint, colorAmt, 0.88);
-      } else {
-        hexToVec3(live.color, tint);
+    if (live.twinkle) {
+      twinkleHue.current = advanceTwinkleHue(
+        twinkleHue.current,
+        dt,
+        live.twinkleSpeed,
+      );
+      resolveTwinkleColor(
+        twinkleHue.current,
+        live.twinkleS,
+        live.twinkleL,
+        tint,
+      );
+      if (colorArmed) {
+        const pulseAmt = updateTwinklePulseEnv(
+          twinklePulse.current,
+          colorRaw,
+          live.colorDrive,
+          dt,
+        );
+        pulseTwinkleLight(tint, pulseAmt, live.colorDrive);
       }
     } else if (colorArmed && colorAmt > 0.001) {
       lerpHex(live.color, live.colorPeak, colorAmt, tint);
@@ -125,11 +137,9 @@ function HexacoreQuad({
 
     m.uniforms.iTime!.value = t;
     m.uniforms.uCamZ!.value = camZ.current;
-    m.uniforms.uGarland!.value = live.garland ? 1 : 0;
-    m.uniforms.uGarlandSpeed!.value = Math.max(0, live.garlandSpeed);
+    m.uniforms.uTwinkle!.value = live.twinkle ? 1 : 0;
     m.uniforms.uSaturation!.value = Math.max(0, live.saturation);
     m.uniforms.uColor!.value.copy(tint);
-    // Garland emit palette (palEnergy) reads uWaveColor — must follow audio tint
     m.uniforms.uWaveColor!.value.copy(tint);
   });
 

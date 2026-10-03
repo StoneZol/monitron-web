@@ -16,6 +16,7 @@ import {
   TWINKLE_DEFAULT_SPEED,
 } from "@/lib/twinkleHsl";
 import {
+  WARPBURST_COLOR_DRIVE_MAX,
   WARPBURST_DEFAULTS,
   WARPBURST_DRIVE_MAX,
   type WarpburstLive,
@@ -135,7 +136,7 @@ function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
     colorDrive: clamp(
       Number(raw.colorDrive),
       0,
-      WARPBURST_DRIVE_MAX,
+      WARPBURST_COLOR_DRIVE_MAX,
       STORED_DEFAULTS.colorDrive,
     ),
     speedChannel: channel(raw.speedChannel, STORED_DEFAULTS.speedChannel),
@@ -218,7 +219,8 @@ export default function useWarpburstHook() {
       colorDrive: live.colorDrive,
       speedChannel: live.speedChannel,
       speedDrive: live.speedDrive,
-      driveMax: WARPBURST_DRIVE_MAX,
+      colorDriveMax: WARPBURST_COLOR_DRIVE_MAX,
+      speedDriveMax: WARPBURST_DRIVE_MAX,
       setFlightSpeed: (flightSpeed: number) => commit({ flightSpeed }),
       setCameraBank: (cameraBank: number) => commit({ cameraBank }),
       setColor: (color: string) => commit({ color }),

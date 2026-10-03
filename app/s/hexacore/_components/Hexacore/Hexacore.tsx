@@ -10,7 +10,7 @@ import {
   PanelButton,
   Select,
   Slider,
-  Toggle,
+  TwinkleControls,
 } from "@/components/ControlPanel";
 import HexacoreCanvas from "./Hexacore.Canvas";
 import useHexacoreHook from "./Hexacore.hooks";
@@ -29,19 +29,21 @@ const REACTIVE_CHANNEL_OPTIONS: { value: ReactiveChannel; label: string }[] = [
 ];
 
 const INFO = {
-  look: "Flight through the hexagonal hive — tint and iridescent garland.",
+  look: "Flight through the hexagonal hive — tint and HSL twinkle emit.",
   flightSpeed: "Base camera advance along the tunnel (1 ≈ Shadertoy default).",
-  color: "Base tint while garland is on (audio hue-walks / punches it).",
   colorPalette:
-    "Idle = rest. Peak = color-channel target. Locked while garland is on or audio is off.",
-  garland:
-    "Realtime iridescent emit on the hex circuitry. Off: solid edge tint with idle→peak lerp.",
-  garlandSpeed: "How fast the garland palette and twinkle cycle (1 ≈ default).",
-  saturation: "Look chroma — crystals, garland, and solid emit (0 = gray, 1 = default).",
-  colorChannel: "Band that punches color (garland: hue/brightness; off: idle→peak).",
+    "Idle = rest. Peak = color-channel target. Hidden while twinkle is on; peak locked when audio is off.",
+  twinkle:
+    "Hue cycles 0…360 in hsl(H S% L%) on hex emit. Off: solid edge tint with idle→peak lerp.",
+  twinkleSpeed: "How fast hue runs a full lap (1 ≈ 6s).",
+  twinkleS: "Saturation % for the twinkle hsl() (100 = full chroma).",
+  twinkleL: "Lightness % for the twinkle hsl() (50 = vivid mid).",
+  saturation: "Look chroma — crystals and emit (0 = gray, 1 = default).",
+  colorChannel:
+    "Band that punches color (twinkle: shared light pulse; off: idle→peak).",
   speedChannel: "Band that punches flight speed.",
-  colorDrive: "Color punch strength.",
-  speedDrive: "Speed punch strength.",
+  colorDrive: "Color / twinkle pulse boost (0…2).",
+  speedDrive: "Speed punch strength (0…8).",
   visualizer: {
     section: "Audio in → bus meters → peak gain for reactive screens.",
     source:
@@ -90,24 +92,21 @@ const Hexacore = ({ showOverlay = true }: HexacoreProps) => {
                 format={(v) => `×${v.toFixed(2)}`}
                 info={INFO.flightSpeed}
               />
-              <Toggle
-                label="Garland"
-                checked={controls.garland}
-                onChange={controls.setGarland}
-                info={INFO.garland}
+              <TwinkleControls
+                title="twinkle"
+                checked={controls.twinkle}
+                onCheckedChange={controls.setTwinkle}
+                speed={controls.twinkleSpeed}
+                onSpeedChange={controls.setTwinkleSpeed}
+                s={controls.twinkleS}
+                onSChange={controls.setTwinkleS}
+                l={controls.twinkleL}
+                onLChange={controls.setTwinkleL}
+                info={INFO.twinkle}
+                speedInfo={INFO.twinkleSpeed}
+                sInfo={INFO.twinkleS}
+                lInfo={INFO.twinkleL}
               />
-              {controls.garland ? (
-                <Slider
-                  label="Garland speed"
-                  value={controls.garlandSpeed}
-                  min={HEXACORE_RANGES.garlandSpeed.min}
-                  max={HEXACORE_RANGES.garlandSpeed.max}
-                  step={HEXACORE_RANGES.garlandSpeed.step}
-                  onChange={controls.setGarlandSpeed}
-                  format={(v) => `×${v.toFixed(2)}`}
-                  info={INFO.garlandSpeed}
-                />
-              ) : null}
               <Slider
                 label="Saturation"
                 value={controls.saturation}
@@ -118,34 +117,30 @@ const Hexacore = ({ showOverlay = true }: HexacoreProps) => {
                 format={(v) => `×${v.toFixed(2)}`}
                 info={INFO.saturation}
               />
-              <ColorTable
-                label="color palette"
-                info={INFO.colorPalette}
-                columns={["idle", "peak"]}
-                lockedColumns={
-                  audioLocked || controls.garland ? ["peak"] : []
-                }
-                columnStamps={
-                  controls.garland
-                    ? { peak: "garland" }
-                    : audioStamp
-                }
-                rows={[
-                  {
-                    label: "tint",
-                    cells: [
-                      {
-                        value: controls.color,
-                        onChange: controls.setColor,
-                      },
-                      {
-                        value: controls.colorPeak,
-                        onChange: controls.setColorPeak,
-                      },
-                    ],
-                  },
-                ]}
-              />
+              {!controls.twinkle ? (
+                <ColorTable
+                  label="color palette"
+                  info={INFO.colorPalette}
+                  columns={["idle", "peak"]}
+                  lockedColumns={audioLocked ? ["peak"] : []}
+                  columnStamps={audioStamp}
+                  rows={[
+                    {
+                      label: "tint",
+                      cells: [
+                        {
+                          value: controls.color,
+                          onChange: controls.setColor,
+                        },
+                        {
+                          value: controls.colorPeak,
+                          onChange: controls.setColorPeak,
+                        },
+                      ],
+                    },
+                  ]}
+                />
+              ) : null}
             </ControlSection>
 
             <VisualizerSection
@@ -174,19 +169,19 @@ const Hexacore = ({ showOverlay = true }: HexacoreProps) => {
                     <Slider
                       label="Color"
                       value={controls.colorDrive}
-                      min={HEXACORE_RANGES.drive.min}
-                      max={controls.driveMax}
-                      step={HEXACORE_RANGES.drive.step}
+                      min={HEXACORE_RANGES.colorDrive.min}
+                      max={controls.colorDriveMax}
+                      step={HEXACORE_RANGES.colorDrive.step}
                       onChange={controls.setColorDrive}
-                      format={(v) => `×${v.toFixed(1)}`}
+                      format={(v) => `×${v.toFixed(2)}`}
                       info={INFO.colorDrive}
                     />
                     <Slider
                       label="Speed"
                       value={controls.speedDrive}
-                      min={HEXACORE_RANGES.drive.min}
-                      max={controls.driveMax}
-                      step={HEXACORE_RANGES.drive.step}
+                      min={HEXACORE_RANGES.speedDrive.min}
+                      max={controls.speedDriveMax}
+                      step={HEXACORE_RANGES.speedDrive.step}
                       onChange={controls.setSpeedDrive}
                       format={(v) => `×${v.toFixed(1)}`}
                       info={INFO.speedDrive}

@@ -13,6 +13,12 @@ import {
 import { toggleFullscreen } from "@/lib/fullscreen";
 import { loadScreenPrefs, saveScreenPrefs } from "@/lib/screenPrefs";
 import {
+  TWINKLE_DEFAULT_L,
+  TWINKLE_DEFAULT_S,
+  TWINKLE_DEFAULT_SPEED,
+} from "@/lib/twinkleHsl";
+import {
+  HEXACORE_COLOR_DRIVE_MAX,
   HEXACORE_DEFAULTS,
   HEXACORE_DRIVE_MAX,
   type HexacoreLive,
@@ -62,9 +68,20 @@ function channel(v: unknown, fallback: ReactiveChannel): ReactiveChannel {
 }
 
 function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
+  const {
+    garland: legacyGarland,
+    garlandSpeed: legacyGarlandSpeed,
+    ...rest
+  } = raw;
+
+  const twinkleRaw =
+    rest.twinkle !== undefined ? rest.twinkle : legacyGarland;
+  const twinkleSpeedRaw =
+    rest.twinkleSpeed !== undefined ? rest.twinkleSpeed : legacyGarlandSpeed;
+
   return {
     ...STORED_DEFAULTS,
-    ...raw,
+    ...rest,
     audioSource: migrateAudioSource(raw),
     micGate: normalizeMicGate(raw.micGate),
     peakGain: normalizePeakGain(raw.peakGain),
@@ -76,15 +93,27 @@ function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
     ),
     color: asHex(raw.color, STORED_DEFAULTS.color),
     colorPeak: asHex(raw.colorPeak, STORED_DEFAULTS.colorPeak),
-    garland:
-      raw.garland === undefined
-        ? STORED_DEFAULTS.garland
-        : Boolean(raw.garland),
-    garlandSpeed: clamp(
-      Number(raw.garlandSpeed),
+    twinkle:
+      twinkleRaw === undefined
+        ? STORED_DEFAULTS.twinkle
+        : Boolean(twinkleRaw),
+    twinkleSpeed: clamp(
+      Number(twinkleSpeedRaw),
       0,
       4,
-      STORED_DEFAULTS.garlandSpeed,
+      STORED_DEFAULTS.twinkleSpeed ?? TWINKLE_DEFAULT_SPEED,
+    ),
+    twinkleS: clamp(
+      Number(raw.twinkleS),
+      0,
+      100,
+      STORED_DEFAULTS.twinkleS ?? TWINKLE_DEFAULT_S,
+    ),
+    twinkleL: clamp(
+      Number(raw.twinkleL),
+      0,
+      100,
+      STORED_DEFAULTS.twinkleL ?? TWINKLE_DEFAULT_L,
     ),
     saturation: clamp(
       Number(raw.saturation),
@@ -96,7 +125,7 @@ function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
     colorDrive: clamp(
       Number(raw.colorDrive),
       0,
-      HEXACORE_DRIVE_MAX,
+      HEXACORE_COLOR_DRIVE_MAX,
       STORED_DEFAULTS.colorDrive,
     ),
     speedChannel: channel(raw.speedChannel, STORED_DEFAULTS.speedChannel),
@@ -168,19 +197,24 @@ export default function useHexacoreHook() {
       flightSpeed: live.flightSpeed,
       color: live.color,
       colorPeak: live.colorPeak,
-      garland: live.garland,
-      garlandSpeed: live.garlandSpeed,
+      twinkle: live.twinkle,
+      twinkleSpeed: live.twinkleSpeed,
+      twinkleS: live.twinkleS,
+      twinkleL: live.twinkleL,
       saturation: live.saturation,
       colorChannel: live.colorChannel,
       colorDrive: live.colorDrive,
       speedChannel: live.speedChannel,
       speedDrive: live.speedDrive,
-      driveMax: HEXACORE_DRIVE_MAX,
+      colorDriveMax: HEXACORE_COLOR_DRIVE_MAX,
+      speedDriveMax: HEXACORE_DRIVE_MAX,
       setFlightSpeed: (flightSpeed: number) => commit({ flightSpeed }),
       setColor: (color: string) => commit({ color }),
       setColorPeak: (colorPeak: string) => commit({ colorPeak }),
-      setGarland: (garland: boolean) => commit({ garland }),
-      setGarlandSpeed: (garlandSpeed: number) => commit({ garlandSpeed }),
+      setTwinkle: (twinkle: boolean) => commit({ twinkle }),
+      setTwinkleSpeed: (twinkleSpeed: number) => commit({ twinkleSpeed }),
+      setTwinkleS: (twinkleS: number) => commit({ twinkleS }),
+      setTwinkleL: (twinkleL: number) => commit({ twinkleL }),
       setSaturation: (saturation: number) => commit({ saturation }),
       setColorChannel: (colorChannel: ReactiveChannel) =>
         commit({ colorChannel }),

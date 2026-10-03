@@ -7,14 +7,16 @@ import type { VizBands } from "@/lib/audioBus";
 import { risingEdge } from "@/lib/audioDerive";
 import {
   advanceTwinkleHue,
+  createTwinklePulseEnv,
+  pulseTwinkleLight,
   resolveTwinkleColor,
+  updateTwinklePulseEnv,
 } from "@/lib/twinkleHsl";
 import {
   channelLevel,
   drivenLevel,
   hexToVec3,
   lerpHex,
-  pulseBrightness,
 } from "./Warpburst.audio";
 import type { WarpburstLive } from "./Warpburst.types";
 import {
@@ -53,6 +55,7 @@ function WarpburstQuad({
   const flickerEnv = useRef(0);
   const flickerPrev = useRef(0);
   const twinkleHue = useRef(0);
+  const twinklePulse = useRef(createTwinklePulseEnv());
 
   const mat = useMemo(
     () =>
@@ -133,6 +136,8 @@ function WarpburstQuad({
     if (flickerEnv.current < 0.004) flickerEnv.current = 0;
     flickerPrev.current = flickerHit;
 
+    let peakFlicker = flickerEnv.current;
+
     if (live.twinkle) {
       twinkleHue.current = advanceTwinkleHue(
         twinkleHue.current,
@@ -145,10 +150,26 @@ function WarpburstQuad({
         live.twinkleL,
         tint,
       );
-      highlight.copy(tint);
-      if (colorArmed && colorAmt > 0.001) {
-        pulseBrightness(tint, colorAmt, 0.88);
-        pulseBrightness(highlight, colorAmt, 0.92);
+      const pulseAmt = colorArmed
+        ? updateTwinklePulseEnv(
+            twinklePulse.current,
+            colorRaw,
+            live.colorDrive,
+            dt,
+          )
+        : 0;
+      if (colorArmed) {
+        pulseTwinkleLight(tint, pulseAmt, live.colorDrive);
+        highlight.copy(tint);
+        pulseTwinkleLight(
+          highlight,
+          Math.min(1, pulseAmt * 1.08),
+          live.colorDrive,
+        );
+        // Same standardized pulse drives fog peak flash
+        peakFlicker = Math.max(peakFlicker, pulseAmt);
+      } else {
+        highlight.copy(tint);
       }
     } else if (colorArmed && colorAmt > 0.001) {
       lerpHex(live.color, live.colorPeak, colorAmt, tint);
@@ -164,7 +185,7 @@ function WarpburstQuad({
     m.uniforms.uTwinkle!.value = live.twinkle ? 1 : 0;
     m.uniforms.uSaturation!.value = Math.max(0, live.saturation);
     m.uniforms.uDetail!.value = Math.max(0, live.fogDetail);
-    m.uniforms.uPeakFlicker!.value = flickerEnv.current;
+    m.uniforms.uPeakFlicker!.value = peakFlicker;
     m.uniforms.uColor!.value.copy(tint);
     m.uniforms.uHighlight!.value.copy(highlight);
   });

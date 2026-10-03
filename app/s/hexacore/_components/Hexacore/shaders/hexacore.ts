@@ -5,10 +5,9 @@
  * Changes from original:
  * - iTime / iResolution as uniforms
  * - uCamZ: accumulated camera Z (dt × flightSpeed)
- * - uColor: crystal / non-garland tint (may be audio-reactive)
- * - uWaveColor: garland tint (idle picker; not audio-modulated)
- * - uGarland: realtime iridescent emit on hex circuitry; off = solid uColor edges
- * - uGarlandSpeed: iridescence / twinkle rate multiplier
+ * - uColor: crystal / solid-edge tint (idle→peak or CPU HSL twinkle)
+ * - uWaveColor: emit tint (same as uColor when twinkle drives HSL hex)
+ * - uTwinkle: HSL hue-cycle mode; off = solid uColor edges
  * - uSaturation: look chroma (0 = gray, 1 = default, >1 = boost)
  * - AA=1 for monitor perf
  */
@@ -31,8 +30,7 @@ uniform float iTime;
 uniform float uCamZ;
 uniform vec3 uColor;
 uniform vec3 uWaveColor;
-uniform float uGarland;
-uniform float uGarlandSpeed;
+uniform float uTwinkle;
 uniform float uSaturation;
 
 #define MAX_STEPS    110
@@ -48,7 +46,6 @@ const float SLAB  = 2.6;
 const float TUN_R = 0.95;
 
 float gT;
-float gGarlandT;
 float gTrap;
 float gCid;
 float gEmit;
@@ -201,20 +198,28 @@ vec3 aces(vec3 x){
     return clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14), 0.0, 1.0);
 }
 
-// Time-driven iridescence + mild lead along the path (ahead of cam = further in palette)
+// Twinkle: CPU hsl hex in uWaveColor + mild spatial brightness.
+// Off path still uses legacy palEnergy for crystal ambience helpers.
 vec3 energyCol(float cellSeed, float pathZ){
+    if (uTwinkle > 0.5) {
+        float pulse = 0.82 + 0.18 * sin(cellSeed * 6.2831 + 0.12 * (pathZ - gCamZ));
+        return satMix(uWaveColor) * pulse;
+    }
     float lead = 0.032 * (pathZ - gCamZ);
-    return palEnergy(0.55 * gGarlandT + cellSeed * 0.21 + lead);
+    return palEnergy(0.55 * gT + cellSeed * 0.21 + lead);
 }
 
 vec3 fogCol(vec3 rd){
-    return 0.02 * palEnergy(0.55 * gGarlandT + 0.3 * rd.y);
+    if (uTwinkle > 0.5) {
+        return 0.02 * satMix(uWaveColor) * (0.85 + 0.15 * rd.y);
+    }
+    return 0.02 * palEnergy(0.55 * gT + 0.3 * rd.y);
 }
 
 float march(vec3 ro, vec3 rd, float pix, int steps, float tmax, inout vec3 vol, float volW){
     float t = 0.02, omega = 1.35, prevR = 0.0, stepLen = 0.0;
     float candErr = 1e9, candT = -1.0;
-    float glowMul = uGarland > 0.5 ? 1.0 : 0.0;
+    float glowMul = uTwinkle > 0.5 ? 1.0 : 0.0;
     for (int i = 0; i < MAX_STEPS; i++){
         if (i >= steps) break;
         vec3  p  = ro + rd * t;
@@ -223,8 +228,8 @@ float march(vec3 ro, vec3 rd, float pix, int steps, float tmax, inout vec3 vol, 
 
         if (volW > 0.0 && glowMul > 0.0){
             float e = gEmit;
-            float twinkle = 0.7 + 0.3 * sin(gGarlandT * 2.6 + e * 30.0 + 0.08 * (p.z - gCamZ));
-            vol += volW * energyCol(e * 10.0, p.z) * twinkle
+            float pulse = 0.7 + 0.3 * sin(gT * 2.6 + e * 30.0 + 0.08 * (p.z - gCamZ));
+            vol += volW * energyCol(e * 10.0, p.z) * pulse
                    * 0.0004 / (0.0004 + e * e * 300.0)
                    * exp(-0.07 * t) * min(ar, 0.15) * 0.6;
         }
@@ -279,11 +284,11 @@ vec3 shade(vec3 p, vec3 n, vec3 rd, float t, bool full, out vec3 F0out, out floa
 
     col += alb * ao * (0.06 + 0.06 * n.y) * energyCol(0.55, p.z);
 
-    // Hex emit: time iridescence with a mild lead down the trail
+    // Hex emit: HSL twinkle hex, or solid idle tint
     float em = smoothstep(0.003 + 0.002 * t, 0.0, emit);
-    if (uGarland > 0.5) {
-        float twinkle = 0.75 + 0.35 * sin(gGarlandT * 2.8 + gCell2 * 6.2831 + 0.1 * (p.z - gCamZ));
-        col += em * energyCol(gCell2, p.z) * twinkle * 3.0;
+    if (uTwinkle > 0.5) {
+        float pulse = 0.75 + 0.35 * sin(gT * 2.8 + gCell2 * 6.2831 + 0.1 * (p.z - gCamZ));
+        col += em * energyCol(gCell2, p.z) * pulse * 3.0;
     } else {
         col += em * satMix(uColor) * 3.0;
     }
@@ -325,7 +330,6 @@ vec3 render(vec3 ro, vec3 rd, float pix){
 
 void main() {
     gT = iTime;
-    gGarlandT = iTime * uGarlandSpeed;
     vec2 fragCoord = vUv * iResolution.xy;
 
     gCamZ = uCamZ;

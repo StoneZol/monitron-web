@@ -31,7 +31,10 @@ export type WarpburstLive = {
   speedDrive: number;
 };
 
+/** Speed punch drive */
 export const WARPBURST_DRIVE_MAX = 8;
+/** Color / twinkle punch — short 0…2 boost, no need to haul to ×8 */
+export const WARPBURST_COLOR_DRIVE_MAX = 2;
 
 /** Defaults from sealed share preset. */
 export const WARPBURST_DEFAULTS: WarpburstLive = {
@@ -56,5 +59,6 @@ export const WARPBURST_RANGES = {
   cameraBank: { min: 0, max: 2, step: 0.05 },
   saturation: { min: 0, max: 2, step: 0.05 },
   fogDetail: { min: 0, max: 4, step: 0.1 },
-  drive: { min: 0, max: WARPBURST_DRIVE_MAX, step: 0.1 },
+  colorDrive: { min: 0, max: WARPBURST_COLOR_DRIVE_MAX, step: 0.05 },
+  speedDrive: { min: 0, max: WARPBURST_DRIVE_MAX, step: 0.1 },
 } as const;
