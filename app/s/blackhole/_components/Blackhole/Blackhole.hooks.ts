@@ -13,6 +13,12 @@ import {
 import { toggleFullscreen } from "@/lib/fullscreen";
 import { loadScreenPrefs, saveScreenPrefs } from "@/lib/screenPrefs";
 import {
+  TWINKLE_DEFAULT_L,
+  TWINKLE_DEFAULT_S,
+  TWINKLE_DEFAULT_SPEED,
+} from "@/lib/twinkleHsl";
+import {
+  BLACKHOLE_COLOR_DRIVE_MAX,
   BLACKHOLE_DEFAULTS,
   BLACKHOLE_DRIVE_MAX,
   type BlackholeLive,
@@ -65,8 +71,19 @@ function migratePitch(raw: Record<string, unknown>): number {
     deg = ((deg + 180) % 360) - 180;
     return clamp(deg, 1, 179, STORED_DEFAULTS.pitch);
   }
-  // 0° / 180° = camera in disk plane → pixel glitches
   return clamp(pitch, 1, 179, STORED_DEFAULTS.pitch);
+}
+
+/** Legacy colorSpeed was deg/sec; twinkleSpeed is × (1 ≈ 60°/s). */
+function migrateTwinkleSpeed(raw: unknown, legacyColorSpeed: unknown): number {
+  if (raw !== undefined && Number.isFinite(Number(raw))) {
+    return clamp(Number(raw), 0, 4, TWINKLE_DEFAULT_SPEED);
+  }
+  const deg = Number(legacyColorSpeed);
+  if (Number.isFinite(deg) && deg > 0) {
+    return clamp(deg / 60, 0, 4, TWINKLE_DEFAULT_SPEED);
+  }
+  return TWINKLE_DEFAULT_SPEED;
 }
 
 function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
@@ -75,22 +92,26 @@ function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
       ? (v as ReactiveChannel)
       : fallback;
 
-  const legacy = raw as Record<string, unknown>;
+  const { colorSpeed: legacyColorSpeed, ...rest } = raw as Record<
+    string,
+    unknown
+  >;
+
   const holeColor = asHex(
-    legacy.holeColor ?? legacy.diskInner,
+    rest.holeColor ?? rest.diskInner,
     STORED_DEFAULTS.holeColor,
   );
   const holeColorPeak = asHex(
-    legacy.holeColorPeak ?? legacy.diskOuter,
+    rest.holeColorPeak ?? rest.diskOuter,
     STORED_DEFAULTS.holeColorPeak,
   );
 
   const yawChannel = channel(
-    legacy.yawChannel ?? legacy.spaceChannel,
+    rest.yawChannel ?? rest.spaceChannel,
     STORED_DEFAULTS.yawChannel,
   );
   const yawDrive = clamp(
-    Number(legacy.yawDrive ?? legacy.spaceDrive),
+    Number(rest.yawDrive ?? rest.spaceDrive),
     0,
     BLACKHOLE_DRIVE_MAX,
     STORED_DEFAULTS.yawDrive,
@@ -98,34 +119,60 @@ function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
 
   return {
     ...STORED_DEFAULTS,
-    ...raw,
+    ...rest,
     audioSource: migrateAudioSource(raw),
     micGate: normalizeMicGate(raw.micGate),
     peakGain: normalizePeakGain(raw.peakGain),
     holeColor,
     holeColorPeak,
-    holeTwinkle: Boolean(legacy.holeTwinkle),
+    holeTwinkle: Boolean(rest.holeTwinkle),
+    holeTwinkleSpeed: migrateTwinkleSpeed(
+      rest.holeTwinkleSpeed,
+      legacyColorSpeed,
+    ),
+    holeTwinkleS: clamp(
+      Number(rest.holeTwinkleS),
+      0,
+      100,
+      STORED_DEFAULTS.holeTwinkleS ?? TWINKLE_DEFAULT_S,
+    ),
+    holeTwinkleL: clamp(
+      Number(rest.holeTwinkleL),
+      0,
+      100,
+      STORED_DEFAULTS.holeTwinkleL ?? TWINKLE_DEFAULT_L,
+    ),
     nebulaEnabled:
-      legacy.nebulaEnabled === undefined
+      rest.nebulaEnabled === undefined
         ? STORED_DEFAULTS.nebulaEnabled
-        : Boolean(legacy.nebulaEnabled),
-    nebulaTwinkle: Boolean(legacy.nebulaTwinkle),
-    nebulaColor: asHex(legacy.nebulaColor, STORED_DEFAULTS.nebulaColor),
+        : Boolean(rest.nebulaEnabled),
+    nebulaTwinkle: Boolean(rest.nebulaTwinkle),
+    nebulaTwinkleSpeed: migrateTwinkleSpeed(
+      rest.nebulaTwinkleSpeed,
+      legacyColorSpeed,
+    ),
+    nebulaTwinkleS: clamp(
+      Number(rest.nebulaTwinkleS),
+      0,
+      100,
+      STORED_DEFAULTS.nebulaTwinkleS ?? TWINKLE_DEFAULT_S,
+    ),
+    nebulaTwinkleL: clamp(
+      Number(rest.nebulaTwinkleL),
+      0,
+      100,
+      STORED_DEFAULTS.nebulaTwinkleL ?? TWINKLE_DEFAULT_L,
+    ),
+    nebulaColor: asHex(rest.nebulaColor, STORED_DEFAULTS.nebulaColor),
     nebulaColorPeak: asHex(
-      legacy.nebulaColorPeak,
+      rest.nebulaColorPeak,
       STORED_DEFAULTS.nebulaColorPeak,
     ),
     nebulaIntensity: clamp(
-      Number(legacy.nebulaIntensity),
+      Number(rest.nebulaIntensity),
       0,
       3,
       STORED_DEFAULTS.nebulaIntensity,
-    ),
-    colorSpeed: clamp(
-      Number(legacy.colorSpeed),
-      1,
-      180,
-      STORED_DEFAULTS.colorSpeed,
     ),
     flightSpeed: clamp(
       Number(raw.flightSpeed),
@@ -140,11 +187,17 @@ function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
       STORED_DEFAULTS.blackHoleSize,
     ),
     pitch: migratePitch(raw),
-    beltAngle: clamp(Number(legacy.beltAngle), -180, 180, STORED_DEFAULTS.beltAngle),
+    beltAngle: clamp(
+      Number(rest.beltAngle),
+      -180,
+      180,
+      STORED_DEFAULTS.beltAngle,
+    ),
     yawSpeed: (() => {
       const v = Number(raw.yawSpeed);
       if (!Number.isFinite(v)) return STORED_DEFAULTS.yawSpeed;
-      if (v > 2) return clamp(v * (Math.PI / 180), 0, 2, STORED_DEFAULTS.yawSpeed);
+      if (v > 2)
+        return clamp(v * (Math.PI / 180), 0, 2, STORED_DEFAULTS.yawSpeed);
       return clamp(v, 0, 2, STORED_DEFAULTS.yawSpeed);
     })(),
     diskRotationSpeed: clamp(
@@ -157,29 +210,28 @@ function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
     holeDrive: clamp(
       Number(raw.holeDrive),
       0,
-      BLACKHOLE_DRIVE_MAX,
+      BLACKHOLE_COLOR_DRIVE_MAX,
       STORED_DEFAULTS.holeDrive,
     ),
     yawChannel,
     yawDrive,
-    nebulaChannel: channel(legacy.nebulaChannel, STORED_DEFAULTS.nebulaChannel),
+    nebulaChannel: channel(rest.nebulaChannel, STORED_DEFAULTS.nebulaChannel),
     nebulaDrive: clamp(
-      Number(legacy.nebulaDrive),
+      Number(rest.nebulaDrive),
       0,
-      BLACKHOLE_DRIVE_MAX,
+      BLACKHOLE_COLOR_DRIVE_MAX,
       STORED_DEFAULTS.nebulaDrive,
     ),
     scalePunch: Boolean(
-      legacy.scalePunch === undefined
+      rest.scalePunch === undefined
         ? STORED_DEFAULTS.scalePunch
-        : legacy.scalePunch,
+        : rest.scalePunch,
     ),
     scaleDrive: (() => {
-      const v = Number(legacy.scaleDrive);
+      const v = Number(rest.scaleDrive);
       if (!Number.isFinite(v)) return STORED_DEFAULTS.scaleDrive;
-      // Legacy raw punch (0.01…0.05) → UI units (1 ≡ 0.01)
-      if (v < 1) return clamp(v / 0.01, 1, 2, STORED_DEFAULTS.scaleDrive);
-      return clamp(v, 1, 2, STORED_DEFAULTS.scaleDrive);
+      if (v < 1) return clamp(v / 0.01, 1, 16, STORED_DEFAULTS.scaleDrive);
+      return clamp(v, 1, 16, STORED_DEFAULTS.scaleDrive);
     })(),
   };
 }
@@ -248,12 +300,17 @@ export default function useBlackholeHook() {
       holeColor: live.holeColor,
       holeColorPeak: live.holeColorPeak,
       holeTwinkle: live.holeTwinkle,
+      holeTwinkleSpeed: live.holeTwinkleSpeed,
+      holeTwinkleS: live.holeTwinkleS,
+      holeTwinkleL: live.holeTwinkleL,
       nebulaEnabled: live.nebulaEnabled,
       nebulaTwinkle: live.nebulaTwinkle,
+      nebulaTwinkleSpeed: live.nebulaTwinkleSpeed,
+      nebulaTwinkleS: live.nebulaTwinkleS,
+      nebulaTwinkleL: live.nebulaTwinkleL,
       nebulaColor: live.nebulaColor,
       nebulaColorPeak: live.nebulaColorPeak,
       nebulaIntensity: live.nebulaIntensity,
-      colorSpeed: live.colorSpeed,
       holeChannel: live.holeChannel,
       holeDrive: live.holeDrive,
       yawChannel: live.yawChannel,
@@ -262,7 +319,8 @@ export default function useBlackholeHook() {
       nebulaDrive: live.nebulaDrive,
       scalePunch: live.scalePunch,
       scaleDrive: live.scaleDrive,
-      driveMax: BLACKHOLE_DRIVE_MAX,
+      colorDriveMax: BLACKHOLE_COLOR_DRIVE_MAX,
+      speedDriveMax: BLACKHOLE_DRIVE_MAX,
       setYawSpeed: (yawSpeed: number) => commit({ yawSpeed }),
       setPitch: (pitch: number) => commit({ pitch }),
       setBeltAngle: (beltAngle: number) => commit({ beltAngle }),
@@ -272,14 +330,21 @@ export default function useBlackholeHook() {
       setHoleColor: (holeColor: string) => commit({ holeColor }),
       setHoleColorPeak: (holeColorPeak: string) => commit({ holeColorPeak }),
       setHoleTwinkle: (holeTwinkle: boolean) => commit({ holeTwinkle }),
+      setHoleTwinkleSpeed: (holeTwinkleSpeed: number) =>
+        commit({ holeTwinkleSpeed }),
+      setHoleTwinkleS: (holeTwinkleS: number) => commit({ holeTwinkleS }),
+      setHoleTwinkleL: (holeTwinkleL: number) => commit({ holeTwinkleL }),
       setNebulaEnabled: (nebulaEnabled: boolean) => commit({ nebulaEnabled }),
       setNebulaTwinkle: (nebulaTwinkle: boolean) => commit({ nebulaTwinkle }),
+      setNebulaTwinkleSpeed: (nebulaTwinkleSpeed: number) =>
+        commit({ nebulaTwinkleSpeed }),
+      setNebulaTwinkleS: (nebulaTwinkleS: number) => commit({ nebulaTwinkleS }),
+      setNebulaTwinkleL: (nebulaTwinkleL: number) => commit({ nebulaTwinkleL }),
       setNebulaColor: (nebulaColor: string) => commit({ nebulaColor }),
       setNebulaColorPeak: (nebulaColorPeak: string) =>
         commit({ nebulaColorPeak }),
       setNebulaIntensity: (nebulaIntensity: number) =>
         commit({ nebulaIntensity }),
-      setColorSpeed: (colorSpeed: number) => commit({ colorSpeed }),
       setHoleChannel: (holeChannel: ReactiveChannel) => commit({ holeChannel }),
       setHoleDrive: (holeDrive: number) => commit({ holeDrive }),
       setYawChannel: (yawChannel: ReactiveChannel) => commit({ yawChannel }),
