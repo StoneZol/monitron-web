@@ -160,3 +160,10 @@ export function resolveTwinkleHex(
   resolveTwinkleColor(hueDeg, s, l, _color);
   return `#${_color.getHexString()}`;
 }
+
+/** Hue degrees 0…360 from a hex (for multi-stop twinkle offsets). */
+export function hueDegFromHex(hex: string): number {
+  _color.set(hex);
+  _color.getHSL(_hsl);
+  return _hsl.h * 360;
+}

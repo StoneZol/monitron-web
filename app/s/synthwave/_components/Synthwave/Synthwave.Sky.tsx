@@ -9,9 +9,15 @@ import {
     neonSkyVertexShader,
 } from "./shaders/neonsky";
 import {
+    advanceTwinkleHue,
+    createTwinklePulseEnv,
+    pulseTwinkleLight,
+    resolveTwinkleColor,
+    updateTwinklePulseEnv,
+} from "@/lib/twinkleHsl";
+import {
     channelLevel,
     hexToVec3,
-    hueWalkHex,
     lerpHex,
 } from "./Synthwave.audio";
 import type { SynthwaveLive } from "./Synthwave.types";
@@ -50,7 +56,8 @@ export function Sky({
         [],
     );
     const matRef = useRef(mat);
-    const hueOffset = useRef(0);
+    const twinkleHue = useRef(0);
+    const twinklePulse = useRef(createTwinklePulseEnv());
     const skyHold = useRef(0);
     const skyOffset = useRef(new THREE.Vector2(0, 0));
     const skyPhase = useRef(0);
@@ -87,12 +94,30 @@ export function Sky({
         const reactive = Boolean(viz?.enabled);
 
         if (knobs.skyTwinkle) {
-            hueOffset.current =
-                (hueOffset.current + knobs.colorSpeed * step) % 360;
-            hueWalkHex(knobs.skyTop, hueOffset.current, clouds);
+            twinkleHue.current = advanceTwinkleHue(
+                twinkleHue.current,
+                step,
+                knobs.skyTwinkleSpeed,
+            );
+            resolveTwinkleColor(
+                twinkleHue.current,
+                knobs.skyTwinkleS,
+                knobs.skyTwinkleL,
+                clouds,
+            );
+            // Sky palette beats on the beat band (no dedicated channel)
+            if (reactive) {
+                const raw = channelLevel(viz!, "beat");
+                const pulseAmt = updateTwinklePulseEnv(
+                    twinklePulse.current,
+                    raw,
+                    1,
+                    step,
+                );
+                pulseTwinkleLight(clouds, pulseAmt, 1);
+            }
             skyHold.current = 0;
         } else {
-            hueOffset.current = 0;
             if (reactive) {
                 const raw = channelLevel(viz!, "beat");
                 const decay = Math.exp(-step * 5.5);

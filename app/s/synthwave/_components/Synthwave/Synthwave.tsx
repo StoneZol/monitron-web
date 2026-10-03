@@ -13,6 +13,7 @@ import {
     Select,
     Slider,
     Toggle,
+    TwinkleControls,
 } from "@/components/ControlPanel";
 import useSynthwaveHook from "./Synthwave.hooks";
 import type { SynthwaveProps } from "./Synthwave.types";
@@ -28,8 +29,7 @@ const REACTIVE_CHANNEL_OPTIONS = [
 const INFO = {
     look: "Scene layers — sky, sunset beacon, grid, terrain framing.",
     sky: "Cloud wash + horizon tint and drift.",
-    skyPalette:
-        "Idle = rest. Peak = beat target (locked while garland is on or audio is off). Horizon is separate.",
+    skyPalette: "Idle = rest. Peak = beat target (locked while audio is off).",
     skyHorizon:
         "Decorative glow blob — static tint, excluded from sky twinkle and beat lerp.",
     skySpeed: "Cloud drift speed. 1 ≈ classic WE scroll rate.",
@@ -38,10 +38,10 @@ const INFO = {
     sunset:
         "Horizon beacon — sun disk now; later can swap to light pillars into the sky.",
     sunPalette:
-        "Idle = rest. Peak = sun-channel target (locked while garland is on or audio is off).",
+        "Idle = rest. Peak = sun-channel target (locked while audio is off).",
     grid: "Neon road lines, floor fill, scroll speed.",
     gridPalette:
-        "Idle = rest. Peak = glow-channel target (locked while garland is on or audio is off).",
+        "Idle = rest. Peak = glow-channel target (locked while audio is off).",
     sunSize: "Scale × WE sun size.",
     sunBrightness:
         "Disk intensity. Below 1 fades opacity (colors stay clean); above 1 pushes bloom.",
@@ -62,20 +62,26 @@ const INFO = {
     roadLength:
         "How far the neon road runs toward the sun. Default is short (~⅓ of the view); slide up to extend.",
     roadStretch:
-        "Kick stretches the road toward the horizon with road channel; idle eases back to Road length.",
-    roadChannel: "Band that punches scroll speed.",
-    roadDrive: "Scroll punch strength for the road channel (was the single Drive).",
-    glowChannel: "Band that flashes grid glow / line brightness (bass kicks).",
-    glowDrive: "Glow / palette flash strength (1 = previous feel).",
+        "Kick stretches the road toward the horizon with grid speed channel; idle eases back to Road length.",
+    roadChannel: "Band that punches grid scroll speed (and stretch).",
+    roadDrive: "Scroll punch strength for grid speed (0…8).",
+    glowChannel:
+        "Band that flashes grid line glow and palette / twinkle pulse.",
+    glowDrive: "Color / twinkle pulse boost for grid color (0…2).",
     sunChannel: "Band that punches sun / glow brightness (idle dips a bit).",
-    sunDrive: "Sun punch strength (1 = previous feel).",
-    sunTwinkle:
-        "Garland hue walk from sun idle colors. Peak column locked while on.",
-    gridTwinkle:
-        "Garland hue walk from grid idle colors. Peak column locked while on.",
-    skyTwinkle:
-        "Garland hue walk on sky clouds only — horizon stays put. Peak locked while on.",
-    colorSpeed: "Hue walk rate while any twinkle (garland) is on.",
+    sunDrive: "Color / twinkle pulse boost for sun (0…2).",
+    skyTwinkle: "HSL hue walk on sky clouds only — horizon stays put.",
+    skyTwinkleSpeed: "How fast sky hue runs a full lap (1 ≈ 6s).",
+    skyTwinkleS: "Saturation % for sky twinkle hsl().",
+    skyTwinkleL: "Lightness % for sky twinkle hsl().",
+    sunTwinkle: "HSL hue walk on the sun disk (top/bottom keep idle hue split).",
+    sunTwinkleSpeed: "How fast sun hue runs a full lap (1 ≈ 6s).",
+    sunTwinkleS: "Saturation % for sun twinkle hsl().",
+    sunTwinkleL: "Lightness % for sun twinkle hsl().",
+    gridTwinkle: "HSL hue walk on grid near/far (keep idle hue split).",
+    gridTwinkleSpeed: "How fast grid hue runs a full lap (1 ≈ 6s).",
+    gridTwinkleS: "Saturation % for grid twinkle hsl().",
+    gridTwinkleL: "Lightness % for grid twinkle hsl().",
     visualizer: {
         section: "Audio in → bus meters → peak gain for reactive screens.",
         source:
@@ -116,42 +122,49 @@ const Synthwave = ({ showOverlay = true }: SynthwaveProps) => {
                     >
                         <ControlSection label="look" info={INFO.look}>
                             <ControlSubSection label="sky" info={INFO.sky}>
-                                <Toggle
-                                    label="Sky twinkle"
+                                <TwinkleControls
+                                    title="sky twinkle"
                                     checked={controls.skyTwinkle}
-                                    onChange={controls.setSkyTwinkle}
+                                    onCheckedChange={controls.setSkyTwinkle}
+                                    speed={controls.skyTwinkleSpeed}
+                                    onSpeedChange={controls.setSkyTwinkleSpeed}
+                                    s={controls.skyTwinkleS}
+                                    onSChange={controls.setSkyTwinkleS}
+                                    l={controls.skyTwinkleL}
+                                    onLChange={controls.setSkyTwinkleL}
                                     info={INFO.skyTwinkle}
+                                    speedInfo={INFO.skyTwinkleSpeed}
+                                    sInfo={INFO.skyTwinkleS}
+                                    lInfo={INFO.skyTwinkleL}
                                 />
-                                <ColorTable
-                                    label="sky palette"
-                                    info={INFO.skyPalette}
-                                    columns={["idle", "peak"]}
-                                    lockedColumns={
-                                        audioLocked || controls.skyTwinkle
-                                            ? ["peak"]
-                                            : []
-                                    }
-                                    columnStamps={
-                                        controls.skyTwinkle
-                                            ? { peak: "twinkle" }
-                                            : audioStamp
-                                    }
-                                    rows={[
-                                        {
-                                            label: "sky",
-                                            cells: [
-                                                {
-                                                    value: controls.skyTop,
-                                                    onChange: controls.setSkyTop,
-                                                },
-                                                {
-                                                    value: controls.skyTopPeak,
-                                                    onChange: controls.setSkyTopPeak,
-                                                },
-                                            ],
-                                        },
-                                    ]}
-                                />
+                                {!controls.skyTwinkle ? (
+                                    <ColorTable
+                                        label="sky palette"
+                                        info={INFO.skyPalette}
+                                        columns={["idle", "peak"]}
+                                        lockedColumns={
+                                            audioLocked ? ["peak"] : []
+                                        }
+                                        columnStamps={audioStamp}
+                                        rows={[
+                                            {
+                                                label: "sky",
+                                                cells: [
+                                                    {
+                                                        value: controls.skyTop,
+                                                        onChange:
+                                                            controls.setSkyTop,
+                                                    },
+                                                    {
+                                                        value: controls.skyTopPeak,
+                                                        onChange:
+                                                            controls.setSkyTopPeak,
+                                                    },
+                                                ],
+                                            },
+                                        ]}
+                                    />
+                                ) : null}
                                 <ColorField
                                     label="Horizon"
                                     value={controls.skyHorizon}
@@ -181,55 +194,64 @@ const Synthwave = ({ showOverlay = true }: SynthwaveProps) => {
                             </ControlSubSection>
 
                             <ControlSubSection label="sunset" info={INFO.sunset}>
-                                <Toggle
-                                    label="Sun twinkle"
+                                <TwinkleControls
+                                    title="sun twinkle"
                                     checked={controls.sunTwinkle}
-                                    onChange={controls.setSunTwinkle}
+                                    onCheckedChange={controls.setSunTwinkle}
+                                    speed={controls.sunTwinkleSpeed}
+                                    onSpeedChange={controls.setSunTwinkleSpeed}
+                                    s={controls.sunTwinkleS}
+                                    onSChange={controls.setSunTwinkleS}
+                                    l={controls.sunTwinkleL}
+                                    onLChange={controls.setSunTwinkleL}
                                     info={INFO.sunTwinkle}
+                                    speedInfo={INFO.sunTwinkleSpeed}
+                                    sInfo={INFO.sunTwinkleS}
+                                    lInfo={INFO.sunTwinkleL}
                                 />
-                                <ColorTable
-                                    label="sun palette"
-                                    info={INFO.sunPalette}
-                                    columns={["idle", "peak"]}
-                                    lockedColumns={
-                                        audioLocked || controls.sunTwinkle
-                                            ? ["peak"]
-                                            : []
-                                    }
-                                    columnStamps={
-                                        controls.sunTwinkle
-                                            ? { peak: "twinkle" }
-                                            : audioStamp
-                                    }
-                                    rows={[
-                                        {
-                                            label: "top",
-                                            cells: [
-                                                {
-                                                    value: controls.sunRim,
-                                                    onChange: controls.setSunRim,
-                                                },
-                                                {
-                                                    value: controls.sunRimPeak,
-                                                    onChange: controls.setSunRimPeak,
-                                                },
-                                            ],
-                                        },
-                                        {
-                                            label: "bottom",
-                                            cells: [
-                                                {
-                                                    value: controls.sunMid,
-                                                    onChange: controls.setSunMid,
-                                                },
-                                                {
-                                                    value: controls.sunMidPeak,
-                                                    onChange: controls.setSunMidPeak,
-                                                },
-                                            ],
-                                        },
-                                    ]}
-                                />
+                                {!controls.sunTwinkle ? (
+                                    <ColorTable
+                                        label="sun palette"
+                                        info={INFO.sunPalette}
+                                        columns={["idle", "peak"]}
+                                        lockedColumns={
+                                            audioLocked ? ["peak"] : []
+                                        }
+                                        columnStamps={audioStamp}
+                                        rows={[
+                                            {
+                                                label: "top",
+                                                cells: [
+                                                    {
+                                                        value: controls.sunRim,
+                                                        onChange:
+                                                            controls.setSunRim,
+                                                    },
+                                                    {
+                                                        value: controls.sunRimPeak,
+                                                        onChange:
+                                                            controls.setSunRimPeak,
+                                                    },
+                                                ],
+                                            },
+                                            {
+                                                label: "bottom",
+                                                cells: [
+                                                    {
+                                                        value: controls.sunMid,
+                                                        onChange:
+                                                            controls.setSunMid,
+                                                    },
+                                                    {
+                                                        value: controls.sunMidPeak,
+                                                        onChange:
+                                                            controls.setSunMidPeak,
+                                                    },
+                                                ],
+                                            },
+                                        ]}
+                                    />
+                                ) : null}
                                 <Slider
                                     label="Bottom fill"
                                     value={controls.sunGradientStart}
@@ -273,63 +295,70 @@ const Synthwave = ({ showOverlay = true }: SynthwaveProps) => {
                             </ControlSubSection>
 
                             <ControlSubSection label="grid" info={INFO.grid}>
-                                <div className="flex flex-wrap gap-1.5">
-                                    <Toggle
-                                        label="Grid twinkle"
-                                        checked={controls.gridTwinkle}
-                                        onChange={controls.setGridTwinkle}
-                                        info={INFO.gridTwinkle}
-                                    />
-                                    <Toggle
-                                        label="Stretch"
-                                        checked={controls.roadStretch}
-                                        onChange={controls.setRoadStretch}
-                                        info={INFO.roadStretch}
-                                    />
-                                </div>
-                                <ColorTable
-                                    label="grid palette"
-                                    info={INFO.gridPalette}
-                                    columns={["idle", "peak"]}
-                                    lockedColumns={
-                                        audioLocked || controls.gridTwinkle
-                                            ? ["peak"]
-                                            : []
-                                    }
-                                    columnStamps={
-                                        controls.gridTwinkle
-                                            ? { peak: "twinkle" }
-                                            : audioStamp
-                                    }
-                                    rows={[
-                                        {
-                                            label: "near",
-                                            cells: [
-                                                {
-                                                    value: controls.roadColor,
-                                                    onChange: controls.setRoadColor,
-                                                },
-                                                {
-                                                    value: controls.roadColorPeak,
-                                                    onChange: controls.setRoadColorPeak,
-                                                },
-                                            ],
-                                        },
-                                        {
-                                            label: "far",
-                                            cells: [
-                                                {
-                                                    value: controls.roadFar,
-                                                    onChange: controls.setRoadFar,
-                                                },
-                                                {
-                                                    value: controls.roadFarPeak,
-                                                    onChange: controls.setRoadFarPeak,
-                                                },
-                                            ],
-                                        },
-                                    ]}
+                                <TwinkleControls
+                                    title="grid twinkle"
+                                    checked={controls.gridTwinkle}
+                                    onCheckedChange={controls.setGridTwinkle}
+                                    speed={controls.gridTwinkleSpeed}
+                                    onSpeedChange={controls.setGridTwinkleSpeed}
+                                    s={controls.gridTwinkleS}
+                                    onSChange={controls.setGridTwinkleS}
+                                    l={controls.gridTwinkleL}
+                                    onLChange={controls.setGridTwinkleL}
+                                    info={INFO.gridTwinkle}
+                                    speedInfo={INFO.gridTwinkleSpeed}
+                                    sInfo={INFO.gridTwinkleS}
+                                    lInfo={INFO.gridTwinkleL}
                                 />
+                                <Toggle
+                                    label="Stretch"
+                                    checked={controls.roadStretch}
+                                    onChange={controls.setRoadStretch}
+                                    info={INFO.roadStretch}
+                                />
+                                {!controls.gridTwinkle ? (
+                                    <ColorTable
+                                        label="grid palette"
+                                        info={INFO.gridPalette}
+                                        columns={["idle", "peak"]}
+                                        lockedColumns={
+                                            audioLocked ? ["peak"] : []
+                                        }
+                                        columnStamps={audioStamp}
+                                        rows={[
+                                            {
+                                                label: "near",
+                                                cells: [
+                                                    {
+                                                        value: controls.roadColor,
+                                                        onChange:
+                                                            controls.setRoadColor,
+                                                    },
+                                                    {
+                                                        value: controls.roadColorPeak,
+                                                        onChange:
+                                                            controls.setRoadColorPeak,
+                                                    },
+                                                ],
+                                            },
+                                            {
+                                                label: "far",
+                                                cells: [
+                                                    {
+                                                        value: controls.roadFar,
+                                                        onChange:
+                                                            controls.setRoadFar,
+                                                    },
+                                                    {
+                                                        value: controls.roadFarPeak,
+                                                        onChange:
+                                                            controls.setRoadFarPeak,
+                                                    },
+                                                ],
+                                            },
+                                        ]}
+                                    />
+                                ) : null}
                                 <ColorField
                                     label="Floor"
                                     value={controls.roadFloor}
@@ -420,20 +449,6 @@ const Synthwave = ({ showOverlay = true }: SynthwaveProps) => {
                                     info={INFO.roadLength}
                                 />
                             </ControlSubSection>
-
-                            {(controls.skyTwinkle ||
-                                controls.sunTwinkle ||
-                                controls.gridTwinkle) && (
-                                    <Slider
-                                        label="Color speed"
-                                        value={controls.colorSpeed}
-                                        min={1}
-                                        max={180}
-                                        step={1}
-                                        onChange={controls.setColorSpeed}
-                                        info={INFO.colorSpeed}
-                                    />
-                                )}
                         </ControlSection>
 
                         <VisualizerSection visualizer={visualizer} info={INFO.visualizer}>
@@ -441,14 +456,14 @@ const Synthwave = ({ showOverlay = true }: SynthwaveProps) => {
                                 <>
                                     <ControlSubSection label="channels">
                                         <Select
-                                            label="Road"
+                                            label="Grid speed"
                                             value={controls.roadChannel}
                                             options={[...REACTIVE_CHANNEL_OPTIONS]}
                                             onChange={controls.setRoadChannel}
                                             info={INFO.roadChannel}
                                         />
                                         <Select
-                                            label="Glow"
+                                            label="Grid color"
                                             value={controls.glowChannel}
                                             options={[...REACTIVE_CHANNEL_OPTIONS]}
                                             onChange={controls.setGlowChannel}
@@ -464,33 +479,33 @@ const Synthwave = ({ showOverlay = true }: SynthwaveProps) => {
                                     </ControlSubSection>
                                     <ControlSubSection label="drive">
                                         <Slider
-                                            label="Road"
+                                            label="Grid speed"
                                             value={controls.roadDrive}
                                             min={0}
-                                            max={controls.driveMax}
+                                            max={controls.speedDriveMax}
                                             step={0.5}
                                             onChange={controls.setRoadDrive}
                                             format={(v) => `×${v.toFixed(1)}`}
                                             info={INFO.roadDrive}
                                         />
                                         <Slider
-                                            label="Glow"
+                                            label="Grid color"
                                             value={controls.glowDrive}
                                             min={0}
-                                            max={controls.driveMax}
-                                            step={0.5}
+                                            max={controls.colorDriveMax}
+                                            step={0.05}
                                             onChange={controls.setGlowDrive}
-                                            format={(v) => `×${v.toFixed(1)}`}
+                                            format={(v) => `×${v.toFixed(2)}`}
                                             info={INFO.glowDrive}
                                         />
                                         <Slider
                                             label="Sun"
                                             value={controls.sunDrive}
                                             min={0}
-                                            max={controls.driveMax}
-                                            step={0.5}
+                                            max={controls.colorDriveMax}
+                                            step={0.05}
                                             onChange={controls.setSunDrive}
-                                            format={(v) => `×${v.toFixed(1)}`}
+                                            format={(v) => `×${v.toFixed(2)}`}
                                             info={INFO.sunDrive}
                                         />
                                     </ControlSubSection>

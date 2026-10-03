@@ -73,23 +73,35 @@ export type SynthwaveLive = {
     roadDrive: number;
     /** Band that flashes grid glow / line brightness */
     glowChannel: ReactiveChannel;
-    /** Multiplier on glow channel level (1 = previous hardcoded feel) */
+    /** Color / twinkle pulse boost 0…2 */
     glowDrive: number;
     /** Band that punches sun / glow brightness */
     sunChannel: ReactiveChannel;
-    /** Multiplier on sun channel level (1 = previous hardcoded feel) */
+    /** Color / twinkle pulse boost 0…2 */
     sunDrive: number;
-    /** Garland hue walk on sun (from idle); peak unused while on */
+    /** HSL twinkle on sun disk (title "sun twinkle") */
     sunTwinkle: boolean;
-    /** Hue walk on sun glow (halo) color */
+    sunTwinkleSpeed: number;
+    sunTwinkleS: number;
+    sunTwinkleL: number;
+    /** Legacy unused halo flag — kept for prefs migrate */
     sunGlowTwinkle: boolean;
-    /** Garland hue walk on grid (from idle) */
+    /** HSL twinkle on grid (title "grid twinkle") */
     gridTwinkle: boolean;
-    /** Garland hue walk on sky clouds only (horizon excluded) */
+    gridTwinkleSpeed: number;
+    gridTwinkleS: number;
+    gridTwinkleL: number;
+    /** HSL twinkle on sky clouds (title "sky twinkle"); horizon excluded */
     skyTwinkle: boolean;
-    /** Hue degrees per second while any twinkle is on */
-    colorSpeed: number;
+    skyTwinkleSpeed: number;
+    skyTwinkleS: number;
+    skyTwinkleL: number;
     audioSource: AudioSource;
     micGate: number;
     peakGain: number;
 };
+
+/** Road scroll punch */
+export const SYNTHWAVE_DRIVE_MAX = 8;
+/** Glow / sun color punch */
+export const SYNTHWAVE_COLOR_DRIVE_MAX = 2;
