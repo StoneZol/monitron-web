@@ -7,6 +7,7 @@
  * - Extra FBM octaves + fine wisp layer for more fog detail
  * - iTime / iResolution as uniforms
  * - uCamZ: accumulated flight (dt × flightSpeed)
+ * - uCamBank: roll/pitch/yaw/sway amplitude (0 = straight, 1 = default, 2 = 2×)
  * - uColor / uHighlight: base goo + neon highlight (audio / garland)
  * - uGarland + uGarlandSpeed: realtime iridescent palette crawl
  * - uSaturation: look chroma
@@ -30,6 +31,7 @@ varying vec2 vUv;
 uniform vec3 iResolution;
 uniform float iTime;
 uniform float uCamZ;
+uniform float uCamBank;
 uniform vec3 uColor;
 uniform vec3 uHighlight;
 uniform float uGarland;
@@ -126,9 +128,10 @@ void main() {
     // Flight clock from accumulated cam Z (1 ≈ Shadertoy BASE_SPEED path)
     float time = uCamZ;
 
-    float roll  = sin(time * 0.25) * 0.7;
-    float pitch = cos(time * 0.15) * 0.15;
-    float yaw   = sin(time * 0.10) * 0.15;
+    float bank = clamp(uCamBank, 0.0, 2.0);
+    float roll  = sin(time * 0.25) * 0.7 * bank;
+    float pitch = cos(time * 0.15) * 0.15 * bank;
+    float yaw   = sin(time * 0.10) * 0.15 * bank;
 
     float cr = cos(roll), sr = sin(roll);
     vec2 uvTunnel = vec2(
@@ -139,8 +142,8 @@ void main() {
     vec3 ro = vec3(0.0, 0.0, time * 2.5);
     vec3 rd = normalize(vec3(uvTunnel + vec2(yaw, pitch), 1.2));
 
-    float swayX = sin(time * 0.3) * 0.08;
-    float swayY = cos(time * 0.2) * 0.05;
+    float swayX = sin(time * 0.3) * 0.08 * bank;
+    float swayY = cos(time * 0.2) * 0.05 * bank;
     rd.x += swayX;
     rd.y += swayY;
 

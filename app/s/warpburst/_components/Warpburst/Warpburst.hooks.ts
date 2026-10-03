@@ -74,6 +74,12 @@ function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
       3,
       STORED_DEFAULTS.flightSpeed,
     ),
+    cameraBank: clamp(
+      Number(raw.cameraBank),
+      0,
+      2,
+      STORED_DEFAULTS.cameraBank,
+    ),
     color: asHex(raw.color, STORED_DEFAULTS.color),
     colorPeak: asHex(raw.colorPeak, STORED_DEFAULTS.colorPeak),
     garland:
@@ -172,6 +178,7 @@ export default function useWarpburstHook() {
     visualizer,
     controls: {
       flightSpeed: live.flightSpeed,
+      cameraBank: live.cameraBank,
       color: live.color,
       colorPeak: live.colorPeak,
       garland: live.garland,
@@ -184,6 +191,7 @@ export default function useWarpburstHook() {
       speedDrive: live.speedDrive,
       driveMax: WARPBURST_DRIVE_MAX,
       setFlightSpeed: (flightSpeed: number) => commit({ flightSpeed }),
+      setCameraBank: (cameraBank: number) => commit({ cameraBank }),
       setColor: (color: string) => commit({ color }),
       setColorPeak: (colorPeak: string) => commit({ colorPeak }),
       setGarland: (garland: boolean) => commit({ garland }),

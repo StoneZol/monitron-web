@@ -32,6 +32,8 @@ const REACTIVE_CHANNEL_OPTIONS: { value: ReactiveChannel; label: string }[] = [
 const INFO = {
   look: "Goo tunnel fog from Warpburst 2 — no stars. Tint, garland crawl, peak flicker.",
   flightSpeed: "Base tunnel advance (1 ≈ Shadertoy BASE_SPEED).",
+  cameraBank:
+    "Camera roll / pitch / yaw / sway spread — 0 = dead straight, 1 = default, 2 = double.",
   colorPalette:
     "Idle = base goo. Peak = neon highlight. Locked while garland is on or audio is off.",
   garland:
@@ -92,6 +94,16 @@ const Warpburst = ({ showOverlay = true }: WarpburstProps) => {
                 onChange={controls.setFlightSpeed}
                 format={(v) => `×${v.toFixed(2)}`}
                 info={INFO.flightSpeed}
+              />
+              <Slider
+                label="Camera bank"
+                value={controls.cameraBank}
+                min={WARPBURST_RANGES.cameraBank.min}
+                max={WARPBURST_RANGES.cameraBank.max}
+                step={WARPBURST_RANGES.cameraBank.step}
+                onChange={controls.setCameraBank}
+                format={(v) => `×${v.toFixed(2)}`}
+                info={INFO.cameraBank}
               />
               <Toggle
                 label="Garland"

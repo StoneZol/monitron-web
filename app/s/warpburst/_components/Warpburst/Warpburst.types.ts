@@ -6,10 +6,12 @@ export type WarpburstProps = {
 export type ReactiveChannel = "off" | "bass" | "mid" | "high" | "beat";
 
 export type WarpburstLive = {
-    /** Tunnel flight (1 ≈ Shadertoy BASE_SPEED feel) */
-    flightSpeed: number;
-    /** Base goo tint — idle */
-    color: string;
+  /** Tunnel flight (1 ≈ Shadertoy BASE_SPEED feel) */
+  flightSpeed: number;
+  /** Camera roll/pitch/yaw/sway amount (0 = straight, 1 = default, 2 = 2×) */
+  cameraBank: number;
+  /** Base goo tint — idle */
+  color: string;
     /** Neon highlight / peak tint */
     colorPeak: string;
     /** Realtime iridescent fog crawl */
@@ -29,23 +31,25 @@ export type WarpburstLive = {
 export const WARPBURST_DRIVE_MAX = 8;
 
 export const WARPBURST_DEFAULTS: WarpburstLive = {
-    flightSpeed: 1,
-    color: "#4d0099",
-    colorPeak: "#00ffb3",
-    garland: true,
-    garlandSpeed: 1,
-    saturation: 1,
-    fogDetail: 1,
-    colorChannel: "bass",
-    colorDrive: 1.2,
-    speedChannel: "bass",
-    speedDrive: 1.2,
+  flightSpeed: 1,
+  cameraBank: 1,
+  color: "#4d0099",
+  colorPeak: "#00ffb3",
+  garland: true,
+  garlandSpeed: 1,
+  saturation: 1,
+  fogDetail: 1,
+  colorChannel: "bass",
+  colorDrive: 1.2,
+  speedChannel: "bass",
+  speedDrive: 1.2,
 };
 
 export const WARPBURST_RANGES = {
-    flightSpeed: { min: 0.1, max: 3, step: 0.05 },
-    garlandSpeed: { min: 0, max: 4, step: 0.05 },
-    saturation: { min: 0, max: 2, step: 0.05 },
-    fogDetail: { min: 0, max: 4, step: 0.1 },
-    drive: { min: 0, max: WARPBURST_DRIVE_MAX, step: 0.1 },
+  flightSpeed: { min: 0.1, max: 3, step: 0.05 },
+  cameraBank: { min: 0, max: 2, step: 0.05 },
+  garlandSpeed: { min: 0, max: 4, step: 0.05 },
+  saturation: { min: 0, max: 2, step: 0.05 },
+  fogDetail: { min: 0, max: 4, step: 0.1 },
+  drive: { min: 0, max: WARPBURST_DRIVE_MAX, step: 0.1 },
 } as const;

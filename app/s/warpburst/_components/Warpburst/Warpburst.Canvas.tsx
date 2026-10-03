@@ -61,6 +61,7 @@ function WarpburstQuad({
           iResolution: { value: new THREE.Vector3(1, 1, 1) },
           iTime: { value: 0 },
           uCamZ: { value: 0 },
+          uCamBank: { value: 1 },
           uColor: { value: new THREE.Color("#4d0099") },
           uHighlight: { value: new THREE.Color("#00ffb3") },
           uGarland: { value: 1 },
@@ -149,6 +150,7 @@ function WarpburstQuad({
 
     m.uniforms.iTime!.value = t;
     m.uniforms.uCamZ!.value = camZ.current;
+    m.uniforms.uCamBank!.value = Math.max(0, live.cameraBank);
     m.uniforms.uGarland!.value = live.garland ? 1 : 0;
     m.uniforms.uGarlandSpeed!.value = Math.max(0, live.garlandSpeed);
     m.uniforms.uSaturation!.value = Math.max(0, live.saturation);
