@@ -91,7 +91,7 @@ export const SCALE_DRIVE_UNIT = 0.01;
 /** Temporary wide ranges — replace once dialed in. */
 export const BLACKHOLE_RANGES = {
     yawSpeed: { min: 0.01, max: 1, step: 0.01 },
-    pitch: { min: -180, max: 180, step: 1 },
+    pitch: { min: 0, max: 180, step: 1 },
     blackHoleSize: { min: 0.05, max: 2, step: 0.01 },
     diskRotationSpeed: { min: 0.05, max: 5, step: 0.05 },
     colorSpeed: { min: 1, max: 180, step: 1 },
