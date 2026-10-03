@@ -12,6 +12,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useScreensOverlay } from "@/components/ScreensOverlay/ScreensOverlay.context";
 import { NavBackButton } from "@/components/NavBackButton";
+import { VisualPipButton } from "@/components/VisualPipButton";
 import { placeholders } from "@/lib/placeholders";
 import {
     readPanelSections,
@@ -183,14 +184,24 @@ export function ControlPanel({
                     </div>
                 ) : null}
             </div>
-            {actions || sources?.length ? (
+            {actions || sources?.length || overlay ? (
                 <div className="shrink-0 border-b border-line p-2">
-                    {actions}
+                    {actions || overlay ? (
+                        <div
+                            className={cn(
+                                "flex gap-2",
+                                actions ? "[&>div]:contents" : null,
+                            )}
+                        >
+                            {actions}
+                            {overlay ? <VisualPipButton /> : null}
+                        </div>
+                    ) : null}
                     {sources?.length ? (
                         <div
                             className={cn(
                                 "flex flex-wrap gap-x-2 gap-y-1",
-                                actions ? "mt-2" : null,
+                                actions || overlay ? "mt-2" : null,
                             )}
                         >
                             {sources.map((src) => (
