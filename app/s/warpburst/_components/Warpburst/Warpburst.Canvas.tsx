@@ -41,8 +41,8 @@ function WarpburstQuad({
   liveRef: RefObject<WarpburstLive>;
   vizRef: RefObject<VizBands>;
 }) {
-  const tint = useMemo(() => new THREE.Color("#4d0099"), []);
-  const highlight = useMemo(() => new THREE.Color("#00ffb3"), []);
+  const tint = useMemo(() => new THREE.Color("#c200ff"), []);
+  const highlight = useMemo(() => new THREE.Color("#8200ff"), []);
   const camZ = useRef(0);
   const lastT = useRef(0);
   const colorEnv = useRef(0);
@@ -61,13 +61,13 @@ function WarpburstQuad({
           iResolution: { value: new THREE.Vector3(1, 1, 1) },
           iTime: { value: 0 },
           uCamZ: { value: 0 },
-          uCamBank: { value: 1 },
-          uColor: { value: new THREE.Color("#4d0099") },
-          uHighlight: { value: new THREE.Color("#00ffb3") },
-          uGarland: { value: 1 },
+          uCamBank: { value: 0.5 },
+          uColor: { value: new THREE.Color("#c200ff") },
+          uHighlight: { value: new THREE.Color("#8200ff") },
+          uGarland: { value: 0 },
           uGarlandSpeed: { value: 1 },
           uSaturation: { value: 1 },
-          uDetail: { value: 1 },
+          uDetail: { value: 4 },
           uTwinkle: { value: 0 },
         },
       }),

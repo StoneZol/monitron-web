@@ -1,5 +1,5 @@
 export type WarpburstProps = {
-    showOverlay?: boolean;
+  showOverlay?: boolean;
 };
 
 /** Audio band that drives a motion/look slot. */
@@ -12,37 +12,38 @@ export type WarpburstLive = {
   cameraBank: number;
   /** Base goo tint — idle */
   color: string;
-    /** Neon highlight / peak tint */
-    colorPeak: string;
-    /** Realtime iridescent fog crawl */
-    garland: boolean;
-    /** Iridescence rate (1 ≈ default) */
-    garlandSpeed: number;
-    /** Look chroma (0 = gray, 1 = default) */
-    saturation: number;
+  /** Neon highlight / peak tint */
+  colorPeak: string;
+  /** Realtime iridescent fog crawl */
+  garland: boolean;
+  /** Iridescence rate (1 ≈ default) */
+  garlandSpeed: number;
+  /** Look chroma (0 = gray, 1 = default) */
+  saturation: number;
   /** Fog octave / wisp amount (0 = smooth, 1 = default, 4 = max) */
   fogDetail: number;
-    colorChannel: ReactiveChannel;
-    colorDrive: number;
-    speedChannel: ReactiveChannel;
-    speedDrive: number;
+  colorChannel: ReactiveChannel;
+  colorDrive: number;
+  speedChannel: ReactiveChannel;
+  speedDrive: number;
 };
 
 export const WARPBURST_DRIVE_MAX = 8;
 
+/** Defaults from sealed share preset. */
 export const WARPBURST_DEFAULTS: WarpburstLive = {
   flightSpeed: 1,
-  cameraBank: 1,
-  color: "#4d0099",
-  colorPeak: "#00ffb3",
-  garland: true,
+  cameraBank: 0.5,
+  color: "#c200ff",
+  colorPeak: "#8200ff",
+  garland: false,
   garlandSpeed: 1,
   saturation: 1,
-  fogDetail: 1,
+  fogDetail: 4,
   colorChannel: "bass",
   colorDrive: 1.2,
   speedChannel: "bass",
-  speedDrive: 1.2,
+  speedDrive: 2,
 };
 
 export const WARPBURST_RANGES = {

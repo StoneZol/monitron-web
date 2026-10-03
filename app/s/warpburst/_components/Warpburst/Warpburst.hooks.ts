@@ -3,10 +3,8 @@
 import { useSyncExternalStore } from "react";
 import {
   migrateAudioSource,
-  MIC_GATE_DEFAULT,
   normalizeMicGate,
   normalizePeakGain,
-  PEAK_GAIN_DEFAULT,
   useAudioReactive,
   type AudioSource,
 } from "@/hooks/useAudioReactive";
@@ -36,9 +34,9 @@ type Stored = WarpburstLive & {
 
 const STORED_DEFAULTS: Stored = {
   ...WARPBURST_DEFAULTS,
-  audioSource: "off",
-  micGate: MIC_GATE_DEFAULT,
-  peakGain: PEAK_GAIN_DEFAULT,
+  audioSource: "plugin",
+  micGate: 0.02,
+  peakGain: 1.5,
 };
 
 function clamp(n: number, min: number, max: number, fallback: number) {
