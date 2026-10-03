@@ -5,9 +5,11 @@ import {
   readScreenPrefsRaw,
   saveScreenPrefs,
 } from "@/lib/screenPrefs";
+import { getFxModeMod } from "./overlaysMods";
 import {
   FX_OVERLAY_DEFAULTS,
   FX_OVERLAY_KEY,
+  FX_WASH_DEFAULT,
   type FxBlendMode,
   type FxOverlayMode,
   type FxOverlayPrefs,
@@ -109,7 +111,20 @@ export function useFxOverlay(screenId: string) {
 
   return {
     ...prefs,
-    setMode: (mode: FxOverlayMode) => commit({ mode }),
+    setMode: (mode: FxOverlayMode) => {
+      const mod = getFxModeMod(mode);
+      if (!mod) {
+        commit({ mode });
+        return;
+      }
+      commit({
+        mode,
+        intensity: mod.defaults.intensity,
+        contrast: mod.defaults.contrast,
+        blend: mod.defaults.blend,
+        wash: FX_WASH_DEFAULT,
+      });
+    },
     setIntensity: (intensity: number) =>
       commit({ intensity: clamp(intensity, 0, 1, prefs.intensity) }),
     setContrast: (contrast: number) =>

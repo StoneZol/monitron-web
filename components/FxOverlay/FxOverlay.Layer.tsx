@@ -1,37 +1,15 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { applyFxMode, clearAllFxModes } from "./overlaysMods";
 import { useFxOverlay } from "./FxOverlay.store";
 
 type FxOverlayLayerProps = {
   screenId: string;
 };
 
-function clearCanvasFilters(root: HTMLElement) {
-  for (const c of root.querySelectorAll<HTMLCanvasElement>("canvas")) {
-    c.style.filter = "";
-  }
-}
-
-function applyCanvasFilters(
-  root: HTMLElement,
-  grayscale: number,
-  contrast: number,
-) {
-  const g = Math.min(1, Math.max(0, grayscale));
-  const c = Math.min(2, Math.max(0.5, contrast));
-  const parts: string[] = [];
-  if (g > 0.001) parts.push(`grayscale(${g})`);
-  if (Math.abs(c - 1) > 0.001) parts.push(`contrast(${c})`);
-  const filter = parts.join(" ");
-  for (const el of root.querySelectorAll<HTMLCanvasElement>("canvas")) {
-    el.style.filter = filter;
-  }
-}
-
 /**
- * B&W = canvas grayscale(intensity) + contrast.
- * Blend ≠ normal → optional black wash (separate wash strength — not full blackout at 1).
+ * Orchestrates overlay mods from `overlaysMods/` + optional blend wash.
  */
 export function FxOverlayLayer({ screenId }: FxOverlayLayerProps) {
   const fx = useFxOverlay(screenId);
@@ -42,13 +20,11 @@ export function FxOverlayLayer({ screenId }: FxOverlayLayerProps) {
     if (!root) return;
 
     const paint = () => {
-      if (fx.mode === "bw") {
-        applyCanvasFilters(root, fx.intensity, fx.contrast);
-      } else if (fx.mode !== "off" && Math.abs(fx.contrast - 1) > 0.001) {
-        applyCanvasFilters(root, 0, fx.contrast);
-      } else {
-        clearCanvasFilters(root);
-      }
+      applyFxMode(fx.mode, {
+        root,
+        intensity: fx.intensity,
+        contrast: fx.contrast,
+      });
     };
 
     paint();
@@ -56,7 +32,7 @@ export function FxOverlayLayer({ screenId }: FxOverlayLayerProps) {
     mo.observe(root, { childList: true, subtree: true });
     return () => {
       mo.disconnect();
-      clearCanvasFilters(root);
+      clearAllFxModes(root);
     };
   }, [fx.mode, fx.intensity, fx.contrast, screenId]);
 

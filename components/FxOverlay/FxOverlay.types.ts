@@ -1,44 +1,36 @@
-export type FxOverlayMode = "off" | "bw";
+import { bwMod } from "./overlaysMods";
+import type { FxBlendMode } from "./overlaysMods/types";
 
-/** CSS mix-blend-mode values we expose in the panel. */
-export type FxBlendMode =
-  | "normal"
-  | "multiply"
-  | "screen"
-  | "overlay"
-  | "darken"
-  | "lighten"
-  | "soft-light"
-  | "hard-light"
-  | "difference"
-  | "saturation"
-  | "color"
-  | "luminosity";
+export type { FxBlendMode };
+export type FxOverlayMode = "off" | "bw";
 
 export type FxOverlayPrefs = {
   mode: FxOverlayMode;
-  /** 0…1 — B&W grayscale amount */
+  /** 0…1 — mode strength (B&W = grayscale amount) */
   intensity: number;
   /** CSS contrast multiplier (1 = unchanged) */
   contrast: number;
   blend: FxBlendMode;
-  /** 0…1 — optional black wash strength when blend ≠ normal */
+  /** 0…1 — optional black wash when blend ≠ normal */
   wash: number;
 };
 
 export const FX_OVERLAY_KEY = "_fx" as const;
 
+/** Shared wash default for blend add-on (any mode). */
+export const FX_WASH_DEFAULT = 0.5;
+
 export const FX_OVERLAY_DEFAULTS: FxOverlayPrefs = {
   mode: "off",
-  intensity: 1,
-  contrast: 1,
-  blend: "normal",
-  wash: 0.25,
+  intensity: bwMod.defaults.intensity,
+  contrast: bwMod.defaults.contrast,
+  blend: bwMod.defaults.blend,
+  wash: FX_WASH_DEFAULT,
 };
 
 export const FX_MODE_OPTIONS: { value: FxOverlayMode; label: string }[] = [
   { value: "off", label: "off" },
-  { value: "bw", label: "B&W" },
+  { value: bwMod.id as FxOverlayMode, label: bwMod.label },
 ];
 
 export const FX_BLEND_OPTIONS: { value: FxBlendMode; label: string }[] = [

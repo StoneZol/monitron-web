@@ -79,7 +79,7 @@ export const BLACKHOLE_DEFAULTS: BlackholeLive = {
     /** Avoid 0°/180° — edge-on disk plane glitches */
     pitch: 5,
     /** 0° = horizontal belt */
-    beltAngle: 5,
+    beltAngle: 10,
     holeChannel: "bass",
     holeDrive: 1.2,
     yawChannel: "beat",
