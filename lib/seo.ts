@@ -62,6 +62,7 @@ export function rootMetadata(): Metadata {
       "shader",
       "audio reactive",
       "idle monitor",
+      "chrome extension",
     ],
     authors: [{ name: SITE_NAME }],
     creator: SITE_NAME,
