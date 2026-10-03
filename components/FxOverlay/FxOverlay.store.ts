@@ -52,9 +52,9 @@ function subscribe(screenId: string, listener: () => void) {
   };
 }
 
-function clamp01(n: number, fallback: number) {
+function clamp(n: number, min: number, max: number, fallback: number) {
   if (!Number.isFinite(n)) return fallback;
-  return Math.min(1, Math.max(0, n));
+  return Math.min(max, Math.max(min, n));
 }
 
 export function migrateFxPrefs(raw: unknown): FxOverlayPrefs {
@@ -72,8 +72,10 @@ export function migrateFxPrefs(raw: unknown): FxOverlayPrefs {
       : FX_OVERLAY_DEFAULTS.blend;
   return {
     mode,
-    intensity: clamp01(Number(o.intensity), FX_OVERLAY_DEFAULTS.intensity),
+    intensity: clamp(Number(o.intensity), 0, 1, FX_OVERLAY_DEFAULTS.intensity),
+    contrast: clamp(Number(o.contrast), 0.5, 2, FX_OVERLAY_DEFAULTS.contrast),
     blend,
+    wash: clamp(Number(o.wash), 0, 1, FX_OVERLAY_DEFAULTS.wash),
   };
 }
 
@@ -109,8 +111,12 @@ export function useFxOverlay(screenId: string) {
     ...prefs,
     setMode: (mode: FxOverlayMode) => commit({ mode }),
     setIntensity: (intensity: number) =>
-      commit({ intensity: clamp01(intensity, prefs.intensity) }),
+      commit({ intensity: clamp(intensity, 0, 1, prefs.intensity) }),
+    setContrast: (contrast: number) =>
+      commit({ contrast: clamp(contrast, 0.5, 2, prefs.contrast) }),
     setBlend: (blend: FxBlendMode) => commit({ blend }),
+    setWash: (wash: number) =>
+      commit({ wash: clamp(wash, 0, 1, prefs.wash) }),
   };
 }
 

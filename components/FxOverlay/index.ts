@@ -11,4 +11,5 @@ export {
   FX_MODE_OPTIONS,
   FX_OVERLAY_DEFAULTS,
   FX_OVERLAY_KEY,
+  FX_RANGES,
 } from "./FxOverlay.types";

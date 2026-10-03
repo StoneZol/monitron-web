@@ -17,22 +17,28 @@ export type FxBlendMode =
 
 export type FxOverlayPrefs = {
   mode: FxOverlayMode;
-  /** 0…1 — overlay opacity / strength */
+  /** 0…1 — B&W grayscale amount */
   intensity: number;
+  /** CSS contrast multiplier (1 = unchanged) */
+  contrast: number;
   blend: FxBlendMode;
+  /** 0…1 — optional black wash strength when blend ≠ normal */
+  wash: number;
 };
 
 export const FX_OVERLAY_KEY = "_fx" as const;
 
 export const FX_OVERLAY_DEFAULTS: FxOverlayPrefs = {
   mode: "off",
-  intensity: 0.35,
+  intensity: 1,
+  contrast: 1,
   blend: "normal",
+  wash: 0.25,
 };
 
 export const FX_MODE_OPTIONS: { value: FxOverlayMode; label: string }[] = [
   { value: "off", label: "off" },
-  { value: "bw", label: "B&W (black wash)" },
+  { value: "bw", label: "B&W" },
 ];
 
 export const FX_BLEND_OPTIONS: { value: FxBlendMode; label: string }[] = [
@@ -49,3 +55,9 @@ export const FX_BLEND_OPTIONS: { value: FxBlendMode; label: string }[] = [
   { value: "color", label: "color" },
   { value: "luminosity", label: "luminosity" },
 ];
+
+export const FX_RANGES = {
+  intensity: { min: 0, max: 1, step: 0.01 },
+  contrast: { min: 0.5, max: 2, step: 0.05 },
+  wash: { min: 0, max: 1, step: 0.01 },
+} as const;
