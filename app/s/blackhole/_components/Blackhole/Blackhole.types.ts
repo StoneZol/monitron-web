@@ -31,7 +31,7 @@ export type BlackholeLive = {
     /** Advances disk swirl / star drift */
     flightSpeed: number;
     exposure: number;
-    /** Outer march steps (×6 inner) — Shadertoy/Brayns default ~20 */
+    /** Outer march steps (×6 inner) — Shadertoy default ~20 */
     nbDisks: number;
     /** Accretion disk / horizon swirl (_Speed) */
     diskRotationSpeed: number;

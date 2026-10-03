@@ -21,13 +21,6 @@ import {
     type ReactiveChannel,
 } from "./Blackhole.types";
 
-const SOURCES = [
-    {
-        label: "tsBXW3 · accretion disk",
-        href: "https://www.shadertoy.com/view/tsBXW3",
-    },
-] as const;
-
 const REACTIVE_CHANNEL_OPTIONS: { value: ReactiveChannel; label: string }[] = [
     { value: "off", label: "off" },
     { value: "bass", label: "bass (30–180 Hz)" },
@@ -86,32 +79,17 @@ const Blackhole = ({ showOverlay = true }: BlackholeProps) => {
                     <ControlPanel
                         title="blackhole"
                         actions={
-                            <div className="flex flex-col gap-2">
-                                <div className="flex gap-2">
-                                    <NavBackButton className="min-w-0 flex-1" />
-                                    <PanelButton onClick={controls.reset} className="flex-1">
-                                        reset
-                                    </PanelButton>
-                                    <PanelButton
-                                        onClick={controls.fullscreen}
-                                        className="flex-1"
-                                    >
-                                        fullscreen
-                                    </PanelButton>
-                                </div>
-                                <div className="flex flex-wrap gap-x-2 gap-y-1 font-mono text-[8px] uppercase tracking-[0.16em] text-muted">
-                                    {SOURCES.map((src) => (
-                                        <a
-                                            key={src.href}
-                                            href={src.href}
-                                            target="_blank"
-                                            rel="noreferrer"
-                                            className="text-cyan hover:text-signal"
-                                        >
-                                            {src.label} ↗
-                                        </a>
-                                    ))}
-                                </div>
+                            <div className="flex gap-2">
+                                <NavBackButton className="min-w-0 flex-1" />
+                                <PanelButton onClick={controls.reset} className="flex-1">
+                                    reset
+                                </PanelButton>
+                                <PanelButton
+                                    onClick={controls.fullscreen}
+                                    className="flex-1"
+                                >
+                                    fullscreen
+                                </PanelButton>
                             </div>
                         }
                     >

@@ -11,6 +11,7 @@ import {
 } from "react";
 import { cn } from "@/lib/utils";
 import { useScreensOverlay } from "@/components/ScreensOverlay/ScreensOverlay.context";
+import { placeholders } from "@/lib/placeholders";
 import {
     readPanelSections,
     writePanelSection,
@@ -119,6 +120,10 @@ export function ControlPanel({
         }
     };
 
+    const sources = overlay
+        ? placeholders.find((p) => p.id === overlay.screenId)?.sources
+        : undefined;
+
     return (
         <div
             className={cn(
@@ -174,9 +179,31 @@ export function ControlPanel({
                     </div>
                 ) : null}
             </div>
-            {actions ? (
+            {actions || sources?.length ? (
                 <div className="shrink-0 border-b border-line p-2">
                     {actions}
+                    {sources?.length ? (
+                        <div
+                            className={cn(
+                                "flex flex-wrap gap-x-2 gap-y-1",
+                                actions ? "mt-2" : null,
+                            )}
+                        >
+                            {sources.map((src) => (
+                                <a
+                                    key={src.href}
+                                    href={src.href}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="truncate font-mono text-[9px] uppercase tracking-[0.14em] text-cyan/70 transition-colors hover:text-signal"
+                                    title={src.title}
+                                >
+                                    original — {src.author}
+                                    <span className="ml-1 text-muted/60">↗</span>
+                                </a>
+                            ))}
+                        </div>
+                    ) : null}
                 </div>
             ) : null}
             <div className="control-panel-scroll min-h-0 flex-1 flex flex-col gap-1.5 overflow-x-hidden overflow-y-auto overscroll-contain p-2">

@@ -1,3 +1,11 @@
+export type PlaceholderSource = {
+    href: string;
+    /** Shader / piece author */
+    author: string;
+    /** Full original title */
+    title: string;
+};
+
 export type PlaceholderMeta = {
     id: string;
     title: string;
@@ -6,8 +14,8 @@ export type PlaceholderMeta = {
     previewSrc?: string;
     /** Compatible with Monitron Chrome extension audio-bus */
     reactive?: boolean;
-    /** Attribution links (Shadertoy etc.) — clickable badge on the card */
-    sources?: { label: string; href: string }[];
+    /** Attribution — non-clickable stamp + credit link under the card */
+    sources?: PlaceholderSource[];
 };
 
 export const placeholders: PlaceholderMeta[] = [
@@ -36,10 +44,12 @@ export const placeholders: PlaceholderMeta[] = [
         id: "blackhole",
         title: "Blackhole",
         href: "/s/blackhole",
+        previewSrc: "/s/blackhole.webp",
         reactive: true,
         sources: [
             {
-                label: "tsBXW3 · accretion disk",
+                author: "set111",
+                title: "Black hole with accretion disk",
                 href: "https://www.shadertoy.com/view/tsBXW3",
             },
         ],

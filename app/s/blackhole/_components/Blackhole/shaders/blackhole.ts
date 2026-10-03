@@ -35,7 +35,7 @@ uniform float uHoleBoost;
 uniform vec3 uNebulaColor;
 uniform float uNebulaIntensity;
 
-// Shadertoy custom params (defaults from the public Brayns remake of this shader)
+// Shadertoy custom params (defaults from set111 / tsBXW3)
 #define _Size uSize
 #define _Speed uSpeed
 const float _Steps = 12.0;
