@@ -139,6 +139,7 @@ function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
       STORED_DEFAULTS.blackHoleSize,
     ),
     pitch: migratePitch(raw),
+    beltAngle: clamp(Number(legacy.beltAngle), -180, 180, STORED_DEFAULTS.beltAngle),
     yawSpeed: (() => {
       const v = Number(raw.yawSpeed);
       if (!Number.isFinite(v)) return STORED_DEFAULTS.yawSpeed;
@@ -240,6 +241,7 @@ export default function useBlackholeHook() {
     controls: {
       yawSpeed: live.yawSpeed,
       pitch: live.pitch,
+      beltAngle: live.beltAngle,
       blackHoleSize: live.blackHoleSize,
       diskRotationSpeed: live.diskRotationSpeed,
       holeColor: live.holeColor,
@@ -262,6 +264,7 @@ export default function useBlackholeHook() {
       driveMax: BLACKHOLE_DRIVE_MAX,
       setYawSpeed: (yawSpeed: number) => commit({ yawSpeed }),
       setPitch: (pitch: number) => commit({ pitch }),
+      setBeltAngle: (beltAngle: number) => commit({ beltAngle }),
       setBlackHoleSize: (blackHoleSize: number) => commit({ blackHoleSize }),
       setDiskRotationSpeed: (diskRotationSpeed: number) =>
         commit({ diskRotationSpeed }),

@@ -28,6 +28,7 @@ uniform float iTime;
 uniform float uSize;
 uniform float uYaw;
 uniform float uPitch;
+uniform float uBeltAngle;
 uniform float uSpeed;
 uniform vec3 uHoleColor;
 uniform float uHoleBoost;
@@ -213,27 +214,36 @@ void Rotate( inout vec3 vector, vec2 angle )
 				+sin(angle.x)*vec2(-1,1)*vector.zx;
 }
 
+// Rotate v around unit axis k (Rodrigues) — used to spin only the hole/disk
+vec3 rotAround(vec3 v, vec3 k, float a)
+{
+    float c = cos(a);
+    float s = sin(a);
+    return v * c + cross(k, v) * s + k * dot(k, v) * (1.0 - c);
+}
+
 void mainImage( out vec4 colOut, in vec2 fragCoord )
 {
     colOut = vec4(0.);;
 
-    vec2 fragCoordRot;
-    fragCoordRot.x = fragCoord.x*0.985 + fragCoord.y * 0.174;
-    fragCoordRot.y = fragCoord.y*0.985 - fragCoord.x * 0.174;
-    fragCoordRot += vec2(-0.06, 0.12) * iResolution.xy;
+    // Centered frame — belt angle is controlled in 3D on the hole itself
+    vec2 fragCoordRot = fragCoord;
 
     for( int j=0; j<AA; j++ )
     for( int i=0; i<AA; i++ )
     {
-        //setting up camera
+        //setting up camera (yaw + pitch rotate the view / space)
         vec3 ray = normalize( vec3((fragCoordRot-iResolution.xy*.5  + vec2(i,j)/(float(AA)))/iResolution.x, 1 ));
-        // Zoom from fixed MOUSE_X; yaw auto + pitch in radians from panel
-        vec3 pos = vec3(0.,0.05,-(20.*MOUSE_X-10.)*(20.*MOUSE_X-10.)*.05);
+        // Camera on −Z, no Y offset — keeps the hole dead-center
+        vec3 pos = vec3(0.,0.,-(20.*MOUSE_X-10.)*(20.*MOUSE_X-10.)*.05);
         vec2 angle = vec2(uYaw, uPitch);
-        float dist = length(pos);
         Rotate(pos,angle);
-        angle.xy -= min(.3/dist , 3.14) * vec2(1, 0.5);
         Rotate(ray,angle);
+
+        // Belt angle: roll hole/disk around the view axis only.
+        // Background is sampled with the inverse roll so space stays put.
+        vec3 camAxis = normalize(pos);
+        ray = rotAround(ray, camAxis, uBeltAngle);
 
         vec4 col = vec4(0.);
         vec4 glow = vec4(0.);
@@ -270,7 +280,9 @@ void mainImage( out vec4 colOut, in vec2 fragCoord )
 
             else if(dist2 > _Size * 1000.) //ray escaped BH
             {
-                vec4 bg = background (ray);
+                // Un-roll so nebula/stars keep camera orientation
+                vec3 rayBg = rotAround(ray, camAxis, -uBeltAngle);
+                vec4 bg = background (rayBg);
                 outCol = vec4(col.rgb*col.a + bg.rgb*(1.-col.a)  + glow.rgb *(1.-col.a    ), 1.);
                 break;
             }

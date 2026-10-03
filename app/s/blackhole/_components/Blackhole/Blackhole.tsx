@@ -49,8 +49,9 @@ const INFO = {
     nebulaIntensity: "Base nebula strength. 1 ≈ subtle wash.",
     colorSpeed: "Hue walk rate while any twinkle is on.",
     yawSpeed: "Horizontal orbit rate (unitless, like disk spin).",
-    pitch: "Camera tilt in degrees.",
-    scale: "Black hole / disk radius (_Size).",
+  pitch: "Camera tilt — tips the whole view (space + hole).",
+  beltAngle: "Central belt angle — rolls only the hole/disk; stars stay put. 0° = horizontal.",
+  scale: "Black hole / disk radius (_Size).",
     scalePunch: "Pulse + shake hole scale from the hole channel.",
     scaleDrive: "How hard scale punches when Scale punch is on.",
     diskSpin: "Accretion disk / horizon swirl speed.",
@@ -238,6 +239,16 @@ const Blackhole = ({ showOverlay = true }: BlackholeProps) => {
                                 onChange={controls.setPitch}
                                 format={(v) => `${v.toFixed(0)}°`}
                                 info={INFO.pitch}
+                            />
+                            <Slider
+                                label="Belt angle"
+                                value={controls.beltAngle}
+                                min={BLACKHOLE_RANGES.beltAngle.min}
+                                max={BLACKHOLE_RANGES.beltAngle.max}
+                                step={BLACKHOLE_RANGES.beltAngle.step}
+                                onChange={controls.setBeltAngle}
+                                format={(v) => `${v.toFixed(0)}°`}
+                                info={INFO.beltAngle}
                             />
                             <Slider
                                 label="Scale"

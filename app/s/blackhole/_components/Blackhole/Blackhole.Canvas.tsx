@@ -48,10 +48,10 @@ function BlackholeQuad({
                     iResolution: { value: new THREE.Vector3(1, 1, 1) },
                     iTime: { value: 0 },
                     uSize: { value: 0.2 },
-                    uYaw: { value: 0 },
-                    uPitch: { value: (2 * Math.PI) / 180 },
-                    uRoll: { value: (10 * Math.PI) / 180 },
-                    uSpeed: { value: 0.2 },
+          uYaw: { value: 0 },
+          uPitch: { value: (2 * Math.PI) / 180 },
+          uBeltAngle: { value: 0 },
+          uSpeed: { value: 0.2 },
                     uHoleColor: { value: new THREE.Color("#ffcc00") },
                     uHoleBoost: { value: 0 },
                     uNebulaColor: { value: new THREE.Color("#4a2a6e") },
@@ -97,7 +97,7 @@ function BlackholeQuad({
         const shake = scalePunchOn ? scalePunch : 0;
         mat.uniforms.uPitch!.value =
             ((live.pitch + Math.sin(t * 28) * shake * 4) * Math.PI) / 180;
-        mat.uniforms.uRoll!.value = (live.roll * Math.PI) / 180;
+        mat.uniforms.uBeltAngle!.value = (live.beltAngle * Math.PI) / 180;
         mat.uniforms.uSpeed!.value = Math.max(0.05, live.diskRotationSpeed);
 
         const yawArmed = reactive && live.yawChannel !== "off";
