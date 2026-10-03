@@ -7,7 +7,8 @@
         "build": "next build",
         "start": "next start",
         "lint": "eslint",
-        "convert": "auto-convert-images"
+        "convert": "auto-convert-images",
+        "resize": "auto-convert-images-resize"
     },
     "dependencies": {
         "@react-three/fiber": "^9.8.1",

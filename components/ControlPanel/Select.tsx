@@ -23,6 +23,30 @@ type SelectProps<T extends string = string> = {
   className?: string;
 };
 
+function stepEnabledIndex<T extends string>(
+  options: SelectOption<T>[],
+  current: T,
+  delta: 1 | -1,
+): T | null {
+  if (options.length === 0) return null;
+  const enabled = options
+    .map((o, i) => ({ o, i }))
+    .filter(({ o }) => !o.disabled);
+  if (enabled.length === 0) return null;
+
+  let pos = enabled.findIndex(({ o }) => o.value === current);
+  if (pos < 0) pos = 0;
+  else pos = (pos + delta + enabled.length) % enabled.length;
+  return enabled[pos]!.o.value;
+}
+
+const stepBtnClass = cn(
+  "flex h-7 w-7 shrink-0 items-center justify-center border border-signal bg-screen text-[11px] text-signal",
+  "hover:border-cyan hover:text-cyan",
+  "focus-visible:outline focus-visible:outline-offset-2 focus-visible:outline-signal",
+  "disabled:pointer-events-none disabled:opacity-40",
+);
+
 export function Select<T extends string>({
   label,
   value,
@@ -36,6 +60,7 @@ export function Select<T extends string>({
   const rootRef = useRef<HTMLDivElement>(null);
   const listId = useId();
   const selected = options.find((o) => o.value === value) ?? options[0];
+  const canStep = options.filter((o) => !o.disabled).length > 1;
 
   useEffect(() => {
     if (!open) return;
@@ -53,6 +78,11 @@ export function Select<T extends string>({
     };
   }, [open]);
 
+  const step = (delta: 1 | -1) => {
+    const next = stepEnabledIndex(options, value, delta);
+    if (next != null && next !== value) onChange(next);
+  };
+
   return (
     <div
       ref={rootRef}
@@ -66,66 +96,86 @@ export function Select<T extends string>({
       <span className={fieldLabelRow}>
         <FieldLabel label={label} info={info} />
       </span>
-      <div className={cn(fieldControlRow, "relative")}>
+      <div className={cn(fieldControlRow, "relative h-7 gap-1")}>
         <button
           type="button"
-          role="combobox"
-          aria-expanded={open}
-          aria-controls={listId}
-          disabled={disabled}
-          onClick={() => setOpen((v) => !v)}
-          className={cn(
-            "flex h-7 w-full items-center justify-between gap-2 border border-signal bg-screen px-2 text-left text-[10px] uppercase tracking-[0.18em] text-signal",
-            "hover:border-cyan hover:text-cyan",
-            "focus-visible:outline focus-visible:outline-offset-2 focus-visible:outline-signal",
-            open && "border-cyan text-cyan",
-          )}
+          aria-label={`Previous ${label}`}
+          disabled={disabled || !canStep}
+          onClick={() => step(-1)}
+          className={stepBtnClass}
         >
-          <span>{selected?.label ?? value}</span>
-          <span className="text-magenta" aria-hidden>
-            {open ? "▴" : "▾"}
-          </span>
+          ‹
         </button>
-        {open ? (
-          <ul
-            id={listId}
-            role="listbox"
-            className="absolute top-full left-0 z-30 mt-1 max-h-48 w-full overflow-y-auto border border-signal bg-screen/95 shadow-[2px_2px_0_var(--magenta)] backdrop-blur-sm"
+        <div className="relative min-w-0 flex-1">
+          <button
+            type="button"
+            role="combobox"
+            aria-expanded={open}
+            aria-controls={listId}
+            disabled={disabled}
+            onClick={() => setOpen((v) => !v)}
+            className={cn(
+              "flex h-7 w-full items-center justify-between gap-2 border border-signal bg-screen px-2 text-left text-[10px] uppercase tracking-[0.18em] text-signal",
+              "hover:border-cyan hover:text-cyan",
+              "focus-visible:outline focus-visible:outline-offset-2 focus-visible:outline-signal",
+              open && "border-cyan text-cyan",
+            )}
           >
-            {options.map((opt) => {
-              const active = opt.value === value;
-              const optDisabled = Boolean(opt.disabled);
-              return (
-                <li
-                  key={opt.value}
-                  role="option"
-                  aria-selected={active}
-                  aria-disabled={optDisabled || undefined}
-                >
-                  <button
-                    type="button"
-                    disabled={optDisabled}
-                    className={cn(
-                      "flex w-full px-2 py-1.5 text-left text-[10px] uppercase tracking-[0.18em]",
-                      optDisabled
-                        ? "cursor-not-allowed text-muted opacity-40"
-                        : active
-                          ? "bg-signal/20 text-cyan"
-                          : "text-signal hover:bg-signal/10 hover:text-cyan",
-                    )}
-                    onClick={() => {
-                      if (optDisabled) return;
-                      onChange(opt.value);
-                      setOpen(false);
-                    }}
+            <span className="truncate">{selected?.label ?? value}</span>
+            <span className="shrink-0 text-magenta" aria-hidden>
+              {open ? "▴" : "▾"}
+            </span>
+          </button>
+          {open ? (
+            <ul
+              id={listId}
+              role="listbox"
+              className="absolute top-full left-0 z-30 mt-1 max-h-48 w-full overflow-y-auto border border-signal bg-screen/95 shadow-[2px_2px_0_var(--magenta)] backdrop-blur-sm"
+            >
+              {options.map((opt) => {
+                const active = opt.value === value;
+                const optDisabled = Boolean(opt.disabled);
+                return (
+                  <li
+                    key={opt.value}
+                    role="option"
+                    aria-selected={active}
+                    aria-disabled={optDisabled || undefined}
                   >
-                    {opt.label}
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        ) : null}
+                    <button
+                      type="button"
+                      disabled={optDisabled}
+                      className={cn(
+                        "flex w-full px-2 py-1.5 text-left text-[10px] uppercase tracking-[0.18em]",
+                        optDisabled
+                          ? "cursor-not-allowed text-muted opacity-40"
+                          : active
+                            ? "bg-signal/20 text-cyan"
+                            : "text-signal hover:bg-signal/10 hover:text-cyan",
+                      )}
+                      onClick={() => {
+                        if (optDisabled) return;
+                        onChange(opt.value);
+                        setOpen(false);
+                      }}
+                    >
+                      {opt.label}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : null}
+        </div>
+        <button
+          type="button"
+          aria-label={`Next ${label}`}
+          disabled={disabled || !canStep}
+          onClick={() => step(1)}
+          className={stepBtnClass}
+        >
+          ›
+        </button>
       </div>
     </div>
   );

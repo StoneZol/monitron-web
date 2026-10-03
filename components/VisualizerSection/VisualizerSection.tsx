@@ -7,6 +7,7 @@ import {
   Select,
   Slider,
 } from "@/components/ControlPanel";
+import { FxOverlaySection } from "@/components/FxOverlay";
 import {
   AUDIO_SOURCE_OPTIONS,
   type AudioSource,
@@ -34,6 +35,7 @@ type VisualizerSectionProps = {
 /**
  * Shared visualizer chrome for every audio-reactive screen:
  * extension status, source, mic gate, screen children, ::audio-bus, peak gain.
+ * Fx overlay mounts immediately above this block on every screen.
  */
 export function VisualizerSection({
   visualizer,
@@ -41,7 +43,9 @@ export function VisualizerSection({
   info,
 }: VisualizerSectionProps) {
   return (
-    <ControlSection label="visualizer" info={info?.section}>
+    <>
+      <FxOverlaySection />
+      <ControlSection label="visualizer" info={info?.section}>
       <div className="flex items-center justify-between gap-3 text-[10px] uppercase tracking-[0.2em]">
         <span className="text-muted">extension</span>
         <span
@@ -112,5 +116,6 @@ export function VisualizerSection({
         />
       )}
     </ControlSection>
+    </>
   );
 }

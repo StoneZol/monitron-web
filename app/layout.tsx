@@ -1,6 +1,6 @@
-import type { Metadata } from "next";
 import { Chakra_Petch, Geist_Mono } from "next/font/google";
 import { PhotosensitiveAlert } from "@/components/PhotosensitiveAlert";
+import { rootMetadata } from "@/lib/seo";
 import "./globals.css";
 
 const chakra = Chakra_Petch({
@@ -14,10 +14,7 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-  title: "Monitron",
-  description: "Bootleg generative signals for idle monitors.",
-};
+export const metadata = rootMetadata();
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (

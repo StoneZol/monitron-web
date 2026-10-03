@@ -11,6 +11,8 @@ import {
 } from "react";
 import { cn } from "@/lib/utils";
 import { useScreensOverlay } from "@/components/ScreensOverlay/ScreensOverlay.context";
+import { NavBackButton } from "@/components/NavBackButton";
+import { placeholders } from "@/lib/placeholders";
 import {
     readPanelSections,
     writePanelSection,
@@ -26,7 +28,7 @@ import { PanelButton } from "./PanelButton";
 type ControlPanelProps = {
     title: string;
     children: ReactNode;
-    /** Fixed under the title — outside the scroll body (back / reset / fullscreen) */
+    /** Fixed under the chrome header — outside the scroll body (reset / fullscreen) */
     actions?: ReactNode;
     className?: string;
 };
@@ -119,6 +121,10 @@ export function ControlPanel({
         }
     };
 
+    const sources = overlay
+        ? placeholders.find((p) => p.id === overlay.screenId)?.sources
+        : undefined;
+
     return (
         <div
             className={cn(
@@ -127,9 +133,12 @@ export function ControlPanel({
             )}
         >
             <div className="flex shrink-0 flex-col items-center gap-1.5 border-b border-line p-2">
-                <span className="w-full text-start text-sm uppercase tracking-[0.28em]">
-                    {title}
-                </span>
+                <div className="flex w-full items-center gap-2">
+                    {overlay ? <NavBackButton /> : null}
+                    <span className="min-w-0 flex-1 text-start text-sm uppercase tracking-[0.28em]">
+                        {title}
+                    </span>
+                </div>
                 {overlay ? (
                     <div className="flex w-full flex-col gap-1">
                         <div className="flex w-full gap-1.5">
@@ -154,7 +163,7 @@ export function ControlPanel({
                             </ChromePair>
                             <ChromePair
                                 label="preset"
-                                info="Copy seals current look knobs into a monitron key (clipboard). Paste reads a key for this screen, applies it, and reloads. HUD fold state is not shared."
+                                info="Copy seals current look knobs + fx overlay into a monitron key (clipboard). Paste reads a key for this screen, applies it, and reloads. HUD fold state is not shared."
                                 status={shareFlash}
                             >
                                 <PanelButton
@@ -174,9 +183,31 @@ export function ControlPanel({
                     </div>
                 ) : null}
             </div>
-            {actions ? (
+            {actions || sources?.length ? (
                 <div className="shrink-0 border-b border-line p-2">
                     {actions}
+                    {sources?.length ? (
+                        <div
+                            className={cn(
+                                "flex flex-wrap gap-x-2 gap-y-1",
+                                actions ? "mt-2" : null,
+                            )}
+                        >
+                            {sources.map((src) => (
+                                <a
+                                    key={src.href}
+                                    href={src.href}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="truncate font-mono text-[9px] uppercase tracking-[0.14em] text-cyan/70 transition-colors hover:text-signal"
+                                    title={src.title}
+                                >
+                                    original — {src.author}
+                                    <span className="ml-1 text-muted/60">↗</span>
+                                </a>
+                            ))}
+                        </div>
+                    ) : null}
                 </div>
             ) : null}
             <div className="control-panel-scroll min-h-0 flex-1 flex flex-col gap-1.5 overflow-x-hidden overflow-y-auto overscroll-contain p-2">

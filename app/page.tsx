@@ -1,4 +1,5 @@
 import { PlaceholderCard } from "@/components/PlaceholderCard";
+import { SiteFooter } from "@/components/SiteFooter";
 import { panelButtonClassName } from "@/components/ControlPanel/PanelButton";
 import { PLUGIN_URL } from "@/lib/audioBus";
 import { placeholders } from "@/lib/placeholders";
@@ -16,12 +17,12 @@ export default function Home() {
 
             <p
                 aria-hidden
-                className="pointer-events-none absolute bottom-8 left-3 z-10 hidden origin-bottom-left -rotate-90 font-mono text-[10px] uppercase tracking-[0.35em] text-muted/60 md:block"
+                className="pointer-events-none absolute bottom-28 left-3 z-10 hidden origin-bottom-left -rotate-90 font-mono text-[10px] uppercase tracking-[0.35em] text-muted/60 md:block"
             >
                 monitron::underground_av
             </p>
 
-            <main className="relative z-10 flex w-full flex-1 flex-col px-4 pb-24 pt-10 sm:px-8 sm:pt-14 lg:px-12">
+            <main className="relative z-10 flex w-full flex-1 flex-col px-4 pb-16 pt-10 sm:px-8 sm:pt-14 lg:px-12">
                 <header className="relative mb-14 max-w-4xl sm:mb-20">
                     <div className="mb-6 flex flex-wrap items-center gap-x-4 gap-y-2 font-mono text-[10px] uppercase tracking-[0.24em] text-muted">
                         <span className="text-warn">rec</span>
@@ -82,13 +83,10 @@ export default function Home() {
                 </header>
 
                 <section aria-label="Available placeholders">
-                    <div className="mb-6 flex items-baseline justify-between gap-4">
+                    <div className="mb-6">
                         <h2 className="font-mono text-[11px] uppercase tracking-[0.28em] text-signal">
                             ::channels
                         </h2>
-                        <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted">
-                            hover = preview later
-                        </span>
                     </div>
 
                     <ul className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 lg:gap-5">
@@ -103,6 +101,8 @@ export default function Home() {
                     </ul>
                 </section>
             </main>
+
+            <SiteFooter />
         </div>
     );
 }

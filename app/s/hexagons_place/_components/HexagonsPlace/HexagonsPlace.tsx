@@ -2,7 +2,6 @@
 
 import dynamic from "next/dynamic";
 import { ScreensOverlay } from "@/components/ScreensOverlay";
-import { NavBackButton } from "@/components/NavBackButton";
 import { VisualizerSection } from "@/components/VisualizerSection";
 import {
     ColorField,
@@ -96,7 +95,6 @@ const HexagonsPlace = ({ showOverlay = true }: HexagonsPlaceProps) => {
                         title="hexagons place"
                         actions={
                             <div className="flex gap-2">
-                                <NavBackButton className="min-w-0 flex-1" />
                                 <PanelButton onClick={controls.reset} className="flex-1">
                                     reset
                                 </PanelButton>
