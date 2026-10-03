@@ -12,16 +12,14 @@ export type HexacoreLive = {
   color: string;
   /** Tint at audio peak (used when garland is off) */
   colorPeak: string;
-  /** Energy pulse + emissive circuitry (“garland”) */
+  /** Realtime iridescent emit on hex circuitry */
   garland: boolean;
-  /** Seconds between light-wave crests while garland is on (~2.2 ≈ Shadertoy) */
-  pulseInterval: number;
+  /** Iridescence / twinkle rate (1 ≈ default) */
+  garlandSpeed: number;
   colorChannel: ReactiveChannel;
   colorDrive: number;
   speedChannel: ReactiveChannel;
   speedDrive: number;
-  pulseChannel: ReactiveChannel;
-  pulseDrive: number;
 };
 
 export const HEXACORE_DRIVE_MAX = 8;
@@ -31,18 +29,15 @@ export const HEXACORE_DEFAULTS: HexacoreLive = {
   color: "#c8a0ff",
   colorPeak: "#00eeff",
   garland: true,
-  /** 1/0.45 ≈ original Shadertoy time coeff */
-  pulseInterval: 2.2,
+  garlandSpeed: 1,
   colorChannel: "bass",
   colorDrive: 1.2,
   speedChannel: "bass",
   speedDrive: 1.2,
-  pulseChannel: "bass",
-  pulseDrive: 1.2,
 };
 
 export const HEXACORE_RANGES = {
   flightSpeed: { min: 0.1, max: 3, step: 0.05 },
-  pulseInterval: { min: 0.4, max: 6, step: 0.1 },
+  garlandSpeed: { min: 0, max: 4, step: 0.05 },
   drive: { min: 0, max: HEXACORE_DRIVE_MAX, step: 0.1 },
 } as const;

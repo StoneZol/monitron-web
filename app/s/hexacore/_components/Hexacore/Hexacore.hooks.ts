@@ -80,11 +80,11 @@ function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
       raw.garland === undefined
         ? STORED_DEFAULTS.garland
         : Boolean(raw.garland),
-    pulseInterval: clamp(
-      Number(raw.pulseInterval),
-      0.4,
-      6,
-      STORED_DEFAULTS.pulseInterval,
+    garlandSpeed: clamp(
+      Number(raw.garlandSpeed),
+      0,
+      4,
+      STORED_DEFAULTS.garlandSpeed,
     ),
     colorChannel: channel(raw.colorChannel, STORED_DEFAULTS.colorChannel),
     colorDrive: clamp(
@@ -99,13 +99,6 @@ function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
       0,
       HEXACORE_DRIVE_MAX,
       STORED_DEFAULTS.speedDrive,
-    ),
-    pulseChannel: channel(raw.pulseChannel, STORED_DEFAULTS.pulseChannel),
-    pulseDrive: clamp(
-      Number(raw.pulseDrive),
-      0,
-      HEXACORE_DRIVE_MAX,
-      STORED_DEFAULTS.pulseDrive,
     ),
   };
 }
@@ -170,28 +163,23 @@ export default function useHexacoreHook() {
       color: live.color,
       colorPeak: live.colorPeak,
       garland: live.garland,
-      pulseInterval: live.pulseInterval,
+      garlandSpeed: live.garlandSpeed,
       colorChannel: live.colorChannel,
       colorDrive: live.colorDrive,
       speedChannel: live.speedChannel,
       speedDrive: live.speedDrive,
-      pulseChannel: live.pulseChannel,
-      pulseDrive: live.pulseDrive,
       driveMax: HEXACORE_DRIVE_MAX,
       setFlightSpeed: (flightSpeed: number) => commit({ flightSpeed }),
       setColor: (color: string) => commit({ color }),
       setColorPeak: (colorPeak: string) => commit({ colorPeak }),
       setGarland: (garland: boolean) => commit({ garland }),
-      setPulseInterval: (pulseInterval: number) => commit({ pulseInterval }),
+      setGarlandSpeed: (garlandSpeed: number) => commit({ garlandSpeed }),
       setColorChannel: (colorChannel: ReactiveChannel) =>
         commit({ colorChannel }),
       setColorDrive: (colorDrive: number) => commit({ colorDrive }),
       setSpeedChannel: (speedChannel: ReactiveChannel) =>
         commit({ speedChannel }),
       setSpeedDrive: (speedDrive: number) => commit({ speedDrive }),
-      setPulseChannel: (pulseChannel: ReactiveChannel) =>
-        commit({ pulseChannel }),
-      setPulseDrive: (pulseDrive: number) => commit({ pulseDrive }),
       fullscreen: () => void toggleFullscreen(),
       reset: () => {
         writePrefs({ ...STORED_DEFAULTS });

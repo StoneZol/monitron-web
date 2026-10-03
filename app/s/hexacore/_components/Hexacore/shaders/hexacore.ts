@@ -4,11 +4,11 @@
  *
  * Changes from original:
  * - iTime / iResolution as uniforms
- * - uCamZ: accumulated camera Z (dt × flightSpeed) so speed changes don’t jump the tunnel
+ * - uCamZ: accumulated camera Z (dt × flightSpeed)
  * - uColor: crystal / non-garland tint (may be audio-reactive)
- * - uWaveColor: fixed idle tint for energy crests — never audio-modulated
- * - uGarland: on = racing energy pulse + volumetric glow; off = steady edge emit in uColor
- * - uPulseA/B: crest world-Z; constant world speed; despawn by distance traveled (ignores flightSpeed)
+ * - uWaveColor: garland tint (idle picker; not audio-modulated)
+ * - uGarland: realtime iridescent emit on hex circuitry; off = solid uColor edges
+ * - uGarlandSpeed: iridescence / twinkle rate multiplier
  * - AA=1 for monitor perf
  */
 
@@ -31,9 +31,7 @@ uniform float uCamZ;
 uniform vec3 uColor;
 uniform vec3 uWaveColor;
 uniform float uGarland;
-uniform vec4 uPulseA;
-uniform vec4 uPulseB;
-uniform float uPulseCount;
+uniform float uGarlandSpeed;
 
 #define MAX_STEPS    110
 #define MAX_DIST     28.0
@@ -48,6 +46,7 @@ const float SLAB  = 2.6;
 const float TUN_R = 0.95;
 
 float gT;
+float gGarlandT;
 float gTrap;
 float gCid;
 float gEmit;
@@ -69,7 +68,6 @@ vec3 palCrystal(float t){
   return c * mix(vec3(1.0), uColor * 1.35, 0.55);
 }
 vec3 palEnergy (float t){
-  // Wave / energy paths — locked to uWaveColor so audio never flexes crests
   vec3 c = pal(t, vec3(.60,.45,.50), vec3(.45,.45,.50), vec3(1.,.9,.8),   vec3(.55,.25,.05));
   return c * mix(vec3(1.0), uWaveColor * 1.5, 0.7);
 }
@@ -197,35 +195,18 @@ vec3 aces(vec3 x){
     return clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14), 0.0, 1.0);
 }
 
-// Soft ring on hex emit — wide enough to cover a few cells (no per-hex flicker)
-float shellWaveAt(float z, float crestZ){
-    float d = abs(z - crestZ);
-    return smoothstep(2.4, 0.15, d);
+// Realtime iridescence — driven by time, not road Z (so flight doesn’t scrub the palette)
+vec3 energyCol(float cellSeed){
+    return palEnergy(0.55 * gGarlandT + cellSeed * 0.21);
 }
 
-float shellWave(float z){
-    if (uGarland < 0.5) return 0.0;
-    float best = 0.0;
-    float n = uPulseCount;
-    if (n > 0.5) best = max(best, shellWaveAt(z, uPulseA.x));
-    if (n > 1.5) best = max(best, shellWaveAt(z, uPulseA.y));
-    if (n > 2.5) best = max(best, shellWaveAt(z, uPulseA.z));
-    if (n > 3.5) best = max(best, shellWaveAt(z, uPulseA.w));
-    if (n > 4.5) best = max(best, shellWaveAt(z, uPulseB.x));
-    if (n > 5.5) best = max(best, shellWaveAt(z, uPulseB.y));
-    if (n > 6.5) best = max(best, shellWaveAt(z, uPulseB.z));
-    if (n > 7.5) best = max(best, shellWaveAt(z, uPulseB.w));
-    return best;
+vec3 fogCol(vec3 rd){
+    return 0.02 * palEnergy(0.55 * gGarlandT + 0.3 * rd.y);
 }
-
-vec3 energyCol(float z){ return palEnergy(0.03 * z + 0.05 * gT); }
-
-vec3 fogCol(vec3 rd){ return 0.02 * palEnergy(0.6 + 0.3 * rd.y + 0.03 * gT); }
 
 float march(vec3 ro, vec3 rd, float pix, int steps, float tmax, inout vec3 vol, float volW){
     float t = 0.02, omega = 1.35, prevR = 0.0, stepLen = 0.0;
     float candErr = 1e9, candT = -1.0;
-    // Volumetric in-scatter only while the pulse is racing
     float glowMul = uGarland > 0.5 ? 1.0 : 0.0;
     for (int i = 0; i < MAX_STEPS; i++){
         if (i >= steps) break;
@@ -235,8 +216,8 @@ float march(vec3 ro, vec3 rd, float pix, int steps, float tmax, inout vec3 vol, 
 
         if (volW > 0.0 && glowMul > 0.0){
             float e = gEmit;
-            float wave = shellWave(p.z);
-            vol += volW * energyCol(p.z) * (0.55 + wave * 3.2)
+            float twinkle = 0.7 + 0.3 * sin(gGarlandT * 2.6 + e * 30.0);
+            vol += volW * energyCol(e * 10.0) * twinkle
                    * 0.0004 / (0.0004 + e * e * 300.0)
                    * exp(-0.07 * t) * min(ar, 0.15) * 0.6;
         }
@@ -285,18 +266,17 @@ vec3 shade(vec3 p, vec3 n, vec3 rd, float t, bool full, out vec3 F0out, out floa
     float ao  = full ? calcAO(p, n) : 0.6;
     float dif = max(dot(n, l), 0.0);
 
-    vec3 lc  = mix(vec3(1.0, 0.9, 0.8), energyCol(gCamZ + 4.0), 0.35);
+    vec3 lc  = mix(vec3(1.0, 0.9, 0.8), energyCol(0.35), 0.35);
     vec3 col = alb * (1.0 - F0) * dif * att * sh * lc / PI * 3.0;
     col     += ggx(n, v, l, rough, F0) * att * sh * lc * (mat < 0.5 ? 1.2 : 0.18);
 
-    col += alb * ao * (0.06 + 0.06 * n.y) * energyCol(p.z + 3.0);
+    col += alb * ao * (0.06 + 0.06 * n.y) * energyCol(0.55);
 
-    // Hex emit: iridescent idle garland + brighter traveling crest
+    // Hex emit: realtime iridescent garland (time-based), or solid tint when off
     float em = smoothstep(0.003 + 0.002 * t, 0.0, emit);
     if (uGarland > 0.5) {
-        float wave = shellWave(p.z);
-        vec3 ec = energyCol(p.z + 6.0 * gCell2);
-        col += em * ec * (1.15 + wave * 5.0) * 3.0;
+        float twinkle = 0.75 + 0.35 * sin(gGarlandT * 2.8 + gCell2 * 6.2831);
+        col += em * energyCol(gCell2) * twinkle * 3.0;
     } else {
         col += em * uColor * 3.0;
     }
@@ -338,6 +318,7 @@ vec3 render(vec3 ro, vec3 rd, float pix){
 
 void main() {
     gT = iTime;
+    gGarlandT = iTime * uGarlandSpeed;
     vec2 fragCoord = vUv * iResolution.xy;
 
     gCamZ = uCamZ;

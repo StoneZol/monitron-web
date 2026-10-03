@@ -1,4 +1,5 @@
 import { libertyCore } from "liberty-core";
+import { FX_OVERLAY_KEY } from "@/components/FxOverlay/FxOverlay.types";
 import { readScreenPrefsRaw, saveScreenPrefs } from "@/lib/screenPrefs";
 
 /**
@@ -13,19 +14,26 @@ export const SHARE_VERSION = "1";
 /** Fixed noise length so paste always matches what we sealed. */
 const NOISE_LENGTH = 12;
 
+/**
+ * Underscore keys that travel with the look preset.
+ * `_panelSections` and other HUD chrome stay local.
+ */
+const SHAREABLE_RESERVED = new Set<string>([FX_OVERLAY_KEY]);
+
 export type ShareDecodeError = "empty" | "format" | "screen" | "decrypt";
 
 export type ShareDecodeResult =
   | { ok: true; screenId: string; prefs: Record<string, unknown> }
   | { ok: false; error: ShareDecodeError };
 
-/** Drop HUD chrome (`_*`) — panel fold state is local, not a look preset. */
+/** Drop HUD chrome (`_*`) — panel fold state is local; fx overlay is shared. */
 export function stripReservedPrefs(
   prefs: Record<string, unknown>,
 ): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(prefs)) {
-    if (!key.startsWith("_")) out[key] = value;
+    if (key.startsWith("_") && !SHAREABLE_RESERVED.has(key)) continue;
+    out[key] = value;
   }
   return out;
 }

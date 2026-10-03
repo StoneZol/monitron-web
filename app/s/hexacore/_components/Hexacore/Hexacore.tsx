@@ -30,22 +30,18 @@ const REACTIVE_CHANNEL_OPTIONS: { value: ReactiveChannel; label: string }[] = [
 ];
 
 const INFO = {
-  look: "Flight through the hexagonal hive — tint and energy pulse.",
+  look: "Flight through the hexagonal hive — tint and iridescent garland.",
   flightSpeed: "Base camera advance along the tunnel (1 ≈ Shadertoy default).",
   color: "Base tint while garland is on (audio hue-walks / punches it).",
   colorPalette:
     "Idle = rest. Peak = color-channel target. Locked while garland is on or audio is off.",
   garland:
-    "Racing energy pulse down the tunnel. Off: solid edge tint with idle→peak lerp.",
-  pulseInterval:
-    "Crest cruise speed in the tunnel (constant world speed after spawn).",
+    "Realtime iridescent emit on the hex circuitry. Off: solid edge tint with idle→peak lerp.",
+  garlandSpeed: "How fast the garland palette and twinkle cycle (1 ≈ default).",
   colorChannel: "Band that punches color (garland: hue/brightness; off: idle→peak).",
   speedChannel: "Band that punches flight speed.",
-  pulseChannel:
-    "Spawns a shell crest on hit. After spawn it coasts and dies by travel — ignores flight speed.",
   colorDrive: "Color punch strength.",
   speedDrive: "Speed punch strength.",
-  pulseDrive: "Spawn sensitivity for Wave hits (does not change crest brightness).",
   visualizer: {
     section: "Audio in → bus meters → peak gain for reactive screens.",
     source:
@@ -103,14 +99,14 @@ const Hexacore = ({ showOverlay = true }: HexacoreProps) => {
               />
               {controls.garland ? (
                 <Slider
-                  label="Wave interval"
-                  value={controls.pulseInterval}
-                  min={HEXACORE_RANGES.pulseInterval.min}
-                  max={HEXACORE_RANGES.pulseInterval.max}
-                  step={HEXACORE_RANGES.pulseInterval.step}
-                  onChange={controls.setPulseInterval}
-                  format={(v) => `${v.toFixed(1)}s`}
-                  info={INFO.pulseInterval}
+                  label="Garland speed"
+                  value={controls.garlandSpeed}
+                  min={HEXACORE_RANGES.garlandSpeed.min}
+                  max={HEXACORE_RANGES.garlandSpeed.max}
+                  step={HEXACORE_RANGES.garlandSpeed.step}
+                  onChange={controls.setGarlandSpeed}
+                  format={(v) => `×${v.toFixed(2)}`}
+                  info={INFO.garlandSpeed}
                 />
               ) : null}
               <ColorTable
@@ -164,13 +160,6 @@ const Hexacore = ({ showOverlay = true }: HexacoreProps) => {
                       onChange={controls.setSpeedChannel}
                       info={INFO.speedChannel}
                     />
-                    <Select
-                      label="Wave"
-                      value={controls.pulseChannel}
-                      options={REACTIVE_CHANNEL_OPTIONS}
-                      onChange={controls.setPulseChannel}
-                      info={INFO.pulseChannel}
-                    />
                   </ControlSubSection>
                   <ControlSubSection label="drive">
                     <Slider
@@ -192,16 +181,6 @@ const Hexacore = ({ showOverlay = true }: HexacoreProps) => {
                       onChange={controls.setSpeedDrive}
                       format={(v) => `×${v.toFixed(1)}`}
                       info={INFO.speedDrive}
-                    />
-                    <Slider
-                      label="Wave"
-                      value={controls.pulseDrive}
-                      min={HEXACORE_RANGES.drive.min}
-                      max={controls.driveMax}
-                      step={HEXACORE_RANGES.drive.step}
-                      onChange={controls.setPulseDrive}
-                      format={(v) => `×${v.toFixed(1)}`}
-                      info={INFO.pulseDrive}
                     />
                   </ControlSubSection>
                 </>

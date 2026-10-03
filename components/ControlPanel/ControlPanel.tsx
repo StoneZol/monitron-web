@@ -159,7 +159,7 @@ export function ControlPanel({
                             </ChromePair>
                             <ChromePair
                                 label="preset"
-                                info="Copy seals current look knobs into a monitron key (clipboard). Paste reads a key for this screen, applies it, and reloads. HUD fold state is not shared."
+                                info="Copy seals current look knobs + fx overlay into a monitron key (clipboard). Paste reads a key for this screen, applies it, and reloads. HUD fold state is not shared."
                                 status={shareFlash}
                             >
                                 <PanelButton
