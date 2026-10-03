@@ -54,4 +54,17 @@ export const placeholders: PlaceholderMeta[] = [
             },
         ],
     },
+    {
+        id: "hexacore",
+        title: "Hexacore",
+        href: "/s/hexacore",
+        reactive: true,
+        sources: [
+            {
+                author: "nobody93",
+                title: "Hexagonal Hive Lattice",
+                href: "https://www.shadertoy.com/view/73KGRd",
+            },
+        ],
+    },
 ];
