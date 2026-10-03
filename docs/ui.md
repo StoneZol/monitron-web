@@ -16,6 +16,7 @@ import {
   ColorTable,
   Select,
   Meter,
+  TwinkleControls,
 } from "@/components/ControlPanel";
 ```
 
@@ -168,6 +169,47 @@ Pair toggles in a row when they’re alternatives:
   <Toggle label="Parallel" checked={fogParallel} onChange={setFogParallel} />
 </div>
 ```
+
+---
+
+## `TwinkleControls`
+
+Framed HSL hue-walk block: master toggle + speed / S / L. Canvas owns the hue phase via [`lib/twinkleHsl.ts`](../lib/twinkleHsl.ts) (`advanceTwinkleHue` → `resolveTwinkleColor` → optional `pulseTwinkleLight`).
+
+| Prop              | Type                        | Default | Notes |
+| ----------------- | --------------------------- | ------- | ----- |
+| `title`           | `string`                    | —       | Pref identity — must read as twinkle (`"twinkle"`, `"sky twinkle"`) |
+| `checked`         | `boolean`                   | —       | Master on/off |
+| `onCheckedChange` | `(value: boolean) => void`  | —       | |
+| `speed`           | `number`                    | —       | × multiplier (1 ≈ full hue lap in ~6s) |
+| `onSpeedChange`   | `(value: number) => void`   | —       | Range `0…4` |
+| `s` / `l`         | `number`                    | —       | Saturation / lightness % `0…100` |
+| `onSChange` / `onLChange` | `(value: number) => void` | — | |
+| `info` / `speedInfo` / `sInfo` / `lInfo` | `string?` | — | Optional "?" tips |
+| `className`       | `string?`                   | —       | |
+
+```tsx
+<TwinkleControls
+  title="twinkle"
+  checked={twinkle}
+  onCheckedChange={setTwinkle}
+  speed={twinkleSpeed}
+  onSpeedChange={setTwinkleSpeed}
+  s={twinkleS}
+  onSChange={setTwinkleS}
+  l={twinkleL}
+  onLChange={setTwinkleL}
+/>
+{!twinkle ? (
+  <ColorTable /* idle / peak palette */ />
+) : null}
+```
+
+**Rules of thumb**
+
+- Hide object color pickers while twinkle is on (S/L come from the framed sliders).
+- Color / twinkle audio punch stays on a short drive `0…2`; motion drives stay `0…8`.
+- Prefer shared pulse helpers from `lib/twinkleHsl` over hand-rolled L flashes.
 
 ---
 

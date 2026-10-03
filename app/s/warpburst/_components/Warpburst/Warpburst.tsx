@@ -10,7 +10,7 @@ import {
   PanelButton,
   Select,
   Slider,
-  Toggle,
+  TwinkleControls,
 } from "@/components/ControlPanel";
 import WarpburstCanvas from "./Warpburst.Canvas";
 import useWarpburstHook from "./Warpburst.hooks";
@@ -29,22 +29,25 @@ const REACTIVE_CHANNEL_OPTIONS: { value: ReactiveChannel; label: string }[] = [
 ];
 
 const INFO = {
-  look: "Goo tunnel fog from Warpburst 2 — no stars. Tint, garland crawl, peak flicker.",
+  look: "Goo tunnel fog from Warpburst 2 — no stars. Tint, HSL twinkle, peak flicker.",
   flightSpeed: "Base tunnel advance (1 ≈ Shadertoy BASE_SPEED).",
   cameraBank:
     "Camera roll / pitch / yaw / sway spread — 0 = dead straight, 1 = default, 2 = double.",
   colorPalette:
-    "Idle = base goo. Peak = neon highlight. Locked while garland is on or audio is off.",
-  garland:
-    "Realtime iridescent fog crawl. Off: solid idle→peak lerp on punches.",
-  garlandSpeed: "How fast the fog palette crawls (1 ≈ default).",
+    "Idle = base goo. Peak = neon highlight. Hidden while twinkle is on; peak locked when audio is off.",
+  twinkle:
+    "Hue cycles 0…360 in hsl(H S% L%). Off: solid idle→peak lerp on punches.",
+  twinkleSpeed: "How fast hue runs a full lap (1 ≈ 6s).",
+  twinkleS: "Saturation % for the twinkle hsl() (100 = full chroma).",
+  twinkleL: "Lightness % for the twinkle hsl() (50 = vivid mid).",
   saturation: "Look chroma (0 = gray, 1 = default).",
-  fogDetail: "Fog structure — low = soft blobs, high = micro-filaments (1 ≈ default, 4 = max).",
+  fogDetail:
+    "Fog structure — low = soft blobs, high = micro-filaments (1 ≈ default, 4 = max).",
   colorChannel:
-    "Band that punches color + peak twinkle (garland: hue; off: idle→peak).",
+    "Band that punches color (twinkle: shared light pulse + fog flash; off: idle→peak).",
   speedChannel: "Band that punches flight speed.",
-  colorDrive: "Color / twinkle punch strength.",
-  speedDrive: "Speed punch strength.",
+  colorDrive: "Color / twinkle pulse boost (0…2).",
+  speedDrive: "Speed punch strength (0…8).",
   visualizer: {
     section: "Audio in → bus meters → peak gain for reactive screens.",
     source:
@@ -103,24 +106,21 @@ const Warpburst = ({ showOverlay = true }: WarpburstProps) => {
                 format={(v) => `×${v.toFixed(2)}`}
                 info={INFO.cameraBank}
               />
-              <Toggle
-                label="Garland"
-                checked={controls.garland}
-                onChange={controls.setGarland}
-                info={INFO.garland}
+              <TwinkleControls
+                title="twinkle"
+                checked={controls.twinkle}
+                onCheckedChange={controls.setTwinkle}
+                speed={controls.twinkleSpeed}
+                onSpeedChange={controls.setTwinkleSpeed}
+                s={controls.twinkleS}
+                onSChange={controls.setTwinkleS}
+                l={controls.twinkleL}
+                onLChange={controls.setTwinkleL}
+                info={INFO.twinkle}
+                speedInfo={INFO.twinkleSpeed}
+                sInfo={INFO.twinkleS}
+                lInfo={INFO.twinkleL}
               />
-              {controls.garland ? (
-                <Slider
-                  label="Garland speed"
-                  value={controls.garlandSpeed}
-                  min={WARPBURST_RANGES.garlandSpeed.min}
-                  max={WARPBURST_RANGES.garlandSpeed.max}
-                  step={WARPBURST_RANGES.garlandSpeed.step}
-                  onChange={controls.setGarlandSpeed}
-                  format={(v) => `×${v.toFixed(2)}`}
-                  info={INFO.garlandSpeed}
-                />
-              ) : null}
               <Slider
                 label="Saturation"
                 value={controls.saturation}
@@ -141,34 +141,30 @@ const Warpburst = ({ showOverlay = true }: WarpburstProps) => {
                 format={(v) => `×${v.toFixed(2)}`}
                 info={INFO.fogDetail}
               />
-              <ColorTable
-                label="color palette"
-                info={INFO.colorPalette}
-                columns={["idle", "peak"]}
-                lockedColumns={
-                  audioLocked || controls.garland ? ["peak"] : []
-                }
-                columnStamps={
-                  controls.garland
-                    ? { peak: "garland" }
-                    : audioStamp
-                }
-                rows={[
-                  {
-                    label: "tint",
-                    cells: [
-                      {
-                        value: controls.color,
-                        onChange: controls.setColor,
-                      },
-                      {
-                        value: controls.colorPeak,
-                        onChange: controls.setColorPeak,
-                      },
-                    ],
-                  },
-                ]}
-              />
+              {!controls.twinkle ? (
+                <ColorTable
+                  label="color palette"
+                  info={INFO.colorPalette}
+                  columns={["idle", "peak"]}
+                  lockedColumns={audioLocked ? ["peak"] : []}
+                  columnStamps={audioStamp}
+                  rows={[
+                    {
+                      label: "tint",
+                      cells: [
+                        {
+                          value: controls.color,
+                          onChange: controls.setColor,
+                        },
+                        {
+                          value: controls.colorPeak,
+                          onChange: controls.setColorPeak,
+                        },
+                      ],
+                    },
+                  ]}
+                />
+              ) : null}
             </ControlSection>
 
             <VisualizerSection
@@ -197,19 +193,19 @@ const Warpburst = ({ showOverlay = true }: WarpburstProps) => {
                     <Slider
                       label="Color"
                       value={controls.colorDrive}
-                      min={WARPBURST_RANGES.drive.min}
-                      max={controls.driveMax}
-                      step={WARPBURST_RANGES.drive.step}
+                      min={WARPBURST_RANGES.colorDrive.min}
+                      max={controls.colorDriveMax}
+                      step={WARPBURST_RANGES.colorDrive.step}
                       onChange={controls.setColorDrive}
-                      format={(v) => `×${v.toFixed(1)}`}
+                      format={(v) => `×${v.toFixed(2)}`}
                       info={INFO.colorDrive}
                     />
                     <Slider
                       label="Speed"
                       value={controls.speedDrive}
-                      min={WARPBURST_RANGES.drive.min}
-                      max={controls.driveMax}
-                      step={WARPBURST_RANGES.drive.step}
+                      min={WARPBURST_RANGES.speedDrive.min}
+                      max={controls.speedDriveMax}
+                      step={WARPBURST_RANGES.speedDrive.step}
                       onChange={controls.setSpeedDrive}
                       format={(v) => `×${v.toFixed(1)}`}
                       info={INFO.speedDrive}

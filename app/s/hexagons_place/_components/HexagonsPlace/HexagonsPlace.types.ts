@@ -15,13 +15,13 @@ export type HexagonsPlaceLive = {
   /** Fog bass-hit tint (non-caps) */
   fogPeak: string;
   /**
-   * Garland fog: fixed pickers (no hue cycle).
+   * Twinkle fog: fixed pickers (no hue cycle).
    * Mutually exclusive with fogParallel; both off = fog follows edge.
    */
   fogFixed: boolean;
-  /** Garland fog: hue-cycle fogIdle/fogPeak in parallel with edge */
+  /** Twinkle fog: hue-cycle fog in parallel with edge */
   fogParallel: boolean;
-  /** Multiplier on colorSpeed for parallel fog hue cycle */
+  /** Multiplier on twinkleSpeed for parallel fog hue cycle */
   fogParallelSpeed: number;
   /** Aux ground grid tint when gridFixed */
   gridColor: string;
@@ -32,13 +32,17 @@ export type HexagonsPlaceLive = {
   capGridPeak: string;
   /** Reactive: which audio band drives grid idle→peak; off = static idle */
   gridChannel: ReactiveChannel;
-  /** Multiplier on grid channel level (1 = previous feel) */
+  /** Color / twinkle pulse boost for grid (0…2) */
   gridDrive: number;
   /** Scales the aux ground grid helper */
   gridScale: number;
-  garland: boolean;
+  /** HSL twinkle on edges / fog (title "twinkle"); mutex with caps */
+  twinkle: boolean;
+  twinkleSpeed: number;
+  twinkleS: number;
+  twinkleL: number;
   /**
-   * Spectrum caps mode — replaces garland.
+   * Spectrum caps mode — replaces twinkle.
    * Black edges; top faces colored by bass/mid/high.
    */
   caps: boolean;
@@ -54,10 +58,8 @@ export type HexagonsPlaceLive = {
   capFogPeak: string;
   /** Reactive: which audio band drives caps/non-fixed fog idle→peak; off = static idle */
   fogChannel: ReactiveChannel;
-  /** Multiplier on fog channel level (1 = previous feel) */
+  /** Color / twinkle pulse boost for fog (0…2) */
   fogDrive: number;
-  /** Hue degrees per second when garland is on */
-  colorSpeed: number;
   /** Pitch down in degrees — tips the view, does not move the camera */
   cameraAngle: number;
   /** Camera position.y — independent of angle */
@@ -100,6 +102,11 @@ export type HexagonsPlaceLive = {
   bandBounce: boolean;
   /** When reactive: caps / fog / grid color flicker from spectrum */
   bandFlicker: boolean;
-  /** Multiplies low-slice → color/spin speed punch */
+  /** Legacy prefs only — was hue-speed mul under garland */
   bassBoost: number;
 };
+
+/** Spin punch drive */
+export const HEXAGONS_DRIVE_MAX = 8;
+/** Fog / grid color punch */
+export const HEXAGONS_COLOR_DRIVE_MAX = 2;

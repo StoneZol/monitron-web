@@ -11,6 +11,8 @@ type PanelButtonProps = {
   disabled?: boolean;
   className?: string;
   type?: "button" | "submit" | "reset";
+  title?: string;
+  "aria-pressed"?: boolean;
   /** For CSS glitch layers (`content: attr(data-text)`). */
   "data-text"?: string;
 };
@@ -21,6 +23,8 @@ export function PanelButton({
   disabled = false,
   className,
   type = "button",
+  title,
+  "aria-pressed": ariaPressed,
   "data-text": dataText,
 }: PanelButtonProps) {
   return (
@@ -28,6 +32,8 @@ export function PanelButton({
       type={type}
       onClick={onClick}
       disabled={disabled}
+      title={title}
+      aria-pressed={ariaPressed}
       data-text={dataText}
       className={cn(panelButtonClassName, className)}
     >

@@ -11,7 +11,16 @@ import {
 } from "@/hooks/useAudioReactive";
 import { toggleFullscreen } from "@/lib/fullscreen";
 import { loadScreenPrefs, saveScreenPrefs } from "@/lib/screenPrefs";
+import {
+    TWINKLE_DEFAULT_L,
+    TWINKLE_DEFAULT_S,
+    TWINKLE_DEFAULT_SPEED,
+} from "@/lib/twinkleHsl";
 import type { SynthwaveLive } from "./Synthwave.types";
+import {
+    SYNTHWAVE_COLOR_DRIVE_MAX,
+    SYNTHWAVE_DRIVE_MAX,
+} from "./Synthwave.types";
 import {
     PERSPECTIVE_MAX,
     PERSPECTIVE_MIN,
@@ -56,22 +65,51 @@ export const SYNTHWAVE_DEFAULTS: SynthwaveLive = {
     sunChannel: "bass",
     sunDrive: 1,
     sunTwinkle: false,
+    sunTwinkleSpeed: TWINKLE_DEFAULT_SPEED,
+    sunTwinkleS: TWINKLE_DEFAULT_S,
+    sunTwinkleL: TWINKLE_DEFAULT_L,
     sunGlowTwinkle: false,
     gridTwinkle: false,
+    gridTwinkleSpeed: TWINKLE_DEFAULT_SPEED,
+    gridTwinkleS: TWINKLE_DEFAULT_S,
+    gridTwinkleL: TWINKLE_DEFAULT_L,
     skyTwinkle: false,
-    colorSpeed: 40,
+    skyTwinkleSpeed: TWINKLE_DEFAULT_SPEED,
+    skyTwinkleS: TWINKLE_DEFAULT_S,
+    skyTwinkleL: TWINKLE_DEFAULT_L,
     audioSource: "off",
     micGate: MIC_GATE_DEFAULT,
     peakGain: PEAK_GAIN_DEFAULT,
 };
 
 const SCREEN_ID = "synthwave";
-const DRIVE_MAX = 8;
 const CHANNELS = new Set(["off", "bass", "mid", "high", "beat"]);
 
-function clampDrive(value: number): number {
+function clamp(n: number, min: number, max: number, fallback: number) {
+    if (!Number.isFinite(n)) return fallback;
+    return Math.min(max, Math.max(min, n));
+}
+
+function clampRoadDrive(value: number): number {
     if (!Number.isFinite(value)) return 0;
-    return Math.min(DRIVE_MAX, Math.max(0, value));
+    return Math.min(SYNTHWAVE_DRIVE_MAX, Math.max(0, value));
+}
+
+function clampColorDrive(value: number): number {
+    if (!Number.isFinite(value)) return 0;
+    return Math.min(SYNTHWAVE_COLOR_DRIVE_MAX, Math.max(0, value));
+}
+
+/** Legacy colorSpeed deg/sec → twinkleSpeed × (1 ≈ 60°/s). */
+function migrateTwinkleSpeed(raw: unknown, legacyColorSpeed: unknown): number {
+    if (raw !== undefined && Number.isFinite(Number(raw))) {
+        return clamp(Number(raw), 0, 4, TWINKLE_DEFAULT_SPEED);
+    }
+    const deg = Number(legacyColorSpeed);
+    if (Number.isFinite(deg) && deg > 0) {
+        return clamp(deg / 60, 0, 4, TWINKLE_DEFAULT_SPEED);
+    }
+    return TWINKLE_DEFAULT_SPEED;
 }
 
 function migratePrefs(
@@ -84,12 +122,15 @@ function migratePrefs(
         terrainMode?: string;
         mountSpeed?: number;
         fogTwinkle?: boolean;
+        colorSpeed?: number;
     };
     const legacyMode = legacy.terrainMode;
+    const legacyColorSpeed = legacy.colorSpeed;
     const rest = { ...raw } as SynthwaveLive & Record<string, unknown>;
     delete rest.cityColor;
     delete rest.mountIdle;
     delete rest.terrainMode;
+    delete rest.colorSpeed;
 
     const next: SynthwaveLive = {
         ...SYNTHWAVE_DEFAULTS,
@@ -101,25 +142,26 @@ function migratePrefs(
         audioSource,
         micGate: normalizeMicGate(raw.micGate),
         peakGain: normalizePeakGain(raw.peakGain),
-        roadDrive: clampDrive(
+        roadDrive: clampRoadDrive(
             typeof raw.roadDrive === "number"
                 ? raw.roadDrive
                 : typeof raw.drive === "number"
                     ? raw.drive
                     : SYNTHWAVE_DEFAULTS.roadDrive,
         ),
-        glowDrive: clampDrive(
+        glowDrive: clampColorDrive(
             typeof raw.glowDrive === "number"
                 ? raw.glowDrive
                 : SYNTHWAVE_DEFAULTS.glowDrive,
         ),
-        sunDrive: clampDrive(
+        sunDrive: clampColorDrive(
             typeof raw.sunDrive === "number"
                 ? raw.sunDrive
                 : SYNTHWAVE_DEFAULTS.sunDrive,
         ),
     };
     delete (next as { drive?: number }).drive;
+    delete (next as { colorSpeed?: number }).colorSpeed;
     if (!CHANNELS.has(next.roadChannel))
         next.roadChannel = SYNTHWAVE_DEFAULTS.roadChannel;
     if (!CHANNELS.has(next.glowChannel))
@@ -127,19 +169,63 @@ function migratePrefs(
     if (!CHANNELS.has(next.sunChannel))
         next.sunChannel = SYNTHWAVE_DEFAULTS.sunChannel;
     next.sunTwinkle = Boolean(next.sunTwinkle);
+    next.sunTwinkleSpeed = migrateTwinkleSpeed(
+        rest.sunTwinkleSpeed,
+        legacyColorSpeed,
+    );
+    next.sunTwinkleS = clamp(
+        Number(rest.sunTwinkleS),
+        0,
+        100,
+        TWINKLE_DEFAULT_S,
+    );
+    next.sunTwinkleL = clamp(
+        Number(rest.sunTwinkleL),
+        0,
+        100,
+        TWINKLE_DEFAULT_L,
+    );
     next.sunGlowTwinkle = Boolean(next.sunGlowTwinkle);
     delete (next as { sunGlow?: boolean }).sunGlow;
     next.gridTwinkle = Boolean(next.gridTwinkle);
+    next.gridTwinkleSpeed = migrateTwinkleSpeed(
+        rest.gridTwinkleSpeed,
+        legacyColorSpeed,
+    );
+    next.gridTwinkleS = clamp(
+        Number(rest.gridTwinkleS),
+        0,
+        100,
+        TWINKLE_DEFAULT_S,
+    );
+    next.gridTwinkleL = clamp(
+        Number(rest.gridTwinkleL),
+        0,
+        100,
+        TWINKLE_DEFAULT_L,
+    );
     // migrate: fogTwinkle → skyTwinkle (no fog layer — sky + horizon)
     next.skyTwinkle = Boolean(
         next.skyTwinkle ||
         (legacy.fogTwinkle !== undefined ? legacy.fogTwinkle : false),
     );
     delete (next as { fogTwinkle?: boolean }).fogTwinkle;
-    if (typeof next.colorSpeed !== "number" || !Number.isFinite(next.colorSpeed)) {
-        next.colorSpeed = SYNTHWAVE_DEFAULTS.colorSpeed;
-    }
-    next.colorSpeed = Math.min(180, Math.max(0, next.colorSpeed));
+    next.skyTwinkleSpeed = migrateTwinkleSpeed(
+        rest.skyTwinkleSpeed,
+        legacyColorSpeed,
+    );
+    next.skyTwinkleS = clamp(
+        Number(rest.skyTwinkleS),
+        0,
+        100,
+        TWINKLE_DEFAULT_S,
+    );
+    next.skyTwinkleL = clamp(
+        Number(rest.skyTwinkleL),
+        0,
+        100,
+        TWINKLE_DEFAULT_L,
+    );
     if (typeof next.skySpeed !== "number" || !Number.isFinite(next.skySpeed)) {
         next.skySpeed = SYNTHWAVE_DEFAULTS.skySpeed;
     }
@@ -343,7 +429,8 @@ export default function useSynthwaveHook() {
 
     const controls = {
         ...live,
-        driveMax: DRIVE_MAX,
+        colorDriveMax: SYNTHWAVE_COLOR_DRIVE_MAX,
+        speedDriveMax: SYNTHWAVE_DRIVE_MAX,
         setRoadColor: (roadColor: string) => commit({ roadColor }),
         setRoadColorPeak: (roadColorPeak: string) => commit({ roadColorPeak }),
         setRoadFar: (roadFar: string) => commit({ roadFar }),
@@ -379,20 +466,31 @@ export default function useSynthwaveHook() {
         setRoadChannel: (roadChannel: SynthwaveLive["roadChannel"]) =>
             commit({ roadChannel }),
         setRoadDrive: (roadDrive: number) =>
-            commit({ roadDrive: clampDrive(roadDrive) }),
+            commit({ roadDrive: clampRoadDrive(roadDrive) }),
         setGlowChannel: (glowChannel: SynthwaveLive["glowChannel"]) =>
             commit({ glowChannel }),
         setGlowDrive: (glowDrive: number) =>
-            commit({ glowDrive: clampDrive(glowDrive) }),
+            commit({ glowDrive: clampColorDrive(glowDrive) }),
         setSunChannel: (sunChannel: SynthwaveLive["sunChannel"]) =>
             commit({ sunChannel }),
         setSunDrive: (sunDrive: number) =>
-            commit({ sunDrive: clampDrive(sunDrive) }),
+            commit({ sunDrive: clampColorDrive(sunDrive) }),
         setSunTwinkle: (sunTwinkle: boolean) => commit({ sunTwinkle }),
+        setSunTwinkleSpeed: (sunTwinkleSpeed: number) =>
+            commit({ sunTwinkleSpeed }),
+        setSunTwinkleS: (sunTwinkleS: number) => commit({ sunTwinkleS }),
+        setSunTwinkleL: (sunTwinkleL: number) => commit({ sunTwinkleL }),
         setSunGlowTwinkle: (sunGlowTwinkle: boolean) => commit({ sunGlowTwinkle }),
         setGridTwinkle: (gridTwinkle: boolean) => commit({ gridTwinkle }),
+        setGridTwinkleSpeed: (gridTwinkleSpeed: number) =>
+            commit({ gridTwinkleSpeed }),
+        setGridTwinkleS: (gridTwinkleS: number) => commit({ gridTwinkleS }),
+        setGridTwinkleL: (gridTwinkleL: number) => commit({ gridTwinkleL }),
         setSkyTwinkle: (skyTwinkle: boolean) => commit({ skyTwinkle }),
-        setColorSpeed: (colorSpeed: number) => commit({ colorSpeed }),
+        setSkyTwinkleSpeed: (skyTwinkleSpeed: number) =>
+            commit({ skyTwinkleSpeed }),
+        setSkyTwinkleS: (skyTwinkleS: number) => commit({ skyTwinkleS }),
+        setSkyTwinkleL: (skyTwinkleL: number) => commit({ skyTwinkleL }),
         reset: () => writePrefs({ ...SYNTHWAVE_DEFAULTS }),
         fullscreen: () => void toggleFullscreen(),
     };

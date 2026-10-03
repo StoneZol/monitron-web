@@ -14,10 +14,13 @@ export type WarpburstLive = {
   color: string;
   /** Neon highlight / peak tint */
   colorPeak: string;
-  /** Realtime iridescent fog crawl */
-  garland: boolean;
-  /** Iridescence rate (1 ≈ default) */
-  garlandSpeed: number;
+  /** HSL hue cycle 0…360 (title "twinkle" prefs) */
+  twinkle: boolean;
+  twinkleSpeed: number;
+  /** Saturation % for hsl(H S% L%) */
+  twinkleS: number;
+  /** Lightness % for hsl(H S% L%) */
+  twinkleL: number;
   /** Look chroma (0 = gray, 1 = default) */
   saturation: number;
   /** Fog octave / wisp amount (0 = smooth, 1 = default, 4 = max) */
@@ -28,7 +31,10 @@ export type WarpburstLive = {
   speedDrive: number;
 };
 
+/** Speed punch drive */
 export const WARPBURST_DRIVE_MAX = 8;
+/** Color / twinkle punch — short 0…2 boost, no need to haul to ×8 */
+export const WARPBURST_COLOR_DRIVE_MAX = 2;
 
 /** Defaults from sealed share preset. */
 export const WARPBURST_DEFAULTS: WarpburstLive = {
@@ -36,8 +42,10 @@ export const WARPBURST_DEFAULTS: WarpburstLive = {
   cameraBank: 0.5,
   color: "#c200ff",
   colorPeak: "#8200ff",
-  garland: false,
-  garlandSpeed: 1,
+  twinkle: false,
+  twinkleSpeed: 1,
+  twinkleS: 100,
+  twinkleL: 50,
   saturation: 1,
   fogDetail: 4,
   colorChannel: "bass",
@@ -49,8 +57,8 @@ export const WARPBURST_DEFAULTS: WarpburstLive = {
 export const WARPBURST_RANGES = {
   flightSpeed: { min: 0.1, max: 3, step: 0.05 },
   cameraBank: { min: 0, max: 2, step: 0.05 },
-  garlandSpeed: { min: 0, max: 4, step: 0.05 },
   saturation: { min: 0, max: 2, step: 0.05 },
   fogDetail: { min: 0, max: 4, step: 0.1 },
-  drive: { min: 0, max: WARPBURST_DRIVE_MAX, step: 0.1 },
+  colorDrive: { min: 0, max: WARPBURST_COLOR_DRIVE_MAX, step: 0.05 },
+  speedDrive: { min: 0, max: WARPBURST_DRIVE_MAX, step: 0.1 },
 } as const;

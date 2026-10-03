@@ -9,7 +9,15 @@ import {
     neonSunFragmentShader,
     neonSunVertexShader,
 } from "./shaders/neonsun";
-import { channelLevel, hueWalkHex, lerpHex, drivenLevel } from "./Synthwave.audio";
+import {
+    advanceTwinkleHue,
+    createTwinklePulseEnv,
+    hueDegFromHex,
+    pulseTwinkleLight,
+    resolveTwinkleColor,
+    updateTwinklePulseEnv,
+} from "@/lib/twinkleHsl";
+import { channelLevel, lerpHex, drivenLevel } from "./Synthwave.audio";
 import { DEPTH_MIN, liveRoadDepthRef, roadDepth, Z_PAD } from "./Synthwave.constants";
 import type { SynthwaveLive } from "./Synthwave.types";
 
@@ -64,7 +72,8 @@ export function NeonSun({
     const matRef = useRef(mat);
     const flashMatRef = useRef(flashMat);
     const scaleRef = useRef<THREE.Group>(null);
-    const diskHue = useRef(0);
+    const twinkleHue = useRef(0);
+    const twinklePulse = useRef(createTwinklePulseEnv());
     const sunHold = useRef(0);
 
     useEffect(
@@ -104,19 +113,43 @@ export function NeonSun({
             ? Math.min(1, punch * 0.9 + overdrive * 0.3)
             : overdrive * 0.45;
 
-        const step = knobs.colorSpeed * Math.max(0, dt);
         const top = m.uniforms.uColorSunTop!.value as THREE.Color;
         const bottom = m.uniforms.uColorSunBottom!.value as THREE.Color;
         const flashTop = flash.uniforms.uColorSunTop!.value as THREE.Color;
         const flashBottom = flash.uniforms.uColorSunBottom!.value as THREE.Color;
 
         if (knobs.sunTwinkle) {
-            diskHue.current = (diskHue.current + step) % 360;
-            const off = diskHue.current;
-            hueWalkHex(knobs.sunRim, off, top);
-            hueWalkHex(knobs.sunMid, off, bottom);
+            twinkleHue.current = advanceTwinkleHue(
+                twinkleHue.current,
+                Math.max(0, dt),
+                knobs.sunTwinkleSpeed,
+            );
+            resolveTwinkleColor(
+                twinkleHue.current,
+                knobs.sunTwinkleS,
+                knobs.sunTwinkleL,
+                top,
+            );
+            // Keep top/bottom split from last idle hues
+            const midOff =
+                hueDegFromHex(knobs.sunMid) - hueDegFromHex(knobs.sunRim);
+            resolveTwinkleColor(
+                twinkleHue.current + midOff,
+                knobs.sunTwinkleS,
+                knobs.sunTwinkleL,
+                bottom,
+            );
+            if (sunArmed) {
+                const pulseAmt = updateTwinklePulseEnv(
+                    twinklePulse.current,
+                    sunRaw,
+                    knobs.sunDrive,
+                    Math.max(0, dt),
+                );
+                pulseTwinkleLight(top, pulseAmt, knobs.sunDrive);
+                pulseTwinkleLight(bottom, pulseAmt, knobs.sunDrive);
+            }
         } else {
-            diskHue.current = 0;
             const level = sunArmed ? punch : 0;
             lerpHex(knobs.sunRim, knobs.sunRimPeak, level, top);
             lerpHex(knobs.sunMid, knobs.sunMidPeak, level, bottom);

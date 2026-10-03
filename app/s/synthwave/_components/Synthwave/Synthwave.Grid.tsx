@@ -8,7 +8,15 @@ import {
     neonGridFragmentShader,
     neonGridVertexShader,
 } from "./shaders/neongrid";
-import { channelLevel, hexToVec3, hueWalkHex, lerpHex, drivenLevel } from "./Synthwave.audio";
+import {
+    advanceTwinkleHue,
+    createTwinklePulseEnv,
+    hueDegFromHex,
+    pulseTwinkleLight,
+    resolveTwinkleColor,
+    updateTwinklePulseEnv,
+} from "@/lib/twinkleHsl";
+import { channelLevel, hexToVec3, lerpHex, drivenLevel } from "./Synthwave.audio";
 import {
     CELL,
     CELL_SQUASH,
@@ -127,7 +135,8 @@ export function NeonGrid({
     );
     const floorMatRef = useRef(floorMat);
     const wallMatRef = useRef(wallMat);
-    const hueOffset = useRef(0);
+    const twinkleHue = useRef(0);
+    const twinklePulse = useRef(createTwinklePulseEnv());
     /** Peak-hold so bass kicks flash like Hexagons band flicker */
     const glowHold = useRef(0);
     const roadHold = useRef(0);
@@ -163,12 +172,12 @@ export function NeonGrid({
         const roadKick = roadPunch * roadPunch;
 
         if (knobs.gridTwinkle) {
-            hueOffset.current =
-                (hueOffset.current + knobs.colorSpeed * Math.max(0, dt)) % 360;
-        } else {
-            hueOffset.current = 0;
+            twinkleHue.current = advanceTwinkleHue(
+                twinkleHue.current,
+                Math.max(0, dt),
+                knobs.gridTwinkleSpeed,
+            );
         }
-        const hueOff = hueOffset.current;
 
         const leanDeg = knobs.wallAngle;
         const offsetCells = Math.max(1, Math.round(knobs.wallOffset));
@@ -218,6 +227,17 @@ export function NeonGrid({
             knobs.roadGlow * (glowArmed ? 0.7 + glowFlash * 0.3 : 1) +
                 glowFlash * 8,
         );
+        const farOff =
+            hueDegFromHex(knobs.roadFar) - hueDegFromHex(knobs.roadColor);
+        const twinklePulseAmt =
+            knobs.gridTwinkle && glowArmed
+                ? updateTwinklePulseEnv(
+                      twinklePulse.current,
+                      glowRaw,
+                      knobs.glowDrive,
+                      Math.max(0, dt),
+                  )
+                : 0;
 
         const syncUniforms = (
             mat: THREE.ShaderMaterial,
@@ -233,12 +253,21 @@ export function NeonGrid({
             const near = mat.uniforms.uColorGridNear!.value as THREE.Color;
             const far = mat.uniforms.uColorGridFar!.value as THREE.Color;
             if (knobs.gridTwinkle) {
-                if (hueOff) {
-                    hueWalkHex(knobs.roadColor, hueOff, near);
-                    hueWalkHex(knobs.roadFar, hueOff, far);
-                } else {
-                    hexToVec3(knobs.roadColor, near);
-                    hexToVec3(knobs.roadFar, far);
+                resolveTwinkleColor(
+                    twinkleHue.current,
+                    knobs.gridTwinkleS,
+                    knobs.gridTwinkleL,
+                    near,
+                );
+                resolveTwinkleColor(
+                    twinkleHue.current + farOff,
+                    knobs.gridTwinkleS,
+                    knobs.gridTwinkleL,
+                    far,
+                );
+                if (glowArmed) {
+                    pulseTwinkleLight(near, twinklePulseAmt, knobs.glowDrive);
+                    pulseTwinkleLight(far, twinklePulseAmt, knobs.glowDrive);
                 }
             } else {
                 const level = glowArmed ? glowFlash : 0;

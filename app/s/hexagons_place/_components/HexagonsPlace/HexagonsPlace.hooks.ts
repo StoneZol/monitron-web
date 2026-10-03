@@ -11,7 +11,16 @@ import {
 } from "@/hooks/useAudioReactive";
 import { toggleFullscreen } from "@/lib/fullscreen";
 import { loadScreenPrefs, saveScreenPrefs } from "@/lib/screenPrefs";
-import type { HexagonsPlaceLive } from "./HexagonsPlace.types";
+import {
+    TWINKLE_DEFAULT_L,
+    TWINKLE_DEFAULT_S,
+    TWINKLE_DEFAULT_SPEED,
+} from "@/lib/twinkleHsl";
+import {
+    HEXAGONS_COLOR_DRIVE_MAX,
+    HEXAGONS_DRIVE_MAX,
+    type HexagonsPlaceLive,
+} from "./HexagonsPlace.types";
 
 export const HEXAGONS_DEFAULTS: HexagonsPlaceLive = {
     edgeColor: "#ff9940",
@@ -27,7 +36,10 @@ export const HEXAGONS_DEFAULTS: HexagonsPlaceLive = {
     gridChannel: "beat",
     gridDrive: 1,
     gridScale: 1,
-    garland: false,
+    twinkle: false,
+    twinkleSpeed: TWINKLE_DEFAULT_SPEED,
+    twinkleS: TWINKLE_DEFAULT_S,
+    twinkleL: TWINKLE_DEFAULT_L,
     caps: false,
     capBassIdle: "#8f0070",
     capBassPeak: "#ff2ed2",
@@ -39,7 +51,6 @@ export const HEXAGONS_DEFAULTS: HexagonsPlaceLive = {
     capFogPeak: "#1a4a9e",
     fogChannel: "beat",
     fogDrive: 1,
-    colorSpeed: 40,
     cameraAngle: 25,
     cameraHeight: 8,
     cameraOffset: 10,
@@ -64,9 +75,24 @@ export const HEXAGONS_DEFAULTS: HexagonsPlaceLive = {
     bassBoost: 2,
 };
 
-const BASS_BOOST_MAX = 8;
-
 const SCREEN_ID = "hexagons_place";
+
+function clamp(n: number, min: number, max: number, fallback: number) {
+    if (!Number.isFinite(n)) return fallback;
+    return Math.min(max, Math.max(min, n));
+}
+
+/** Legacy colorSpeed deg/sec → twinkleSpeed × (1 ≈ 60°/s). */
+function migrateTwinkleSpeed(raw: unknown, legacyColorSpeed: unknown): number {
+    if (raw !== undefined && Number.isFinite(Number(raw))) {
+        return clamp(Number(raw), 0, 4, TWINKLE_DEFAULT_SPEED);
+    }
+    const deg = Number(legacyColorSpeed);
+    if (Number.isFinite(deg) && deg > 0) {
+        return clamp(deg / 60, 0, 4, TWINKLE_DEFAULT_SPEED);
+    }
+    return TWINKLE_DEFAULT_SPEED;
+}
 
 const listeners = new Set<() => void>();
 
@@ -95,6 +121,8 @@ function readPrefs(): HexagonsPlaceLive {
         capBeatFogIdle: legacyBeatFogIdle,
         capBeatFogPeak: legacyBeatFogPeak,
         reactive: legacyReactive,
+        garland: legacyGarland,
+        colorSpeed: legacyColorSpeed,
         ...rest
     } = loaded as HexagonsPlaceLive & {
         cameraRotation?: number;
@@ -105,6 +133,8 @@ function readPrefs(): HexagonsPlaceLive {
         capBeatFogIdle?: string;
         capBeatFogPeak?: string;
         reactive?: boolean;
+        garland?: boolean;
+        colorSpeed?: number;
     };
     cached = {
         ...HEXAGONS_DEFAULTS,
@@ -115,7 +145,28 @@ function readPrefs(): HexagonsPlaceLive {
         }),
         micGate: normalizeMicGate(rest.micGate),
         peakGain: normalizePeakGain(rest.peakGain),
+        twinkle: Boolean(
+            rest.twinkle !== undefined ? rest.twinkle : legacyGarland,
+        ),
+        twinkleSpeed: migrateTwinkleSpeed(
+            rest.twinkleSpeed,
+            legacyColorSpeed,
+        ),
+        twinkleS: clamp(
+            Number(rest.twinkleS),
+            0,
+            100,
+            HEXAGONS_DEFAULTS.twinkleS,
+        ),
+        twinkleL: clamp(
+            Number(rest.twinkleL),
+            0,
+            100,
+            HEXAGONS_DEFAULTS.twinkleL,
+        ),
     };
+    delete (cached as { garland?: boolean }).garland;
+    delete (cached as { colorSpeed?: number }).colorSpeed;
     // Legacy single fogColor → fogIdle
     if (
         cached.fogIdle === HEXAGONS_DEFAULTS.fogIdle &&
@@ -163,19 +214,29 @@ function readPrefs(): HexagonsPlaceLive {
     ) {
         cached.spinChannel = HEXAGONS_DEFAULTS.spinChannel;
     }
-    const clampDrive = (v: unknown, fallback: number) => {
-        if (typeof v !== "number" || !Number.isFinite(v)) return fallback;
-        return Math.min(8, Math.max(0, v));
-    };
-    cached.gridDrive = clampDrive(cached.gridDrive, HEXAGONS_DEFAULTS.gridDrive);
-    cached.fogDrive = clampDrive(cached.fogDrive, HEXAGONS_DEFAULTS.fogDrive);
+    cached.gridDrive = clamp(
+        Number(cached.gridDrive),
+        0,
+        HEXAGONS_COLOR_DRIVE_MAX,
+        HEXAGONS_DEFAULTS.gridDrive,
+    );
+    cached.fogDrive = clamp(
+        Number(cached.fogDrive),
+        0,
+        HEXAGONS_COLOR_DRIVE_MAX,
+        HEXAGONS_DEFAULTS.fogDrive,
+    );
     const legacySpinAccel = (loaded as { spinAccel?: unknown }).spinAccel;
-    cached.spinDrive = clampDrive(
+    cached.spinDrive = clamp(
         typeof cached.spinDrive === "number"
             ? cached.spinDrive
-            : legacySpinAccel,
+            : Number(legacySpinAccel),
+        0,
+        HEXAGONS_DRIVE_MAX,
         HEXAGONS_DEFAULTS.spinDrive,
     );
+    // Caps mutex with twinkle
+    if (cached.caps && cached.twinkle) cached.twinkle = false;
     delete (cached as { spinAccel?: number }).spinAccel;
     // Legacy dolly zoom was ~6–40; scene scale lives in 0.25–2.5
     if (cached.cameraZoom > 3) cached.cameraZoom = HEXAGONS_DEFAULTS.cameraZoom;
@@ -254,15 +315,30 @@ export default function useHexagonsPlaceHook() {
                 gridChannel: HexagonsPlaceLive["gridChannel"],
             ) => commit({ gridChannel }),
             gridDrive: live.gridDrive,
-            setGridDrive: (gridDrive: number) => commit({ gridDrive }),
+            setGridDrive: (gridDrive: number) =>
+                commit({
+                    gridDrive: clamp(
+                        gridDrive,
+                        0,
+                        HEXAGONS_COLOR_DRIVE_MAX,
+                        HEXAGONS_DEFAULTS.gridDrive,
+                    ),
+                }),
             gridScale: live.gridScale,
             setGridScale: (gridScale: number) => commit({ gridScale }),
-            garland: live.garland,
-            setGarland: (garland: boolean) =>
-                commit(garland ? { garland: true, caps: false } : { garland }),
+            twinkle: live.twinkle,
+            setTwinkle: (twinkle: boolean) =>
+                commit(twinkle ? { twinkle: true, caps: false } : { twinkle }),
+            twinkleSpeed: live.twinkleSpeed,
+            setTwinkleSpeed: (twinkleSpeed: number) =>
+                commit({ twinkleSpeed }),
+            twinkleS: live.twinkleS,
+            setTwinkleS: (twinkleS: number) => commit({ twinkleS }),
+            twinkleL: live.twinkleL,
+            setTwinkleL: (twinkleL: number) => commit({ twinkleL }),
             caps: live.caps,
             setCaps: (caps: boolean) =>
-                commit(caps ? { caps: true, garland: false } : { caps }),
+                commit(caps ? { caps: true, twinkle: false } : { caps }),
             capBassIdle: live.capBassIdle,
             setCapBassIdle: (capBassIdle: string) => commit({ capBassIdle }),
             capBassPeak: live.capBassPeak,
@@ -283,9 +359,17 @@ export default function useHexagonsPlaceHook() {
             setFogChannel: (fogChannel: HexagonsPlaceLive["fogChannel"]) =>
                 commit({ fogChannel }),
             fogDrive: live.fogDrive,
-            setFogDrive: (fogDrive: number) => commit({ fogDrive }),
-            colorSpeed: live.colorSpeed,
-            setColorSpeed: (colorSpeed: number) => commit({ colorSpeed }),
+            setFogDrive: (fogDrive: number) =>
+                commit({
+                    fogDrive: clamp(
+                        fogDrive,
+                        0,
+                        HEXAGONS_COLOR_DRIVE_MAX,
+                        HEXAGONS_DEFAULTS.fogDrive,
+                    ),
+                }),
+            colorDriveMax: HEXAGONS_COLOR_DRIVE_MAX,
+            speedDriveMax: HEXAGONS_DRIVE_MAX,
             cameraAngle: live.cameraAngle,
             setCameraAngle: (cameraAngle: number) => commit({ cameraAngle }),
             cameraHeight: live.cameraHeight,
@@ -327,7 +411,6 @@ export default function useHexagonsPlaceHook() {
             setBandFlicker: (bandFlicker: boolean) => commit({ bandFlicker }),
             bassBoost: live.bassBoost,
             setBassBoost: (bassBoost: number) => commit({ bassBoost }),
-            bassBoostMax: BASS_BOOST_MAX,
             reset: () => writePrefs({ ...HEXAGONS_DEFAULTS }),
             fullscreen: () => void toggleFullscreen(),
         },
