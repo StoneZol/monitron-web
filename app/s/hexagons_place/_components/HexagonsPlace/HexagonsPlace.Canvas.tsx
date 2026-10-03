@@ -5,6 +5,11 @@ import { Canvas, useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import type { VizBands } from "@/lib/audioBus";
 import { sliceBands, risingEdge } from "@/lib/audioDerive";
+import {
+    advanceTwinkleHue,
+    createTwinklePulseEnv,
+    updateTwinklePulseEnv,
+} from "@/lib/twinkleHsl";
 import { injectGroundFogShader, FOG_NEUTRAL } from "./HexagonsPlace.fog";
 import { applyGlow } from "./HexagonsPlace.glow";
 import type {
@@ -50,12 +55,6 @@ const CAMERA_FOV = 20;
 type CapBand = "bass" | "mid" | "high";
 
 const CAP_BANDS: CapBand[] = ["bass", "mid", "high"];
-
-/** Smooth low-slice → garland hue (spectrum API, not named bass). */
-function audioColorMul(low: number, bassBoost: number) {
-    if (low <= 0) return 1;
-    return 1 + Math.max(0, bassBoost) * low * 0.45;
-}
 
 /** Map bus spectrum → classic low / mid / high energy (Hz slices). */
 function spectrumTrio(viz: VizBands): Record<CapBand, number> {
@@ -412,8 +411,9 @@ function City({
     const spotRef = useRef<THREE.SpotLight>(null);
     const lightBackRef = useRef<THREE.PointLight>(null);
     const gridRef = useRef<THREE.GridHelper>(null);
-    const hueOffset = useRef(0);
-    const fogHueOffset = useRef(0);
+    const twinkleHue = useRef(0);
+    const fogTwinkleHue = useRef(0);
+    const twinklePulse = useRef(createTwinklePulseEnv());
     const prevBands = useRef({ bass: 0, mid: 0, high: 0 });
     const bandEnvs = useRef(createBandEnvs());
     const spinImpulse = useRef(0);
@@ -485,22 +485,38 @@ function City({
         const reactive = Boolean(viz?.enabled);
         const flicker = reactive && knobs.bandFlicker;
         const trio = reactive && viz ? spectrumTrio(viz) : null;
-        const low = trio?.bass ?? 0;
-        const colorMul = reactive
-            ? audioColorMul(low, knobs.bassBoost)
-            : 1;
+        const twinkleOn = knobs.twinkle && !knobs.caps;
+        const fogRaw =
+            flicker && viz && knobs.fogChannel !== "off"
+                ? channelLevel(viz, knobs.fogChannel)
+                : 0;
+        const pulseAmt =
+            twinkleOn && flicker
+                ? updateTwinklePulseEnv(
+                      twinklePulse.current,
+                      fogRaw,
+                      knobs.fogDrive,
+                      Math.max(0, dt),
+                  )
+                : 0;
 
-        if (knobs.garland && !knobs.caps) {
-            const step = knobs.colorSpeed * colorMul * dt;
-            hueOffset.current = (hueOffset.current + step) % 360;
+        if (twinkleOn) {
+            twinkleHue.current = advanceTwinkleHue(
+                twinkleHue.current,
+                Math.max(0, dt),
+                knobs.twinkleSpeed,
+            );
             if (knobs.fogParallel) {
                 const fogMul = THREE.MathUtils.clamp(
                     knobs.fogParallelSpeed,
                     0.1,
                     5,
                 );
-                fogHueOffset.current =
-                    (fogHueOffset.current + step * fogMul) % 360;
+                fogTwinkleHue.current = advanceTwinkleHue(
+                    fogTwinkleHue.current,
+                    Math.max(0, dt),
+                    knobs.twinkleSpeed * fogMul,
+                );
             }
         }
 
@@ -516,14 +532,15 @@ function City({
                 bg,
                 light,
                 knobs,
-                hueOffset.current,
-                fogHueOffset.current,
+                twinkleHue.current,
+                fogTwinkleHue.current,
                 {
                     enabled: flicker && !knobs.caps && Boolean(viz),
                     bass: trio?.bass ?? 0,
                     mid: trio?.mid ?? 0,
                     high: trio?.high ?? 0,
                     beat: viz ? channelLevel(viz, "beat") : 0,
+                    pulseAmt,
                 },
             );
             // Aux grid: fixed | reactive jumps on capGridIdle→Peak via channel | edge
@@ -532,6 +549,9 @@ function City({
                 let c: THREE.Color;
                 if (knobs.gridFixed) {
                     c = _gridColor.set(knobs.gridColor);
+                } else if (twinkleOn) {
+                    // Inherit edge rainbow (+ pulse) — grid palette hidden
+                    c = edgeMaterial.color;
                 } else if (flicker && viz && knobs.gridChannel !== "off") {
                     const level = Math.min(
                         1,

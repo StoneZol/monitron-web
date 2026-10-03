@@ -13,6 +13,7 @@ import {
     Select,
     Slider,
     Toggle,
+    TwinkleControls,
 } from "@/components/ControlPanel";
 import useHexagonsPlaceHook from "./HexagonsPlace.hooks";
 import type { HexagonsPlaceProps } from "./HexagonsPlace.types";
@@ -26,17 +27,20 @@ const REACTIVE_CHANNEL_OPTIONS = [
 ] as const;
 
 const INFO = {
-    look: "Surface look: garland hue walk, caps palette, hex density.",
-    garland: "Hue walks over time on edges / fog instead of fixed colors.",
-    caps: "Per-band cap colors (idle/peak). Turns off flat Edge color.",
-    edge: "Flat edge line color when Caps is off.",
-    colorSpeed: "Hue walk rate while Garland is on.",
+    look: "Surface look: HSL twinkle, caps palette, hex density.",
+    twinkle:
+        "Hue cycles 0…360 on edges / fog. Mutex with Caps. Off: flat Edge color.",
+    twinkleSpeed: "How fast hue runs a full lap (1 ≈ 6s).",
+    twinkleS: "Saturation % for the twinkle hsl().",
+    twinkleL: "Lightness % for the twinkle hsl().",
+    caps: "Per-band cap colors (idle/peak). Turns off twinkle / Edge color.",
+    edge: "Flat edge line color when Caps and Twinkle are off.",
     capsPalette:
         "Idle = resting color. Peak = reactive target (locked until audio is on).",
     hexGrid: "How many hex rings — denser grid, heavier scene.",
     fog: "Ground fog slab — height, density, and color modes.",
-    fogFixed: "Freeze fog hue (no garland walk on fog).",
-    fogParallel: "Fog hue walks in parallel with the main garland.",
+    fogFixed: "Freeze fog hue (no twinkle walk on fog).",
+    fogParallel: "Fog hue walks in parallel with the main twinkle.",
     fogParallelSpeed: "How fast parallel fog hue walks vs the main speed.",
     fogColors: "Fog idle / peak colors. Peak needs a live audio source.",
     fogHeight: "How tall the fog volume sits above the ground.",
@@ -59,10 +63,10 @@ const INFO = {
     bandBounce: "Caps/height bounce with the selected audio bands.",
     bandFlicker: "Brightness flicker driven by audio bands.",
     gridChannel: "Which bus band drives grid peak / reaction.",
-    fogChannel: "Which bus band drives fog peak / reaction.",
+    fogChannel: "Which bus band drives fog peak / twinkle pulse.",
     spinChannel: "Which bus band boosts camera spin (beat punches hard).",
-    gridDrive: "Grid palette punch strength (1 = previous feel).",
-    fogDrive: "Fog palette punch strength (1 = previous feel).",
+    gridDrive: "Grid color punch (0…2).",
+    fogDrive: "Fog / twinkle color punch (0…2).",
     spinDrive: "How hard the spin channel multiplies orbit speed.",
     visualizer: {
         section: "Audio in → bus meters → peak gain for reactive screens.",
@@ -106,39 +110,37 @@ const HexagonsPlace = ({ showOverlay = true }: HexagonsPlaceProps) => {
                     >
                         <ControlSection label="look" info={INFO.look}>
                             <ControlSubSection label="mode">
-                                <div className="flex flex-wrap gap-1.5">
-                                    <Toggle
-                                        label="Garland"
-                                        checked={controls.garland}
-                                        onChange={controls.setGarland}
-                                        info={INFO.garland}
+                                {!controls.caps ? (
+                                    <TwinkleControls
+                                        title="twinkle"
+                                        checked={controls.twinkle}
+                                        onCheckedChange={controls.setTwinkle}
+                                        speed={controls.twinkleSpeed}
+                                        onSpeedChange={controls.setTwinkleSpeed}
+                                        s={controls.twinkleS}
+                                        onSChange={controls.setTwinkleS}
+                                        l={controls.twinkleL}
+                                        onLChange={controls.setTwinkleL}
+                                        info={INFO.twinkle}
+                                        speedInfo={INFO.twinkleSpeed}
+                                        sInfo={INFO.twinkleS}
+                                        lInfo={INFO.twinkleL}
                                     />
-                                    <Toggle
-                                        label="Caps"
-                                        checked={controls.caps}
-                                        onChange={controls.setCaps}
-                                        info={INFO.caps}
-                                    />
-                                </div>
-                                {!controls.caps && (
+                                ) : null}
+                                <Toggle
+                                    label="Caps"
+                                    checked={controls.caps}
+                                    onChange={controls.setCaps}
+                                    info={INFO.caps}
+                                />
+                                {!controls.caps && !controls.twinkle ? (
                                     <ColorField
                                         label="Edge"
                                         value={controls.edgeColor}
                                         onChange={controls.setEdgeColor}
                                         info={INFO.edge}
                                     />
-                                )}
-                                {controls.garland && (
-                                    <Slider
-                                        label="Color speed"
-                                        value={controls.colorSpeed}
-                                        min={1}
-                                        max={180}
-                                        step={1}
-                                        onChange={controls.setColorSpeed}
-                                        info={INFO.colorSpeed}
-                                    />
-                                )}
+                                ) : null}
                                 <Slider
                                     label="Light"
                                     value={controls.lightIntensity}
@@ -258,7 +260,7 @@ const HexagonsPlace = ({ showOverlay = true }: HexagonsPlaceProps) => {
 
                         <ControlSection label="fog" info={INFO.fog}>
                             <ControlSubSection label="tint">
-                                {controls.garland && !controls.caps && (
+                                {controls.twinkle && !controls.caps && (
                                     <>
                                         <div className="flex flex-wrap gap-1.5">
                                             <Toggle
@@ -291,9 +293,13 @@ const HexagonsPlace = ({ showOverlay = true }: HexagonsPlaceProps) => {
                                     </>
                                 )}
                                 {!controls.caps &&
-                                    (!controls.garland ||
+                                    (!controls.twinkle ||
                                         controls.fogFixed ||
-                                        controls.fogParallel) && (
+                                        controls.fogParallel) &&
+                                    !(
+                                        controls.twinkle &&
+                                        controls.fogParallel
+                                    ) && (
                                         <ColorTable
                                             info={INFO.fogColors}
                                             columns={["idle", "peak"]}
@@ -445,7 +451,8 @@ const HexagonsPlace = ({ showOverlay = true }: HexagonsPlaceProps) => {
                                         info={INFO.gridColor}
                                     />
                                 ) : (
-                                    !controls.caps && (
+                                    !controls.caps &&
+                                    !controls.twinkle && (
                                         <ColorTable
                                             info={INFO.gridColors}
                                             columns={["idle", "peak"]}
@@ -546,27 +553,27 @@ const HexagonsPlace = ({ showOverlay = true }: HexagonsPlaceProps) => {
                                             label="Grid"
                                             value={controls.gridDrive}
                                             min={0}
-                                            max={8}
-                                            step={0.5}
+                                            max={controls.colorDriveMax}
+                                            step={0.05}
                                             onChange={controls.setGridDrive}
-                                            format={(v) => `×${v.toFixed(1)}`}
+                                            format={(v) => `×${v.toFixed(2)}`}
                                             info={INFO.gridDrive}
                                         />
                                         <Slider
                                             label="Fog"
                                             value={controls.fogDrive}
                                             min={0}
-                                            max={8}
-                                            step={0.5}
+                                            max={controls.colorDriveMax}
+                                            step={0.05}
                                             onChange={controls.setFogDrive}
-                                            format={(v) => `×${v.toFixed(1)}`}
+                                            format={(v) => `×${v.toFixed(2)}`}
                                             info={INFO.fogDrive}
                                         />
                                         <Slider
                                             label="Spin"
                                             value={controls.spinDrive}
                                             min={0}
-                                            max={8}
+                                            max={controls.speedDriveMax}
                                             step={0.1}
                                             onChange={controls.setSpinDrive}
                                             format={(v) => `×${v.toFixed(1)}`}

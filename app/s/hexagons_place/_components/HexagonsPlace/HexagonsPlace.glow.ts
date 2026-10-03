@@ -1,29 +1,15 @@
 import * as THREE from "three";
+import {
+  hueDegFromHex,
+  pulseTwinkleLight,
+  resolveTwinkleColor,
+} from "@/lib/twinkleHsl";
 import type { HexagonsPlaceLive } from "./HexagonsPlace.types";
 
 const _scratch = new THREE.Color();
 const _fog = new THREE.Color();
 const _fogPeak = new THREE.Color();
 const _hsl = { h: 0, s: 0, l: 0 };
-
-/**
- * Garland shifts hue from the picked base. Near-black / grey still cycles
- * (black has no hue — bump sat/light so the rainbow still runs).
- */
-function resolveHueColor(hex: string, hueOffsetDeg: number, garland: boolean) {
-  _scratch.set(hex);
-  if (!garland) return _scratch;
-
-  _scratch.getHSL(_hsl);
-  let h = (_hsl.h + hueOffsetDeg / 360) % 1;
-  if (h < 0) h += 1;
-  // Achromatic / black: invent a vivid base so offset is visible
-  const achromatic = _hsl.s < 0.08 || _hsl.l < 0.06;
-  const s = achromatic ? 0.85 : Math.max(_hsl.s, 0.55);
-  const l = achromatic ? 0.5 : Math.max(_hsl.l, 0.12);
-  _scratch.setHSL(h, s, l);
-  return _scratch;
-}
 
 /** Keep fog as haze, not a bright wash. */
 function toneFog(src: THREE.Color, out: THREE.Color) {
@@ -41,14 +27,23 @@ export type GlowAudio = {
   mid: number;
   high: number;
   beat: number;
+  /** Shared twinkle light-pulse amount 0…1 (precomputed once per frame). */
+  pulseAmt?: number;
 };
 
+function channelLevel(audio: GlowAudio, ch: HexagonsPlaceLive["fogChannel"]) {
+  if (ch === "beat") return audio.beat;
+  if (ch === "bass") return audio.bass;
+  if (ch === "mid") return audio.mid;
+  return audio.high;
+}
+
 /**
- * Edge: garland / edgeColor, or black in caps mode.
- * Fog under garland:
+ * Edge: twinkle HSL / edgeColor, or black in caps mode.
+ * Fog under twinkle:
  *   neither → follow edge hue
  *   fogFixed → static fogIdle/fogPeak
- *   fogParallel → hue-cycle fogIdle/fogPeak with edge
+ *   fogParallel → hue-cycle fog with edge (offset from idle/peak)
  * Reactive fog jumps use fogChannel (off | bass | mid | high | beat).
  */
 export function applyGlow(
@@ -57,18 +52,30 @@ export function applyGlow(
   background: THREE.Color,
   accentLight: THREE.PointLight,
   live: HexagonsPlaceLive,
-  hueOffsetDeg: number,
-  fogHueOffsetDeg: number,
+  twinkleHueDeg: number,
+  fogTwinkleHueDeg: number,
   audio?: GlowAudio | null,
 ) {
-  const garland = live.garland && !live.caps;
+  const twinkleOn = live.twinkle && !live.caps;
 
   if (live.caps) {
     edgeMaterial.color.set(0x000000);
-  } else {
-    edgeMaterial.color.copy(
-      resolveHueColor(live.edgeColor, hueOffsetDeg, garland),
+  } else if (twinkleOn) {
+    resolveTwinkleColor(
+      twinkleHueDeg,
+      live.twinkleS,
+      live.twinkleL,
+      edgeMaterial.color,
     );
+    if (audio?.enabled && audio.pulseAmt !== undefined) {
+      pulseTwinkleLight(
+        edgeMaterial.color,
+        audio.pulseAmt,
+        live.fogDrive,
+      );
+    }
+  } else {
+    edgeMaterial.color.set(live.edgeColor);
   }
 
   accentLight.color.set(0xffffff);
@@ -80,31 +87,40 @@ export function applyGlow(
 
   const fogLevel = (() => {
     if (!audio?.enabled || live.fogChannel === "off") return 0;
-    const ch = live.fogChannel;
-    const raw =
-      ch === "beat"
-        ? audio.beat
-        : ch === "bass"
-          ? audio.bass
-          : ch === "mid"
-            ? audio.mid
-            : audio.high;
+    const raw = channelLevel(audio, live.fogChannel);
     return Math.max(0, Math.min(1, raw * Math.max(0, live.fogDrive)));
   })();
 
-  if (garland && !live.fogFixed && !live.fogParallel) {
+  if (twinkleOn && !live.fogFixed && !live.fogParallel) {
     // Default: haze follows edge rainbow
     toneFog(edgeMaterial.color, _fog);
-  } else {
-    const cycleFog = garland && live.fogParallel;
-    toneFog(
-      resolveHueColor(live.fogIdle, fogHueOffsetDeg, cycleFog),
-      _fog,
+  } else if (twinkleOn && live.fogParallel) {
+    resolveTwinkleColor(
+      fogTwinkleHueDeg,
+      live.twinkleS,
+      live.twinkleL,
+      _scratch,
     );
-    toneFog(
-      resolveHueColor(live.fogPeak, fogHueOffsetDeg, cycleFog),
+    const peakOff =
+      hueDegFromHex(live.fogPeak) - hueDegFromHex(live.fogIdle);
+    resolveTwinkleColor(
+      fogTwinkleHueDeg + peakOff,
+      live.twinkleS,
+      live.twinkleL,
       _fogPeak,
     );
+    if (audio?.enabled && audio.pulseAmt !== undefined) {
+      pulseTwinkleLight(_scratch, audio.pulseAmt, live.fogDrive);
+      pulseTwinkleLight(_fogPeak, audio.pulseAmt, live.fogDrive);
+    }
+    toneFog(_scratch, _fog);
+    toneFog(_fogPeak, _fogPeak);
+    _fog.lerp(_fogPeak, fogLevel);
+  } else {
+    _scratch.set(live.fogIdle);
+    _fogPeak.set(live.fogPeak);
+    toneFog(_scratch, _fog);
+    toneFog(_fogPeak, _fogPeak);
     _fog.lerp(_fogPeak, fogLevel);
   }
 

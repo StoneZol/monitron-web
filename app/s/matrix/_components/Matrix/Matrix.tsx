@@ -9,19 +9,22 @@ import {
     ControlSubSection,
     PanelButton,
     Slider,
-    Toggle,
+    TwinkleControls,
 } from "@/components/ControlPanel";
 import useMatrixHook from "./Matrix.hooks";
 
 const INFO = {
     look: "Glyph look — color and how the rain falls.",
-    color: "Fixed tint or garland hue walk.",
-    twinkle: "Hue walks over time instead of a fixed rain color.",
-    colorSpeed: "Hue walk rate while Twinkle is on.",
+    color: "Fixed tint or HSL twinkle hue walk.",
+    twinkle: "Hue cycles 0…360 in hsl(H S% L%). Off: fixed rain color.",
+    twinkleSpeed: "How fast hue runs a full lap (1 ≈ 6s).",
+    twinkleS: "Saturation % for the twinkle hsl().",
+    twinkleL: "Lightness % for the twinkle hsl().",
     colorField: "Fixed glyph color when Twinkle is off.",
     rain: "Column drop speed.",
     fallSpeed: "Base column drop speed (higher = faster rain).",
     drive: "How hard the audio bus punches fall speed when reactive.",
+    colorDrive: "Color / twinkle pulse boost (0…2).",
     visualizer: {
         section: "Audio in → bus meters → peak gain for reactive screens.",
         source:
@@ -59,30 +62,29 @@ const Matrix = ({ showOverlay = true }: { showOverlay?: boolean }) => {
                     >
                         <ControlSection label="look" info={INFO.look}>
                             <ControlSubSection label="color" info={INFO.color}>
-                                <Toggle
-                                    label="Twinkle"
+                                <TwinkleControls
+                                    title="twinkle"
                                     checked={controls.twinkle}
-                                    onChange={controls.setTwinkle}
+                                    onCheckedChange={controls.setTwinkle}
+                                    speed={controls.twinkleSpeed}
+                                    onSpeedChange={controls.setTwinkleSpeed}
+                                    s={controls.twinkleS}
+                                    onSChange={controls.setTwinkleS}
+                                    l={controls.twinkleL}
+                                    onLChange={controls.setTwinkleL}
                                     info={INFO.twinkle}
+                                    speedInfo={INFO.twinkleSpeed}
+                                    sInfo={INFO.twinkleS}
+                                    lInfo={INFO.twinkleL}
                                 />
-                                {controls.twinkle ? (
-                                    <Slider
-                                        label="Color speed"
-                                        value={controls.colorSpeed}
-                                        min={1}
-                                        max={180}
-                                        step={1}
-                                        onChange={controls.setColorSpeed}
-                                        info={INFO.colorSpeed}
-                                    />
-                                ) : (
+                                {!controls.twinkle ? (
                                     <ColorField
                                         label="Color"
                                         value={controls.color}
                                         onChange={controls.setColor}
                                         info={INFO.colorField}
                                     />
-                                )}
+                                ) : null}
                             </ControlSubSection>
 
                             <ControlSubSection label="rain" info={INFO.rain}>
@@ -105,7 +107,7 @@ const Matrix = ({ showOverlay = true }: { showOverlay?: boolean }) => {
                             {visualizer.reactive && (
                                 <ControlSubSection label="drive">
                                     <Slider
-                                        label="Drive"
+                                        label="Fall"
                                         value={controls.drive}
                                         min={0}
                                         max={controls.driveMax}
@@ -113,6 +115,16 @@ const Matrix = ({ showOverlay = true }: { showOverlay?: boolean }) => {
                                         onChange={controls.setDrive}
                                         format={(v) => `×${v.toFixed(1)}`}
                                         info={INFO.drive}
+                                    />
+                                    <Slider
+                                        label="Color"
+                                        value={controls.colorDrive}
+                                        min={0}
+                                        max={controls.colorDriveMax}
+                                        step={0.05}
+                                        onChange={controls.setColorDrive}
+                                        format={(v) => `×${v.toFixed(2)}`}
+                                        info={INFO.colorDrive}
                                     />
                                 </ControlSubSection>
                             )}
