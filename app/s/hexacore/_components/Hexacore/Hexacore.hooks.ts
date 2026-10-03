@@ -12,9 +12,21 @@ import {
 } from "@/hooks/useAudioReactive";
 import { toggleFullscreen } from "@/lib/fullscreen";
 import { loadScreenPrefs, saveScreenPrefs } from "@/lib/screenPrefs";
-import { HEXACORE_DEFAULTS, type HexacoreLive } from "./Hexacore.types";
+import {
+  HEXACORE_DEFAULTS,
+  HEXACORE_DRIVE_MAX,
+  type HexacoreLive,
+  type ReactiveChannel,
+} from "./Hexacore.types";
 
 const SCREEN_ID = "hexacore";
+const CHANNELS = new Set<ReactiveChannel>([
+  "off",
+  "bass",
+  "mid",
+  "high",
+  "beat",
+]);
 
 type Stored = HexacoreLive & {
   audioSource: AudioSource;
@@ -43,6 +55,12 @@ function asHex(v: unknown, fallback: string): string {
   return v.startsWith("#") ? v : `#${v}`;
 }
 
+function channel(v: unknown, fallback: ReactiveChannel): ReactiveChannel {
+  return typeof v === "string" && CHANNELS.has(v as ReactiveChannel)
+    ? (v as ReactiveChannel)
+    : fallback;
+}
+
 function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
   return {
     ...STORED_DEFAULTS,
@@ -57,10 +75,38 @@ function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
       STORED_DEFAULTS.flightSpeed,
     ),
     color: asHex(raw.color, STORED_DEFAULTS.color),
+    colorPeak: asHex(raw.colorPeak, STORED_DEFAULTS.colorPeak),
     garland:
       raw.garland === undefined
         ? STORED_DEFAULTS.garland
         : Boolean(raw.garland),
+    pulseInterval: clamp(
+      Number(raw.pulseInterval),
+      0.4,
+      6,
+      STORED_DEFAULTS.pulseInterval,
+    ),
+    colorChannel: channel(raw.colorChannel, STORED_DEFAULTS.colorChannel),
+    colorDrive: clamp(
+      Number(raw.colorDrive),
+      0,
+      HEXACORE_DRIVE_MAX,
+      STORED_DEFAULTS.colorDrive,
+    ),
+    speedChannel: channel(raw.speedChannel, STORED_DEFAULTS.speedChannel),
+    speedDrive: clamp(
+      Number(raw.speedDrive),
+      0,
+      HEXACORE_DRIVE_MAX,
+      STORED_DEFAULTS.speedDrive,
+    ),
+    pulseChannel: channel(raw.pulseChannel, STORED_DEFAULTS.pulseChannel),
+    pulseDrive: clamp(
+      Number(raw.pulseDrive),
+      0,
+      HEXACORE_DRIVE_MAX,
+      STORED_DEFAULTS.pulseDrive,
+    ),
   };
 }
 
@@ -122,10 +168,30 @@ export default function useHexacoreHook() {
     controls: {
       flightSpeed: live.flightSpeed,
       color: live.color,
+      colorPeak: live.colorPeak,
       garland: live.garland,
+      pulseInterval: live.pulseInterval,
+      colorChannel: live.colorChannel,
+      colorDrive: live.colorDrive,
+      speedChannel: live.speedChannel,
+      speedDrive: live.speedDrive,
+      pulseChannel: live.pulseChannel,
+      pulseDrive: live.pulseDrive,
+      driveMax: HEXACORE_DRIVE_MAX,
       setFlightSpeed: (flightSpeed: number) => commit({ flightSpeed }),
       setColor: (color: string) => commit({ color }),
+      setColorPeak: (colorPeak: string) => commit({ colorPeak }),
       setGarland: (garland: boolean) => commit({ garland }),
+      setPulseInterval: (pulseInterval: number) => commit({ pulseInterval }),
+      setColorChannel: (colorChannel: ReactiveChannel) =>
+        commit({ colorChannel }),
+      setColorDrive: (colorDrive: number) => commit({ colorDrive }),
+      setSpeedChannel: (speedChannel: ReactiveChannel) =>
+        commit({ speedChannel }),
+      setSpeedDrive: (speedDrive: number) => commit({ speedDrive }),
+      setPulseChannel: (pulseChannel: ReactiveChannel) =>
+        commit({ pulseChannel }),
+      setPulseDrive: (pulseDrive: number) => commit({ pulseDrive }),
       fullscreen: () => void toggleFullscreen(),
       reset: () => {
         writePrefs({ ...STORED_DEFAULTS });

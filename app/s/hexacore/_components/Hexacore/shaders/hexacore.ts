@@ -5,8 +5,10 @@
  * Changes from original:
  * - iTime / iResolution as uniforms
  * - uCamZ: accumulated camera Z (dt × flightSpeed) so speed changes don’t jump the tunnel
- * - uColor tints crystal + energy palettes
+ * - uColor: crystal / non-garland tint (may be audio-reactive)
+ * - uWaveColor: fixed idle tint for energy crests — never audio-modulated
  * - uGarland: on = racing energy pulse + volumetric glow; off = steady edge emit in uColor
+ * - uPulseA/B: crest world-Z; constant world speed; despawn by distance traveled (ignores flightSpeed)
  * - AA=1 for monitor perf
  */
 
@@ -27,7 +29,11 @@ uniform vec3 iResolution;
 uniform float iTime;
 uniform float uCamZ;
 uniform vec3 uColor;
+uniform vec3 uWaveColor;
 uniform float uGarland;
+uniform vec4 uPulseA;
+uniform vec4 uPulseB;
+uniform float uPulseCount;
 
 #define MAX_STEPS    110
 #define MAX_DIST     28.0
@@ -63,8 +69,9 @@ vec3 palCrystal(float t){
   return c * mix(vec3(1.0), uColor * 1.35, 0.55);
 }
 vec3 palEnergy (float t){
+  // Wave / energy paths — locked to uWaveColor so audio never flexes crests
   vec3 c = pal(t, vec3(.60,.45,.50), vec3(.45,.45,.50), vec3(1.,.9,.8),   vec3(.55,.25,.05));
-  return c * mix(vec3(1.0), uColor * 1.5, 0.7);
+  return c * mix(vec3(1.0), uWaveColor * 1.5, 0.7);
 }
 
 float sdHex2(vec2 p, float r){
@@ -190,11 +197,25 @@ vec3 aces(vec3 x){
     return clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14), 0.0, 1.0);
 }
 
-float pulse(float z){
-    // Garland off: steady edge glow (still tinted by uColor via energyCol)
-    if (uGarland < 0.5) return 1.0;
-    float w = fract((z - gCamZ) * 0.09 - gT * 0.45);
-    return 0.2 + 5.0 * pow(w, 30.0) + 0.7 * pow(w, 5.0);
+// Soft ring on hex emit — wide enough to cover a few cells (no per-hex flicker)
+float shellWaveAt(float z, float crestZ){
+    float d = abs(z - crestZ);
+    return smoothstep(2.4, 0.15, d);
+}
+
+float shellWave(float z){
+    if (uGarland < 0.5) return 0.0;
+    float best = 0.0;
+    float n = uPulseCount;
+    if (n > 0.5) best = max(best, shellWaveAt(z, uPulseA.x));
+    if (n > 1.5) best = max(best, shellWaveAt(z, uPulseA.y));
+    if (n > 2.5) best = max(best, shellWaveAt(z, uPulseA.z));
+    if (n > 3.5) best = max(best, shellWaveAt(z, uPulseA.w));
+    if (n > 4.5) best = max(best, shellWaveAt(z, uPulseB.x));
+    if (n > 5.5) best = max(best, shellWaveAt(z, uPulseB.y));
+    if (n > 6.5) best = max(best, shellWaveAt(z, uPulseB.z));
+    if (n > 7.5) best = max(best, shellWaveAt(z, uPulseB.w));
+    return best;
 }
 
 vec3 energyCol(float z){ return palEnergy(0.03 * z + 0.05 * gT); }
@@ -214,7 +235,9 @@ float march(vec3 ro, vec3 rd, float pix, int steps, float tmax, inout vec3 vol, 
 
         if (volW > 0.0 && glowMul > 0.0){
             float e = gEmit;
-            vol += volW * energyCol(p.z) * pulse(p.z) * 0.0004 / (0.0004 + e * e * 300.0)
+            float wave = shellWave(p.z);
+            vol += volW * energyCol(p.z) * (0.55 + wave * 3.2)
+                   * 0.0004 / (0.0004 + e * e * 300.0)
                    * exp(-0.07 * t) * min(ar, 0.15) * 0.6;
         }
 
@@ -268,12 +291,15 @@ vec3 shade(vec3 p, vec3 n, vec3 rd, float t, bool full, out vec3 F0out, out floa
 
     col += alb * ao * (0.06 + 0.06 * n.y) * energyCol(p.z + 3.0);
 
-    // Edges: garland off → solid picked color; on → palette pulse tinted by uColor
+    // Hex emit: iridescent idle garland + brighter traveling crest
     float em = smoothstep(0.003 + 0.002 * t, 0.0, emit);
-    vec3 edgeCol = uGarland > 0.5
-      ? energyCol(p.z + 6.0 * gCell2) * pulse(p.z)
-      : uColor;
-    col += em * edgeCol * 3.0;
+    if (uGarland > 0.5) {
+        float wave = shellWave(p.z);
+        vec3 ec = energyCol(p.z + 6.0 * gCell2);
+        col += em * ec * (1.15 + wave * 5.0) * 3.0;
+    } else {
+        col += em * uColor * 3.0;
+    }
 
     return col * mix(0.5, 1.0, ao);
 }
