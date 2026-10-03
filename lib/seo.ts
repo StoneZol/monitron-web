@@ -4,8 +4,12 @@ import { getSiteUrl } from "@/lib/site";
 
 export const SITE_NAME = "Monitron";
 export const SITE_TAGLINE = "Bootleg generative signals for idle monitors.";
+/** Homepage / OG description — keep ~80–125 chars for share CTR. */
 export const SITE_DESCRIPTION =
-  "Full-screen generative savers for idle monitors. Chrome extension grabs tab audio — bass, mid, high, beat — and drives the picture.";
+  "Full-screen generative savers for idle monitors. Tab audio drives the picture — bass, mid, high, and beat.";
+/** SERP / OG title for the library home (~50–60 chars). */
+export const SITE_TITLE =
+  "Monitron — generative fullscreen savers for idle monitors";
 
 const GOOGLE_SITE_VERIFICATION = "nZeHCauFJdsg93vSYyMwWigE77hdQjTvuQhEk1hGy0M";
 
@@ -42,12 +46,12 @@ function ogImages(path: string, alt: string): NonNullable<Metadata["openGraph"]>
 
 export function rootMetadata(): Metadata {
   const url = getSiteUrl();
-  const images = ogImages("/og/monitronOG.png", SITE_NAME);
+  const images = ogImages("/og/monitronOG.png", SITE_TITLE);
 
   return {
     metadataBase: new URL(url),
     title: {
-      default: SITE_NAME,
+      default: SITE_TITLE,
       template: `%s · ${SITE_NAME}`,
     },
     description: SITE_DESCRIPTION,
@@ -73,15 +77,15 @@ export function rootMetadata(): Metadata {
       type: "website",
       locale: "en_US",
       siteName: SITE_NAME,
-      title: SITE_NAME,
-      description: SITE_TAGLINE,
+      title: SITE_TITLE,
+      description: SITE_DESCRIPTION,
       url,
       images,
     },
     twitter: {
       card: "summary_large_image",
-      title: SITE_NAME,
-      description: SITE_TAGLINE,
+      title: SITE_TITLE,
+      description: SITE_DESCRIPTION,
       images: [absoluteOg("/og/monitronOG.png")],
     },
     robots: {
