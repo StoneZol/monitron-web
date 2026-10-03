@@ -166,7 +166,9 @@ if (viz.enabled) {
 | [`lib/audioBus.ts`](lib/audioBus.ts)                       | Message protocol + subscribe / `postVisualizerToggle` |
 | [`hooks/useAudioReactive.ts`](hooks/useAudioReactive.ts)   | Extension handshake + `vizRef` + bus panel state      |
 | [`lib/audioDerive.ts`](lib/audioDerive.ts)                 | `sliceBands` / `bandAtColumn` / `risingEdge` helpers  |
+| [`lib/twinkleHsl.ts`](lib/twinkleHsl.ts)                   | Shared HSL twinkle: hue advance, resolve, audio pulse |
 | [`lib/fullscreen.ts`](lib/fullscreen.ts)                   | `toggleFullscreen()`                                  |
+| [`lib/visualPip.ts`](lib/visualPip.ts)                     | Document PiP (+ video fallback) for the live canvas   |
 | [`components/ControlPanel`](components/ControlPanel)       | Bootleg AV knobs / meters / buttons                   |
 | [`components/AudioBusPanel`](components/AudioBusPanel)     | 1:1 plugin bus meters in ControlPanel                 |
 | [`components/ScreensOverlay`](components/ScreensOverlay)   | Idle-hide HUD shell                                   |
@@ -274,6 +276,7 @@ type VizBands = {
 - Idle ~6s without mouse → HUD fades (`ScreensOverlay`); move mouse to bring it back.
 - System cursor is left alone (browser won’t redraw `cursor: none` without movement).
 - Fullscreen = ControlPanel **fullscreen** button (`Fullscreen` API), not OS F11 injection.
+- **PiP** = ControlPanel **pip** button ([`lib/visualPip.ts`](lib/visualPip.ts)). Prefers **Document Picture-in-Picture** (moves the live R3F / canvas shell into a floating window and keeps sizing via `_roots.setSize`). Falls back to classic video PiP via `captureStream` when Document PiP isn’t available. Unsupported browsers hide / no-op the control.
 
 ---
 
@@ -286,3 +289,9 @@ npm run start    # serve build
 npm run lint     # eslint
 npm run convert     # convert prew in webp
 ```
+
+---
+
+## Credits
+
+Created by **StoneZol** and **Cursor** — for visual heads and burnt eyes chasing good vibes and chill atmosphere.
