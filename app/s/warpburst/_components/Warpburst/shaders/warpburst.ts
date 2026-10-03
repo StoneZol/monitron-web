@@ -8,11 +8,11 @@
  * - iTime / iResolution as uniforms
  * - uCamZ: accumulated flight (dt × flightSpeed)
  * - uCamBank: roll/pitch/yaw/sway amplitude (0 = straight, 1 = default, 2 = 2×)
- * - uColor / uHighlight: base goo + neon highlight (audio / garland)
- * - uGarland + uGarlandSpeed: realtime iridescent palette crawl
+ * - uColor / uHighlight: CPU tint (idle→peak or HSL twinkle hex)
+ * - uTwinkle: HSL twinkle mode (CPU drives uColor); no fixed shader palette
  * - uSaturation: look chroma
  * - uDetail: fog octave / wisp amount (0 = smooth, 1 = default, 4 = max)
- * - uTwinkle: peak flicker punch (0…1)
+ * - uPeakFlicker: audio peak punch (0…1)
  */
 
 export const warpburstVertexShader = /* glsl */ `
@@ -34,11 +34,10 @@ uniform float uCamZ;
 uniform float uCamBank;
 uniform vec3 uColor;
 uniform vec3 uHighlight;
-uniform float uGarland;
-uniform float uGarlandSpeed;
+uniform float uTwinkle;
 uniform float uSaturation;
 uniform float uDetail;
-uniform float uTwinkle;
+uniform float uPeakFlicker;
 
 const float PI = 3.14159265359;
 
@@ -105,22 +104,6 @@ vec3 satMix(vec3 c) {
     return mix(vec3(l), c, uSaturation);
 }
 
-vec3 pal(float t, vec3 a, vec3 b, vec3 c, vec3 d) {
-    return a + b * cos(2.0 * PI * (c * t + d));
-}
-
-vec3 garlandCol(float seed) {
-    float t = 0.45 * iTime * uGarlandSpeed + seed * 0.19;
-    vec3 c = pal(
-        t,
-        vec3(0.55, 0.40, 0.50),
-        vec3(0.45, 0.45, 0.50),
-        vec3(1.0, 0.9, 0.8),
-        vec3(0.55, 0.25, 0.05)
-    );
-    return satMix(c * mix(vec3(1.0), uColor * 1.4, 0.65));
-}
-
 void main() {
     vec2 fragCoord = vUv * iResolution.xy;
     vec2 uvRaw = (fragCoord - 0.5 * iResolution.xy) / iResolution.y;
@@ -180,23 +163,13 @@ void main() {
     vec3 baseGoo = satMix(uColor);
     vec3 neonHighlight = satMix(uHighlight);
 
-    vec3 gooFinal;
-    if (uGarland > 0.5) {
-        float lead = 0.028 * (hitPos.z - ro.z);
-        vec3 iri = garlandCol(warp * 3.0 + lead);
-        vec3 hi  = mix(neonHighlight, iri, 0.55);
-        gooFinal = mix(baseGoo, hi, warp) * gooDensity;
-        // Soft cell twinkle along the wall
-        float tw = 0.82 + 0.28 * sin(iTime * uGarlandSpeed * 2.4 + warp * 18.0);
-        gooFinal *= tw;
-    } else {
-        // Solid tint — uColor is idle, or CPU idle→peak on punches.
-        // Don't mix toward peak here or idle looks stuck mid-lerp.
-        gooFinal = baseGoo * gooDensity * mix(0.82, 1.18, warp);
-    }
+    // Tint from CPU (twinkle = hsl hex; else idle / idle→peak).
+    // Warp mixes base↔highlight for depth without a fixed palette.
+    vec3 gooTint = mix(baseGoo, neonHighlight, warp * (uTwinkle > 0.5 ? 0.45 : 0.0));
+    vec3 gooFinal = gooTint * gooDensity * mix(0.82, 1.18, warp);
 
     // Peak flicker — brighten / thin the fog on punches
-    float peakMul = 1.0 + uTwinkle * (0.55 + 0.35 * warp);
+    float peakMul = 1.0 + uPeakFlicker * (0.55 + 0.35 * warp);
     gooFinal *= peakMul;
 
     vec2 tunnelCenter = vec2(-yaw - swayX, -pitch - swayY);
@@ -207,15 +180,15 @@ void main() {
     vec3 volumetricTunnel = gooFinal * depthFade * 2.5;
 
     vec3 coreCenterGlow = (
-        uGarland > 0.5
+        uTwinkle > 0.5
             ? mix(baseGoo, neonHighlight, 0.35)
             : baseGoo
     ) * 0.08 * (1.0 - smoothstep(0.0, 0.4, currentRadius))
-      * (1.0 + uTwinkle * 0.8);
+      * (1.0 + uPeakFlicker * 0.8);
 
     vec3 composite = volumetricTunnel + coreCenterGlow;
     composite *= smoothstep(1.5, 0.4, length(uvRaw));
-    composite = vec3(1.0) - exp(-composite * (1.5 + uTwinkle * 0.35));
+    composite = vec3(1.0) - exp(-composite * (1.5 + uPeakFlicker * 0.35));
 
     gl_FragColor = vec4(composite, 1.0);
 }

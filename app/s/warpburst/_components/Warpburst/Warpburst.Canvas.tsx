@@ -6,10 +6,13 @@ import * as THREE from "three";
 import type { VizBands } from "@/lib/audioBus";
 import { risingEdge } from "@/lib/audioDerive";
 import {
+  advanceTwinkleHue,
+  resolveTwinkleColor,
+} from "@/lib/twinkleHsl";
+import {
   channelLevel,
   drivenLevel,
   hexToVec3,
-  hueWalkHex,
   lerpHex,
   pulseBrightness,
 } from "./Warpburst.audio";
@@ -24,10 +27,10 @@ const COLOR_DECAY = 11;
 const COLOR_EDGE = 0.045;
 const COLOR_EDGE_MIN = 0.05;
 
-/** Peak twinkle envelope — snappy punch, quick fade. */
-const TWINKLE_DECAY = 9;
-const TWINKLE_EDGE = 0.04;
-const TWINKLE_EDGE_MIN = 0.05;
+/** Peak flicker envelope — snappy punch, quick fade. */
+const FLICKER_DECAY = 9;
+const FLICKER_EDGE = 0.04;
+const FLICKER_EDGE_MIN = 0.05;
 
 type WarpburstCanvasProps = {
   liveRef: RefObject<WarpburstLive>;
@@ -47,8 +50,9 @@ function WarpburstQuad({
   const lastT = useRef(0);
   const colorEnv = useRef(0);
   const colorPrev = useRef(0);
-  const twinkleEnv = useRef(0);
-  const twinklePrev = useRef(0);
+  const flickerEnv = useRef(0);
+  const flickerPrev = useRef(0);
+  const twinkleHue = useRef(0);
 
   const mat = useMemo(
     () =>
@@ -64,11 +68,10 @@ function WarpburstQuad({
           uCamBank: { value: 0.5 },
           uColor: { value: new THREE.Color("#c200ff") },
           uHighlight: { value: new THREE.Color("#8200ff") },
-          uGarland: { value: 0 },
-          uGarlandSpeed: { value: 1 },
+          uTwinkle: { value: 0 },
           uSaturation: { value: 1 },
           uDetail: { value: 4 },
-          uTwinkle: { value: 0 },
+          uPeakFlicker: { value: 0 },
         },
       }),
     [],
@@ -104,7 +107,7 @@ function WarpburstQuad({
     camZ.current +=
       dt * 1.2 * Math.max(0.05, live.flightSpeed) * speedMul;
 
-    // Color impulse
+    // Color impulse (idle→peak path when twinkle off)
     const colorHit = colorArmed ? Math.min(1, colorPunch) : 0;
     if (risingEdge(colorHit, colorPrev.current, COLOR_EDGE, COLOR_EDGE_MIN)) {
       colorEnv.current = Math.max(colorEnv.current, colorHit);
@@ -112,33 +115,40 @@ function WarpburstQuad({
     colorEnv.current *= Math.exp(-COLOR_DECAY * dt);
     if (colorEnv.current < 0.004) colorEnv.current = 0;
     colorPrev.current = colorHit;
-    const colorAmt = colorArmed
-      ? Math.max(
-          colorEnv.current,
-          live.garland ? Math.min(1, colorPunch) : 0,
-        )
-      : 0;
+    const colorAmt = colorArmed ? colorEnv.current : 0;
 
-    // Peak twinkle — rising-edge flicker on the color channel
-    const twinkleHit = colorArmed ? Math.min(1, colorPunch) : 0;
+    // Peak flicker — rising-edge punch on the color channel
+    const flickerHit = colorArmed ? Math.min(1, colorPunch) : 0;
     if (
-      risingEdge(twinkleHit, twinklePrev.current, TWINKLE_EDGE, TWINKLE_EDGE_MIN)
+      risingEdge(
+        flickerHit,
+        flickerPrev.current,
+        FLICKER_EDGE,
+        FLICKER_EDGE_MIN,
+      )
     ) {
-      twinkleEnv.current = Math.max(twinkleEnv.current, twinkleHit);
+      flickerEnv.current = Math.max(flickerEnv.current, flickerHit);
     }
-    twinkleEnv.current *= Math.exp(-TWINKLE_DECAY * dt);
-    if (twinkleEnv.current < 0.004) twinkleEnv.current = 0;
-    twinklePrev.current = twinkleHit;
+    flickerEnv.current *= Math.exp(-FLICKER_DECAY * dt);
+    if (flickerEnv.current < 0.004) flickerEnv.current = 0;
+    flickerPrev.current = flickerHit;
 
-    if (live.garland) {
+    if (live.twinkle) {
+      twinkleHue.current = advanceTwinkleHue(
+        twinkleHue.current,
+        dt,
+        live.twinkleSpeed,
+      );
+      resolveTwinkleColor(
+        twinkleHue.current,
+        live.twinkleS,
+        live.twinkleL,
+        tint,
+      );
+      highlight.copy(tint);
       if (colorArmed && colorAmt > 0.001) {
-        hueWalkHex(live.color, colorAmt * 90, tint);
         pulseBrightness(tint, colorAmt, 0.88);
-        hueWalkHex(live.colorPeak, colorAmt * 60, highlight);
-        pulseBrightness(highlight, colorAmt, 0.9);
-      } else {
-        hexToVec3(live.color, tint);
-        hexToVec3(live.colorPeak, highlight);
+        pulseBrightness(highlight, colorAmt, 0.92);
       }
     } else if (colorArmed && colorAmt > 0.001) {
       lerpHex(live.color, live.colorPeak, colorAmt, tint);
@@ -151,11 +161,10 @@ function WarpburstQuad({
     m.uniforms.iTime!.value = t;
     m.uniforms.uCamZ!.value = camZ.current;
     m.uniforms.uCamBank!.value = Math.max(0, live.cameraBank);
-    m.uniforms.uGarland!.value = live.garland ? 1 : 0;
-    m.uniforms.uGarlandSpeed!.value = Math.max(0, live.garlandSpeed);
+    m.uniforms.uTwinkle!.value = live.twinkle ? 1 : 0;
     m.uniforms.uSaturation!.value = Math.max(0, live.saturation);
     m.uniforms.uDetail!.value = Math.max(0, live.fogDetail);
-    m.uniforms.uTwinkle!.value = twinkleEnv.current;
+    m.uniforms.uPeakFlicker!.value = flickerEnv.current;
     m.uniforms.uColor!.value.copy(tint);
     m.uniforms.uHighlight!.value.copy(highlight);
   });

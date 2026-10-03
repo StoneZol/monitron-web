@@ -11,6 +11,11 @@ import {
 import { toggleFullscreen } from "@/lib/fullscreen";
 import { loadScreenPrefs, saveScreenPrefs } from "@/lib/screenPrefs";
 import {
+  TWINKLE_DEFAULT_L,
+  TWINKLE_DEFAULT_S,
+  TWINKLE_DEFAULT_SPEED,
+} from "@/lib/twinkleHsl";
+import {
   WARPBURST_DEFAULTS,
   WARPBURST_DRIVE_MAX,
   type WarpburstLive,
@@ -60,9 +65,21 @@ function channel(v: unknown, fallback: ReactiveChannel): ReactiveChannel {
 }
 
 function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
+  // Old garland* → twinkle* (title "twinkle" keys); drop legacy keys from save blob
+  const {
+    garland: legacyGarland,
+    garlandSpeed: legacyGarlandSpeed,
+    ...rest
+  } = raw;
+
+  const twinkleRaw =
+    rest.twinkle !== undefined ? rest.twinkle : legacyGarland;
+  const twinkleSpeedRaw =
+    rest.twinkleSpeed !== undefined ? rest.twinkleSpeed : legacyGarlandSpeed;
+
   return {
     ...STORED_DEFAULTS,
-    ...raw,
+    ...rest,
     audioSource: migrateAudioSource(raw),
     micGate: normalizeMicGate(raw.micGate),
     peakGain: normalizePeakGain(raw.peakGain),
@@ -80,15 +97,27 @@ function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
     ),
     color: asHex(raw.color, STORED_DEFAULTS.color),
     colorPeak: asHex(raw.colorPeak, STORED_DEFAULTS.colorPeak),
-    garland:
-      raw.garland === undefined
-        ? STORED_DEFAULTS.garland
-        : Boolean(raw.garland),
-    garlandSpeed: clamp(
-      Number(raw.garlandSpeed),
+    twinkle:
+      twinkleRaw === undefined
+        ? STORED_DEFAULTS.twinkle
+        : Boolean(twinkleRaw),
+    twinkleSpeed: clamp(
+      Number(twinkleSpeedRaw),
       0,
       4,
-      STORED_DEFAULTS.garlandSpeed,
+      STORED_DEFAULTS.twinkleSpeed ?? TWINKLE_DEFAULT_SPEED,
+    ),
+    twinkleS: clamp(
+      Number(raw.twinkleS),
+      0,
+      100,
+      STORED_DEFAULTS.twinkleS ?? TWINKLE_DEFAULT_S,
+    ),
+    twinkleL: clamp(
+      Number(raw.twinkleL),
+      0,
+      100,
+      STORED_DEFAULTS.twinkleL ?? TWINKLE_DEFAULT_L,
     ),
     saturation: clamp(
       Number(raw.saturation),
@@ -179,8 +208,10 @@ export default function useWarpburstHook() {
       cameraBank: live.cameraBank,
       color: live.color,
       colorPeak: live.colorPeak,
-      garland: live.garland,
-      garlandSpeed: live.garlandSpeed,
+      twinkle: live.twinkle,
+      twinkleSpeed: live.twinkleSpeed,
+      twinkleS: live.twinkleS,
+      twinkleL: live.twinkleL,
       saturation: live.saturation,
       fogDetail: live.fogDetail,
       colorChannel: live.colorChannel,
@@ -192,8 +223,10 @@ export default function useWarpburstHook() {
       setCameraBank: (cameraBank: number) => commit({ cameraBank }),
       setColor: (color: string) => commit({ color }),
       setColorPeak: (colorPeak: string) => commit({ colorPeak }),
-      setGarland: (garland: boolean) => commit({ garland }),
-      setGarlandSpeed: (garlandSpeed: number) => commit({ garlandSpeed }),
+      setTwinkle: (twinkle: boolean) => commit({ twinkle }),
+      setTwinkleSpeed: (twinkleSpeed: number) => commit({ twinkleSpeed }),
+      setTwinkleS: (twinkleS: number) => commit({ twinkleS }),
+      setTwinkleL: (twinkleL: number) => commit({ twinkleL }),
       setSaturation: (saturation: number) => commit({ saturation }),
       setFogDetail: (fogDetail: number) => commit({ fogDetail }),
       setColorChannel: (colorChannel: ReactiveChannel) =>
