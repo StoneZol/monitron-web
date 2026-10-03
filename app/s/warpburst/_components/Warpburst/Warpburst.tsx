@@ -1,7 +1,6 @@
 "use client";
 
 import { ScreensOverlay } from "@/components/ScreensOverlay";
-import { NavBackButton } from "@/components/NavBackButton";
 import { VisualizerSection } from "@/components/VisualizerSection";
 import {
   ColorTable,
@@ -71,7 +70,6 @@ const Warpburst = ({ showOverlay = true }: WarpburstProps) => {
             title="warpburst"
             actions={
               <div className="flex gap-2">
-                <NavBackButton className="min-w-0 flex-1" />
                 <PanelButton onClick={controls.reset} className="flex-1">
                   reset
                 </PanelButton>

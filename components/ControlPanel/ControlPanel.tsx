@@ -11,6 +11,7 @@ import {
 } from "react";
 import { cn } from "@/lib/utils";
 import { useScreensOverlay } from "@/components/ScreensOverlay/ScreensOverlay.context";
+import { NavBackButton } from "@/components/NavBackButton";
 import { placeholders } from "@/lib/placeholders";
 import {
     readPanelSections,
@@ -27,7 +28,7 @@ import { PanelButton } from "./PanelButton";
 type ControlPanelProps = {
     title: string;
     children: ReactNode;
-    /** Fixed under the title — outside the scroll body (back / reset / fullscreen) */
+    /** Fixed under the chrome header — outside the scroll body (reset / fullscreen) */
     actions?: ReactNode;
     className?: string;
 };
@@ -132,9 +133,12 @@ export function ControlPanel({
             )}
         >
             <div className="flex shrink-0 flex-col items-center gap-1.5 border-b border-line p-2">
-                <span className="w-full text-start text-sm uppercase tracking-[0.28em]">
-                    {title}
-                </span>
+                <div className="flex w-full items-center gap-2">
+                    {overlay ? <NavBackButton /> : null}
+                    <span className="min-w-0 flex-1 text-start text-sm uppercase tracking-[0.28em]">
+                        {title}
+                    </span>
+                </div>
                 {overlay ? (
                     <div className="flex w-full flex-col gap-1">
                         <div className="flex w-full gap-1.5">
