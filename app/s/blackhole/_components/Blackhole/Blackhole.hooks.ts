@@ -63,9 +63,10 @@ function migratePitch(raw: Record<string, unknown>): number {
     const angleY = 2 * pitch * Math.PI + 0.1 + Math.PI;
     let deg = (angleY * 180) / Math.PI;
     deg = ((deg + 180) % 360) - 180;
-    return clamp(deg, -180, 180, STORED_DEFAULTS.pitch);
+    return clamp(deg, 1, 179, STORED_DEFAULTS.pitch);
   }
-  return clamp(pitch, -180, 180, STORED_DEFAULTS.pitch);
+  // 0° / 180° = camera in disk plane → pixel glitches
+  return clamp(pitch, 1, 179, STORED_DEFAULTS.pitch);
 }
 
 function migratePrefs(raw: Stored & Record<string, unknown>): Stored {

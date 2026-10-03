@@ -96,7 +96,10 @@ function BlackholeQuad({
         mat.uniforms.uSize!.value = Math.max(0.05, live.blackHoleSize * sizeMul);
         const shake = scalePunchOn ? scalePunch : 0;
         mat.uniforms.uPitch!.value =
-            ((live.pitch + Math.sin(t * 28) * shake * 4) * Math.PI) / 180;
+            ((Math.min(179, Math.max(1, live.pitch)) +
+                Math.sin(t * 28) * shake * 4) *
+                Math.PI) /
+            180;
         mat.uniforms.uBeltAngle!.value = (live.beltAngle * Math.PI) / 180;
         mat.uniforms.uSpeed!.value = Math.max(0.05, live.diskRotationSpeed);
 

@@ -44,11 +44,11 @@ export type BlackholeLive = {
     scaleDrive: number;
     /** Camera yaw orbit rate — `angle.x += t * yawSpeed` (Shadertoy used 0.1) */
     yawSpeed: number;
-  /** Camera pitch in degrees → angle.y */
-  pitch: number;
-  /** Central belt angle — rolls only the hole/disk, space stays */
-  beltAngle: number;
-  holeChannel: ReactiveChannel;
+    /** Camera pitch in degrees → angle.y */
+    pitch: number;
+    /** Central belt angle — rolls only the hole/disk, space stays */
+    beltAngle: number;
+    holeChannel: ReactiveChannel;
     holeDrive: number;
     yawChannel: ReactiveChannel;
     yawDrive: number;
@@ -76,11 +76,11 @@ export const BLACKHOLE_DEFAULTS: BlackholeLive = {
     /** UI 1…2 — internal punch uses ×0.01 (so 1 ≡ old 0.01) */
     scaleDrive: 1,
     yawSpeed: 0.1,
-  /** Was mouseY 0.49 → angle.y ≈ 2° (mod 360) */
-  pitch: 2,
-  /** 0° = horizontal belt */
-  beltAngle: 0,
-  holeChannel: "bass",
+    /** Avoid 0°/180° — edge-on disk plane glitches */
+    pitch: 5,
+    /** 0° = horizontal belt */
+    beltAngle: 5,
+    holeChannel: "bass",
     holeDrive: 1.2,
     yawChannel: "beat",
     yawDrive: 1.4,
@@ -95,9 +95,9 @@ export const SCALE_DRIVE_UNIT = 0.01;
 /** Temporary wide ranges — replace once dialed in. */
 export const BLACKHOLE_RANGES = {
     yawSpeed: { min: 0.01, max: 1, step: 0.01 },
-  pitch: { min: 0, max: 180, step: 1 },
+  pitch: { min: 1, max: 179, step: 1 },
   beltAngle: { min: -180, max: 180, step: 1 },
-  blackHoleSize: { min: 0.05, max: 2, step: 0.01 },
+    blackHoleSize: { min: 0.05, max: 2, step: 0.01 },
     diskRotationSpeed: { min: 0.05, max: 5, step: 0.05 },
     colorSpeed: { min: 1, max: 180, step: 1 },
     nebulaIntensity: { min: 0, max: 3, step: 0.05 },

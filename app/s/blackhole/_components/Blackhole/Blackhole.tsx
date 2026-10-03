@@ -49,7 +49,7 @@ const INFO = {
     nebulaIntensity: "Base nebula strength. 1 ≈ subtle wash.",
     colorSpeed: "Hue walk rate while any twinkle is on.",
     yawSpeed: "Horizontal orbit rate (unitless, like disk spin).",
-  pitch: "Camera tilt — tips the whole view (space + hole).",
+  pitch: "Camera tilt. 0°/180° blocked — edge-on view glitches the disk.",
   beltAngle: "Central belt angle — rolls only the hole/disk; stars stay put. 0° = horizontal.",
   scale: "Black hole / disk radius (_Size).",
     scalePunch: "Pulse + shake hole scale from the hole channel.",

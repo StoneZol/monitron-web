@@ -40,6 +40,8 @@ uniform float uNebulaIntensity;
 #define _Speed uSpeed
 const float _Steps = 12.0;
 const int AA = 1;
+// Avoid /0 when camera sits in the disk plane (pitch ≈ 0 → ray.y ≈ 0)
+const float RAY_Y_EPS = 1e-3;
 
 // Fixed zoom — was iMouse.x / iResolution.y (0 → camera z ≈ -5)
 const float MOUSE_X = 0.0;
@@ -136,7 +138,8 @@ vec4 raymarchDisk(vec3 ray, vec3 zeroPos)
 
 	vec3 position = zeroPos;
     float lengthPos = length(position.xz);
-    float dist = min(1., lengthPos*(1./_Size) *0.5) * _Size * 0.4 *(1./_Steps) /( abs(ray.y) );
+    float absRayY = max(abs(ray.y), RAY_Y_EPS);
+    float dist = min(1., lengthPos*(1./_Size) *0.5) * _Size * 0.4 *(1./_Steps) / absRayY;
 
     position += dist*_Steps*ray*0.5;
 
@@ -257,7 +260,8 @@ void mainImage( out vec4 colOut, in vec2 fragCoord )
                 float dotpos = dot(pos,pos);
                 float invDist = inversesqrt(dotpos); //1/distance to BH
                 float centDist = dotpos * invDist; 	//distance to BH
-                float stepDist = 0.92 * abs(pos.y /(ray.y));  //conservative distance to disk (y==0)
+                float absRayY = max(abs(ray.y), RAY_Y_EPS);
+                float stepDist = 0.92 * abs(pos.y) / absRayY;  //conservative distance to disk (y==0)
                 float farLimit = centDist * 0.5; //limit step size far from to BH
                 float closeLimit = centDist*0.1 + 0.05*centDist*centDist*(1./_Size); //limit step size closse to BH
                 stepDist = min(stepDist, min(farLimit, closeLimit));
@@ -287,11 +291,12 @@ void mainImage( out vec4 colOut, in vec2 fragCoord )
                 break;
             }
 
-            else if (abs(pos.y) <= _Size * 0.002 ) //ray hit accretion disk
+            // Skip unstable edge-on hits when ray is almost parallel to the disk
+            else if (abs(pos.y) <= _Size * 0.002 && abs(ray.y) > RAY_Y_EPS)
             {
                 vec4 diskCol = raymarchDisk(ray, pos);   //render disk
                 pos.y = 0.;
-                pos += abs(_Size * 0.001 /ray.y) * ray;
+                pos += abs(_Size * 0.001 / max(abs(ray.y), RAY_Y_EPS)) * ray;
                 col = vec4(diskCol.rgb*(1.-col.a) + col.rgb, col.a + diskCol.a*(1.-col.a));
             }
         }
