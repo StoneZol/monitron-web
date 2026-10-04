@@ -54,8 +54,8 @@ function CoralreefQuad({
   liveRef: RefObject<CoralreefLive>;
   vizRef: RefObject<VizBands>;
 }) {
-  const tint = useMemo(() => new THREE.Color("#ff6b4a"), []);
-  const highlight = useMemo(() => new THREE.Color("#4ad4ff"), []);
+  const tint = useMemo(() => new THREE.Color("#ff8e4a"), []);
+  const highlight = useMemo(() => new THREE.Color("#ffd100"), []);
   const flyT = useRef(0);
   const lastT = useRef(0);
   const colorEnv = useRef(0);
@@ -79,8 +79,8 @@ function CoralreefQuad({
           iResolution: { value: new THREE.Vector3(1, 1, 1) },
           iTime: { value: 0 },
           uFlyT: { value: 0 },
-          uColor: { value: new THREE.Color("#ff6b4a") },
-          uHighlight: { value: new THREE.Color("#4ad4ff") },
+          uColor: { value: new THREE.Color("#ff8e4a") },
+          uHighlight: { value: new THREE.Color("#ffd100") },
           uSaturation: { value: 1 },
           uPeakFlicker: { value: 0 },
           uPalettePhase: { value: 0 },

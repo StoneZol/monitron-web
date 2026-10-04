@@ -43,8 +43,8 @@ export const CORALREEF_COLOR_DRIVE_MAX = 2;
 export const CORALREEF_DEFAULTS: CoralreefLive = {
   flightSpeed: 1,
   colorMode: "original",
-  color: "#ff6b4a",
-  colorPeak: "#4ad4ff",
+  color: "#ff8e4a",
+  colorPeak: "#ffd100",
   twinkleSpeed: 1,
   twinkleS: 100,
   twinkleL: 55,
