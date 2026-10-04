@@ -20,7 +20,7 @@ function isSceneCanvasNode(node: Node): boolean {
 }
 
 /**
- * Orchestrates overlay mods — one apply/clear path for every mode (B&W, Grain, …).
+ * Orchestrates overlay mods — one apply/clear path for every mode (B&W, Sepia, Grain, …).
  * Shader overlays mount inside the R3F shell so Document PiP takes them too.
  */
 export function FxOverlayLayer({ screenId }: FxOverlayLayerProps) {

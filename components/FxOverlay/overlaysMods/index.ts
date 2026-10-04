@@ -1,5 +1,6 @@
 import { bwMod } from "./bw";
 import { grainMod } from "./grain";
+import { sepiaMod } from "./sepia";
 import type { FxModeMod, FxModePaintContext } from "./types";
 
 export type {
@@ -10,6 +11,7 @@ export type {
 } from "./types";
 export { bwMod } from "./bw";
 export { grainMod } from "./grain";
+export { sepiaMod } from "./sepia";
 
 /**
  * Registry — add a new overlay:
@@ -18,6 +20,7 @@ export { grainMod } from "./grain";
  */
 export const FX_MODE_MODS: Record<string, FxModeMod> = {
   [bwMod.id]: bwMod,
+  [sepiaMod.id]: sepiaMod,
   [grainMod.id]: grainMod,
 };
 

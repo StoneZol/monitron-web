@@ -1,14 +1,14 @@
-import { bwMod, grainMod } from "./overlaysMods";
+import { bwMod, grainMod, sepiaMod } from "./overlaysMods";
 import type { FxBlendMode, FxModeKnob } from "./overlaysMods/types";
 
 export type { FxBlendMode, FxModeKnob };
-export type FxOverlayMode = "off" | "bw" | "grain";
+export type FxOverlayMode = "off" | "bw" | "sepia" | "grain";
 
 export type FxOverlayPrefs = {
   mode: FxOverlayMode;
-  /** 0…1 — mode strength (B&W = grayscale; overlay shaders = layer opacity) */
+  /** 0…1 — mode strength (B&W/Sepia = filter amount; Grain = layer opacity) */
   intensity: number;
-  /** CSS contrast multiplier (1 = unchanged) — B&W */
+  /** CSS contrast multiplier (1 = unchanged) — B&W / Sepia */
   contrast: number;
   /** Animation clock multiplier — reserved for timed overlays */
   speed: number;
@@ -37,6 +37,7 @@ export const FX_OVERLAY_DEFAULTS: FxOverlayPrefs = {
 export const FX_MODE_OPTIONS: { value: FxOverlayMode; label: string }[] = [
   { value: "off", label: "off" },
   { value: bwMod.id as FxOverlayMode, label: bwMod.label },
+  { value: sepiaMod.id as FxOverlayMode, label: sepiaMod.label },
   { value: grainMod.id as FxOverlayMode, label: grainMod.label },
 ];
 

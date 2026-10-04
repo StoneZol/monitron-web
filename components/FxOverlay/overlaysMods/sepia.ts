@@ -4,19 +4,19 @@ import {
 } from "./canvasFilter";
 import type { FxModeMod, FxModePaintContext } from "./types";
 
-/** Phone-editor style grayscale + contrast on scene canvases. */
-function applyBw({ root, intensity, contrast }: FxModePaintContext) {
-  const g = Math.min(1, Math.max(0, intensity));
+/** Phone-editor style sepia + contrast on scene canvases. */
+function applySepia({ root, intensity, contrast }: FxModePaintContext) {
+  const s = Math.min(1, Math.max(0, intensity));
   const c = Math.min(2, Math.max(0.5, contrast));
   const parts: string[] = [];
-  if (g > 0.001) parts.push(`grayscale(${g})`);
+  if (s > 0.001) parts.push(`sepia(${s})`);
   if (Math.abs(c - 1) > 0.001) parts.push(`contrast(${c})`);
   applyCanvasFilter(root, parts.join(" "));
 }
 
-export const bwMod: FxModeMod = {
-  id: "bw",
-  label: "B&W",
+export const sepiaMod: FxModeMod = {
+  id: "sepia",
+  label: "Sepia",
   knobs: ["intensity", "contrast"],
   defaults: {
     intensity: 1,
@@ -25,6 +25,6 @@ export const bwMod: FxModeMod = {
     particles: 1,
     blend: "normal",
   },
-  apply: applyBw,
+  apply: applySepia,
   clear: clearCanvasFilters,
 };

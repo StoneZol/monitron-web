@@ -16,6 +16,7 @@ export {
 } from "./FxOverlay.types";
 export {
   bwMod,
+  sepiaMod,
   grainMod,
   FX_MODE_MODS,
   applyFxMode,
