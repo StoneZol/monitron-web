@@ -28,6 +28,8 @@ const SCREEN_BLURBS: Record<string, string> = {
     "Goo tunnel fog for idle monitors — speed, color, and peak flicker.",
   fairysmoke:
     "Volumetric fairy smoke shell for idle monitors — reactive tint and speed.",
+  kalistarnest:
+    "Kali Star Nest free flight for idle monitors — reactive stars, fog, and speed.",
 };
 
 function absoluteOg(path: string): string {

@@ -1,6 +1,6 @@
 /**
  * Shared reactive-screen helpers: named EQ channels + tint math.
- * Used by Warpburst / Hexacore / Blackhole / Synthwave / Fairysmoke / Hexagons.
+ * Used by Warpburst / Hexacore / Blackhole / Synthwave / Fairysmoke / Kalistarnest / Hexagons.
  */
 
 import * as THREE from "three";

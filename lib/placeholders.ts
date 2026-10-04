@@ -96,4 +96,23 @@ export const placeholders: PlaceholderMeta[] = [
             },
         ],
     },
+    {
+        id: "kalistarnest",
+        title: "Kali Star Nest",
+        href: "/s/kalistarnest",
+        previewSrc: "/s/kalistarnest.webp",
+        reactive: true,
+        sources: [
+            {
+                author: "aladiN",
+                title: "kali star nest, free 360° flight",
+                href: "https://www.shadertoy.com/view/f3y3DW",
+            },
+            {
+                author: "Kali",
+                title: "Star Nest",
+                href: "https://www.shadertoy.com/view/XlfGRj",
+            },
+        ],
+    },
 ];
