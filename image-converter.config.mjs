@@ -1,27 +1,36 @@
-// eslint-disable-next-line import/no-anonymous-default-export
+/* eslint-disable import/no-anonymous-default-export */
 export default {
-    // Main settings
-    dir: "./public/og",
-    removeOriginal: false, // Delete original files after conversion
-    recursive: true, // Recursive search in subdirectories
-    ignoreOnStart: true, // Ignore existing files on watcher startup
-    concurrency: 4, // Number of parallel workers
+    // Shared
+    recursive: true, // walk subfolders under each command's dir
+    concurrency: 4, // parallel workers
+    ignoreOnStart: true, // watch: skip files that already exist on startup
 
-    // Conversion settings
+    // --- convert + watch (auto-convert-images / auto-convert-images-watch) ---
     convertation: {
-        converted: "*.{webp,png,jpg,jpeg,tiff}", // Source file pattern
-        format: "webp", // Target format: webp, avif, png, jpg, tiff
-        quality: 80, // Quality (0-100)
-        outputDir: "../s", // null = same folder, or path for output
+        dir: "./public/original", // where to look for sources (cwd-relative or absolute)
+        removeOriginal: true, // delete source from convertation.dir after success
+        converted: "png,jpg,jpeg,tiff", // source formats (comma-separated)
+        format: "webp", // output codec: webp | avif | png | jpg | jpeg | tiff
+        quality: 80, // 0–100
+        outputDir: "./public/s", // null = next to source
+        outputDirMode: "flat", // flat | mirror (mirror keeps subfolders from dir)
+
+        needResize: true, // resize once, then encode → outputDir
+        needResizeOriginal: true, // also write resized SOURCE format → resize.outputDir
     },
 
-    // Resize settings (optional)
-    needResize: false, // Enable resize
+    // --- resize geometry + resize / resize:watch (no format change) ---
     resize: {
-        width: 1200, // Width (or null)
-        height: 630, // Height (or null)
-        fit: "cover", // cover, contain, fill, inside, outside
-        position: "center", // Cropping position
-        withoutEnlargement: true, // Don't enlarge small images
+        dir: "./public/converted", // scan folder for resize CLI / resize:watch
+        removeOriginal: false, // independent from convertation.removeOriginal
+        width: 1200, // or null if only height
+        height: 630, // or null if only width
+        fit: "cover", // cover | contain | fill | inside | outside
+        position: "center",
+        withoutEnlargement: true, // don't upscale smaller images
+
+        targetFormat: "webp", // which files to resize: "webp" | "png,jpg" | null → convertation.format
+        outputDir: "./public/og", // null + removeOriginal true → overwrite; false → -1920w suffix
+        outputDirMode: "flat",
     },
 };
