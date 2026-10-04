@@ -189,9 +189,25 @@ void main() {
   float yaw = uYaw;
   float pitch = uPitch;
   if (uCamMode > 0.5) {
-    // Flex: scatter around flight heading
-    yaw = sin(t * 0.10) * 0.55 * bank;
-    pitch = cos(t * 0.15) * 0.35 * bank;
+    // Flex: multi-rate wander (incommensurate) + center bias.
+    // Raw sum alone sits off-axis at high bank; cubic + glance pull it home often.
+    float yRaw =
+      sin(t * 0.11) * 0.42 +
+      sin(t * 0.27 + 1.7) * 0.28 +
+      sin(t * 0.053 + 4.1) * 0.22 +
+      sin(t * 0.41 + 2.3) * 0.12;
+    float pRaw =
+      cos(t * 0.14) * 0.28 +
+      sin(t * 0.19 + 0.9) * 0.22 +
+      cos(t * 0.07 + 3.4) * 0.18 +
+      sin(t * 0.33 + 5.2) * 0.10;
+    // Odd power → most time near 0; peaks still scale with bank
+    float yCub = yRaw * yRaw * yRaw;
+    float pCub = pRaw * pRaw * pRaw;
+    // Slow envelope: wide glances, then collapse toward center
+    float glance = 0.20 + 0.80 * abs(sin(t * 0.041) * sin(t * 0.067 + 1.3));
+    yaw = yCub * 1.35 * bank * glance;
+    pitch = pCub * 1.15 * bank * glance;
   }
   pitch = clamp(pitch, -1.45, 1.45);
 

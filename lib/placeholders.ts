@@ -108,11 +108,6 @@ export const placeholders: PlaceholderMeta[] = [
                 title: "kali star nest, free 360° flight",
                 href: "https://www.shadertoy.com/view/f3y3DW",
             },
-            {
-                author: "Kali",
-                title: "Star Nest",
-                href: "https://www.shadertoy.com/view/XlfGRj",
-            },
         ],
     },
 ];

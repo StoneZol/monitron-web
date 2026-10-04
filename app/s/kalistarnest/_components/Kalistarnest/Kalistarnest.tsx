@@ -54,7 +54,7 @@ const INFO = {
   yaw: "Look X in degrees — 0 = along flight. Turns the view, not the path.",
   pitch: "Look Y in degrees — 0 = along flight. Turns the view, not the path.",
   cameraBank:
-    "Flex look scatter around the flight heading — 0 = locked, 1 = default, 2 = double.",
+    "Flex look wander around the flight heading. Multi-freq + center bias — high bank = wider glances, still returns to center.",
   colorMode:
     "original = aladiN fixedTint + stock dust. custom = star palette / twinkle; dust stays stock.",
   starPalette: "Stars idle→peak. Hidden while star twinkle is on.",
