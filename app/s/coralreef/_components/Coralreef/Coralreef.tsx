@@ -16,6 +16,7 @@ import CoralreefCanvas from "./Coralreef.Canvas";
 import useCoralreefHook from "./Coralreef.hooks";
 import {
   CORALREEF_RANGES,
+  type CoralreefCameraMode,
   type CoralreefColorMode,
   type CoralreefProps,
   type ReactiveChannel,
@@ -29,6 +30,14 @@ const REACTIVE_CHANNEL_OPTIONS: { value: ReactiveChannel; label: string }[] = [
   { value: "beat", label: "beat (peak punches)" },
 ];
 
+const CAMERA_MODE_OPTIONS: {
+  value: CoralreefCameraMode;
+  label: string;
+}[] = [
+  { value: "manual", label: "manual (X / Y)" },
+  { value: "flex", label: "flex (center + scatter)" },
+];
+
 const COLOR_MODE_OPTIONS: {
   value: CoralreefColorMode;
   label: string;
@@ -40,8 +49,14 @@ const COLOR_MODE_OPTIONS: {
 ];
 
 const INFO = {
-  look: "Coral Reef volumetric tunnel (Yusef28) — four color modes + speed.",
+  look: "Coral Reef volumetric tunnel (Yusef28) — four color modes + freelook.",
   flightSpeed: "Base tunnel clock (1 ≈ Shadertoy iTime).",
+  cameraMode:
+    "manual = freelook X/Y (0/0 = down the tunnel). flex = center + bank wander. Flight stays on +Z.",
+  yaw: "Look X in degrees — 0 = along tunnel. Turns the view, not the path.",
+  pitch: "Look Y in degrees — 0 = along tunnel. Turns the view, not the path.",
+  cameraBank:
+    "Flex look wander around the tunnel heading. High bank = wider glances, still returns to center.",
   colorMode:
     "original = stock cos palette. palette twinkle = phase-walk that palette. twinkle = solid HSL fill. palette = idle→peak.",
   colorPalette:
@@ -72,6 +87,7 @@ const Coralreef = ({ showOverlay = true }: CoralreefProps) => {
   const audioLocked = !visualizer.reactive;
   const audioStamp = audioLocked ? ({ peak: "audio" } as const) : undefined;
   const mode = controls.colorMode;
+  const flex = controls.cameraMode === "flex";
 
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-black select-none">
@@ -106,6 +122,48 @@ const Coralreef = ({ showOverlay = true }: CoralreefProps) => {
                 format={(v) => `×${v.toFixed(2)}`}
                 info={INFO.flightSpeed}
               />
+              <Select
+                label="Camera"
+                value={controls.cameraMode}
+                options={CAMERA_MODE_OPTIONS}
+                onChange={controls.setCameraMode}
+                info={INFO.cameraMode}
+              />
+              {flex ? (
+                <Slider
+                  label="Camera bank"
+                  value={controls.cameraBank}
+                  min={CORALREEF_RANGES.cameraBank.min}
+                  max={CORALREEF_RANGES.cameraBank.max}
+                  step={CORALREEF_RANGES.cameraBank.step}
+                  onChange={controls.setCameraBank}
+                  format={(v) => `×${v.toFixed(2)}`}
+                  info={INFO.cameraBank}
+                />
+              ) : (
+                <>
+                  <Slider
+                    label="X"
+                    value={controls.yaw}
+                    min={CORALREEF_RANGES.yaw.min}
+                    max={CORALREEF_RANGES.yaw.max}
+                    step={CORALREEF_RANGES.yaw.step}
+                    onChange={controls.setYaw}
+                    format={(v) => `${v.toFixed(1)}°`}
+                    info={INFO.yaw}
+                  />
+                  <Slider
+                    label="Y"
+                    value={controls.pitch}
+                    min={CORALREEF_RANGES.pitch.min}
+                    max={CORALREEF_RANGES.pitch.max}
+                    step={CORALREEF_RANGES.pitch.step}
+                    onChange={controls.setPitch}
+                    format={(v) => `${v.toFixed(1)}°`}
+                    info={INFO.pitch}
+                  />
+                </>
+              )}
               <Select
                 label="Color mode"
                 value={controls.colorMode}

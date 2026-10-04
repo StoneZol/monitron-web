@@ -19,6 +19,7 @@ import {
   CORALREEF_COLOR_DRIVE_MAX,
   CORALREEF_DEFAULTS,
   CORALREEF_DRIVE_MAX,
+  type CoralreefCameraMode,
   type CoralreefColorMode,
   type CoralreefLive,
   type ReactiveChannel,
@@ -32,6 +33,7 @@ const CHANNELS = new Set<ReactiveChannel>([
   "high",
   "beat",
 ]);
+const CAMERA_MODES = new Set<CoralreefCameraMode>(["manual", "flex"]);
 const COLOR_MODES = new Set<CoralreefColorMode>([
   "original",
   "paletteTwinkle",
@@ -72,6 +74,12 @@ function channel(v: unknown, fallback: ReactiveChannel): ReactiveChannel {
     : fallback;
 }
 
+function cameraMode(v: unknown): CoralreefCameraMode {
+  return typeof v === "string" && CAMERA_MODES.has(v as CoralreefCameraMode)
+    ? (v as CoralreefCameraMode)
+    : STORED_DEFAULTS.cameraMode;
+}
+
 function colorMode(v: unknown): CoralreefColorMode {
   return typeof v === "string" && COLOR_MODES.has(v as CoralreefColorMode)
     ? (v as CoralreefColorMode)
@@ -89,6 +97,15 @@ function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
       0.1,
       3,
       STORED_DEFAULTS.flightSpeed,
+    ),
+    cameraMode: cameraMode(raw.cameraMode),
+    yaw: clamp(Number(raw.yaw), -180, 180, STORED_DEFAULTS.yaw),
+    pitch: clamp(Number(raw.pitch), -80, 80, STORED_DEFAULTS.pitch),
+    cameraBank: clamp(
+      Number(raw.cameraBank),
+      0,
+      2,
+      STORED_DEFAULTS.cameraBank,
     ),
     colorMode: colorMode(raw.colorMode),
     color: asHex(raw.color, STORED_DEFAULTS.color),
@@ -193,6 +210,10 @@ export default function useCoralreefHook() {
     visualizer,
     controls: {
       flightSpeed: live.flightSpeed,
+      cameraMode: live.cameraMode,
+      yaw: live.yaw,
+      pitch: live.pitch,
+      cameraBank: live.cameraBank,
       colorMode: live.colorMode,
       color: live.color,
       colorPeak: live.colorPeak,
@@ -207,6 +228,11 @@ export default function useCoralreefHook() {
       colorDriveMax: CORALREEF_COLOR_DRIVE_MAX,
       speedDriveMax: CORALREEF_DRIVE_MAX,
       setFlightSpeed: (flightSpeed: number) => commit({ flightSpeed }),
+      setCameraMode: (cameraMode: CoralreefCameraMode) =>
+        commit({ cameraMode }),
+      setYaw: (yaw: number) => commit({ yaw }),
+      setPitch: (pitch: number) => commit({ pitch }),
+      setCameraBank: (cameraBank: number) => commit({ cameraBank }),
       setColorMode: (colorMode: CoralreefColorMode) => commit({ colorMode }),
       setColor: (color: string) => commit({ color }),
       setColorPeak: (colorPeak: string) => commit({ colorPeak }),

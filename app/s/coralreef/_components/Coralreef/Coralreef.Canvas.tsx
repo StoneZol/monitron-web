@@ -42,6 +42,8 @@ const MODE_CODE = {
   palette: 3,
 } as const;
 
+const DEG = Math.PI / 180;
+
 type CoralreefCanvasProps = {
   liveRef: RefObject<CoralreefLive>;
   vizRef: RefObject<VizBands>;
@@ -79,6 +81,10 @@ function CoralreefQuad({
           iResolution: { value: new THREE.Vector3(1, 1, 1) },
           iTime: { value: 0 },
           uFlyT: { value: 0 },
+          uYaw: { value: 0 },
+          uPitch: { value: 0 },
+          uCamBank: { value: 0.5 },
+          uCamMode: { value: 0 },
           uColor: { value: new THREE.Color("#ff8e4a") },
           uHighlight: { value: new THREE.Color("#ffd100") },
           uSaturation: { value: 1 },
@@ -215,6 +221,10 @@ function CoralreefQuad({
 
     m.uniforms.iTime!.value = t;
     m.uniforms.uFlyT!.value = flyT.current;
+    m.uniforms.uYaw!.value = live.yaw * DEG;
+    m.uniforms.uPitch!.value = live.pitch * DEG;
+    m.uniforms.uCamBank!.value = Math.max(0, live.cameraBank);
+    m.uniforms.uCamMode!.value = live.cameraMode === "flex" ? 1 : 0;
     m.uniforms.uSaturation!.value = Math.max(0, live.saturation);
     m.uniforms.uPeakFlicker!.value = peakFlicker;
     m.uniforms.uPalettePhase!.value = phase;

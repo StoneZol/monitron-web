@@ -211,10 +211,10 @@ void main() {
   }
   pitch = clamp(pitch, -1.45, 1.45);
 
+  // Horizontal right from yaw only — avoids worldUp flip near steep pitch
   vec3 fwd = dirFrom(yaw, pitch);
-  vec3 worldUp = abs(fwd.y) > 0.95 ? vec3(0.0, 0.0, 1.0) : vec3(0.0, 1.0, 0.0);
-  vec3 rt = normalize(cross(worldUp, fwd));
-  vec3 up = cross(fwd, rt);
+  vec3 rt = vec3(cos(yaw), 0.0, -sin(yaw));
+  vec3 up = cross(rt, fwd);
 
   vec3 e0 = vec3(1.0, 0.0, 0.0);
   vec3 e1 = vec3(0.0, 1.0, 0.0);
