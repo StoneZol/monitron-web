@@ -11,7 +11,11 @@ export type {
 export { bwMod } from "./bw";
 export { cartoonyMod } from "./cartoony";
 
-/** Registry of overlay algorithms — add new mods here. */
+/**
+ * Registry — add a new overlay:
+ * 1) overlaysMods/<id>.ts with apply/clear
+ * 2) register here + add id to FxOverlayMode in FxOverlay.types.ts
+ */
 export const FX_MODE_MODS: Record<string, FxModeMod> = {
   [bwMod.id]: bwMod,
   [cartoonyMod.id]: cartoonyMod,
@@ -22,26 +26,21 @@ export function getFxModeMod(modeId: string): FxModeMod | null {
   return FX_MODE_MODS[modeId] ?? null;
 }
 
+/** Same path for every mode — clear siblings, then apply. */
 export function applyFxMode(modeId: string, ctx: FxModePaintContext) {
   const mod = getFxModeMod(modeId);
   if (!mod) {
     clearAllFxModes(ctx.root);
     return;
   }
-  // Clear other css mods first so filters don't stack across switches
   for (const other of Object.values(FX_MODE_MODS)) {
-    if (other.id !== mod.id) other.clear?.(ctx.root);
+    if (other.id !== mod.id) other.clear(ctx.root);
   }
-  if (mod.kind === "css") {
-    mod.apply?.(ctx);
-  } else {
-    // Shader pass is owned by FxOverlay.Layer — just strip css filters
-    clearAllFxModes(ctx.root);
-  }
+  mod.apply(ctx);
 }
 
 export function clearAllFxModes(root: HTMLElement) {
   for (const mod of Object.values(FX_MODE_MODS)) {
-    mod.clear?.(root);
+    mod.clear(root);
   }
 }

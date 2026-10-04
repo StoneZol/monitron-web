@@ -234,7 +234,6 @@ export default function FairysmokeCanvas({
                 antialias: false,
                 alpha: false,
                 powerPreference: "high-performance",
-                preserveDrawingBuffer: true,
             }}
             onCreated={({ gl }) => {
                 gl.setClearColor("#000000");

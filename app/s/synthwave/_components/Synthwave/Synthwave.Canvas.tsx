@@ -56,7 +56,6 @@ export default function SynthwaveCanvas({
                 antialias: true,
                 alpha: false,
                 powerPreference: "high-performance",
-                preserveDrawingBuffer: true,
             }}
             onCreated={({ camera, gl }) => {
                 camera.lookAt(0, 0.12, -2.2);

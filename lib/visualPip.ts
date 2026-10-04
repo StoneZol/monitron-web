@@ -104,8 +104,9 @@ function findScreenCanvas(): HTMLCanvasElement | null {
 /**
  * R3F DOM: outer shell (className/position) > measure div > canvas.
  * Move the outer shell so home layout + useMeasure keep working.
+ * Fx overlays mount inside this same shell so Document PiP takes them too.
  */
-function findMoveRoot(canvas: HTMLCanvasElement): HTMLElement {
+export function findMoveRoot(canvas: HTMLCanvasElement): HTMLElement {
   const measure = canvas.parentElement;
   const outer = measure?.parentElement;
   if (outer instanceof HTMLElement) return outer;

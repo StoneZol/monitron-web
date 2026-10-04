@@ -24,7 +24,6 @@ function applyBw({ root, intensity, contrast }: FxModePaintContext) {
 export const bwMod: FxModeMod = {
   id: "bw",
   label: "B&W",
-  kind: "css",
   knobs: ["intensity", "contrast"],
   defaults: {
     intensity: 1,

@@ -832,7 +832,7 @@ export default function HexagonsCanvas({ live, vizRef }: HexagonsCanvasProps) {
                 far: 2000,
             }}
             dpr={[1, 2]}
-            gl={{ antialias: true, preserveDrawingBuffer: true }}
+            gl={{ antialias: true }}
             onCreated={({ gl, camera, scene }) => {
                 injectGroundFogShader();
                 scene.traverse((obj) => {

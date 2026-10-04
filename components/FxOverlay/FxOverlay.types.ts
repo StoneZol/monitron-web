@@ -6,7 +6,7 @@ export type FxOverlayMode = "off" | "bw" | "cartoony";
 
 export type FxOverlayPrefs = {
   mode: FxOverlayMode;
-  /** 0…1 — mode strength (B&W = grayscale; shader = dry/wet) */
+  /** 0…1 — mode strength (B&W = grayscale; overlay shaders = layer opacity) */
   intensity: number;
   /** CSS contrast multiplier (1 = unchanged) — B&W */
   contrast: number;

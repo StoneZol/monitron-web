@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { applyFxMode, clearAllFxModes, getFxModeMod } from "./overlaysMods";
-import { FxGlPass, findSceneCanvas } from "./FxOverlay.GlPass";
+import { applyFxMode, clearAllFxModes } from "./overlaysMods";
 import { useFxOverlay } from "./FxOverlay.store";
 
 type FxOverlayLayerProps = {
@@ -10,86 +9,50 @@ type FxOverlayLayerProps = {
 };
 
 /**
- * Orchestrates overlay mods from `overlaysMods/` + optional blend wash.
- * CSS mods (B&W) mutate scene canvas filters; shader mods run a GL pass.
+ * Orchestrates overlay mods — one apply/clear path for every mode (B&W, Cartoony, …).
+ * Shader overlays mount inside the R3F shell so Document PiP takes them with the scene.
  */
 export function FxOverlayLayer({ screenId }: FxOverlayLayerProps) {
   const fx = useFxOverlay(screenId);
   const markerRef = useRef<HTMLDivElement>(null);
-  const passRef = useRef<FxGlPass | null>(null);
   const fxRef = useRef(fx);
   fxRef.current = fx;
 
-  // Mode mount: CSS observer or shader pass
   useEffect(() => {
     const root = markerRef.current?.parentElement;
     if (!root) return;
 
-    const mod = getFxModeMod(fx.mode);
+    const sync = () => {
+      const live = fxRef.current;
+      applyFxMode(live.mode, {
+        root,
+        intensity: live.intensity,
+        contrast: live.contrast,
+        speed: live.speed,
+        particles: live.particles,
+      });
+    };
 
-    if (!mod || mod.kind !== "shader" || !mod.fragmentShader) {
-      if (passRef.current) {
-        passRef.current.dispose();
-        passRef.current = null;
-      }
-
-      const paintCss = () => {
-        const live = fxRef.current;
-        applyFxMode(live.mode, {
-          root,
-          intensity: live.intensity,
-          contrast: live.contrast,
-          speed: live.speed,
-          particles: live.particles,
-        });
-      };
-      paintCss();
-      const mo = new MutationObserver(paintCss);
-      mo.observe(root, { childList: true, subtree: true });
-      return () => {
-        mo.disconnect();
-        clearAllFxModes(root);
-      };
-    }
-
-    clearAllFxModes(root);
-    let pass = passRef.current;
-    if (!pass) {
-      pass = new FxGlPass(mod.fragmentShader);
-      passRef.current = pass;
-    } else {
-      pass.setFragmentShader(mod.fragmentShader);
-    }
-    pass.mount(root);
-    const live = fxRef.current;
-    pass.setUniforms({
-      intensity: live.intensity,
-      speed: live.speed,
-      particles: live.particles,
-    });
-    pass.start(() => findSceneCanvas(root));
+    sync();
+    const mo = new MutationObserver(sync);
+    mo.observe(root, { childList: true, subtree: true });
+    const ro = new ResizeObserver(sync);
+    ro.observe(root);
+    const t0 = window.setTimeout(sync, 0);
+    const t1 = window.setTimeout(sync, 100);
 
     return () => {
-      pass?.stop();
+      window.clearTimeout(t0);
+      window.clearTimeout(t1);
+      mo.disconnect();
+      ro.disconnect();
+      clearAllFxModes(root);
     };
   }, [fx.mode, screenId]);
 
-  // Live knobs
   useEffect(() => {
     const root = markerRef.current?.parentElement;
-    if (!root) return;
-    const mod = getFxModeMod(fx.mode);
-    if (!mod) return;
-
-    if (mod.kind === "shader") {
-      passRef.current?.setUniforms({
-        intensity: fx.intensity,
-        speed: fx.speed,
-        particles: fx.particles,
-      });
-      return;
-    }
-
+    if (!root || fx.mode === "off") return;
     applyFxMode(fx.mode, {
       root,
       intensity: fx.intensity,
@@ -98,14 +61,6 @@ export function FxOverlayLayer({ screenId }: FxOverlayLayerProps) {
       particles: fx.particles,
     });
   }, [fx.mode, fx.intensity, fx.contrast, fx.speed, fx.particles]);
-
-  useEffect(
-    () => () => {
-      passRef.current?.dispose();
-      passRef.current = null;
-    },
-    [],
-  );
 
   const washOn =
     fx.mode !== "off" && fx.blend !== "normal" && fx.wash > 0.001;

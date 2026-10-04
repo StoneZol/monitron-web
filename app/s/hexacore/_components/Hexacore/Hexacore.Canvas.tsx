@@ -165,7 +165,6 @@ export default function HexacoreCanvas({
         antialias: false,
         alpha: false,
         powerPreference: "high-performance",
-        preserveDrawingBuffer: true,
       }}
       onCreated={({ gl }) => {
         gl.setClearColor("#000000");
