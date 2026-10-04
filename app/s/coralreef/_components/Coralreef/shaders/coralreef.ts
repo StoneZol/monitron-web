@@ -9,6 +9,9 @@
  *  3 palette        — solid idle→peak; density from palette luminance
  *
  * Camera: flight scrolls along +Z; look is freelook X/Y or flex bank wander.
+ *
+ * Smoothing vs original: soft-abs glow, slightly finer march, 2-tap AA
+ * (cuts stair-step “shadow” edges on large screens).
  */
 
 export const coralreefVertexShader = /* glsl */ `
@@ -40,6 +43,8 @@ uniform float uPeakFlicker;
 uniform float uPalettePhase;
 /** 0 original, 1 paletteTwinkle, 2 twinkle, 3 palette */
 uniform float uColorMode;
+/** Shadow / edge smooth — 0 = stock, 1 = default soft, 2 = 2× softer */
+uniform float uShadowSmooth;
 
 const vec3 LUMA = vec3(0.2126, 0.7152, 0.0722);
 
@@ -54,6 +59,65 @@ vec3 dirFrom(float yaw, float pitch) {
   return vec3(sin(yaw) * cos(pitch), sin(pitch), cos(yaw) * cos(pitch));
 }
 
+vec4 traceReef(
+  vec3 rd,
+  float flyT,
+  float mode,
+  float phase,
+  float punch,
+  vec3 tint,
+  float smoothAmt
+) {
+  vec3 P, Q;
+  float i = 0.0;
+  float g = 0.0;
+  float d = 0.1;
+  float a;
+  vec4 o = vec4(0.0);
+  // 0 = stock Yusef28, 1 = default soft, 2 = 2× softer
+  float s = clamp(smoothAmt, 0.0, 2.0);
+  float t01 = clamp(s, 0.0, 1.0);       // stock → default
+  float t12 = clamp(s - 1.0, 0.0, 1.0); // default → 2×
+
+  float stepMul = mix(0.30, mix(0.22, 0.11, t12), t01);
+  float minStep = mix(0.0, mix(0.0012, 0.0006, t12), t01);
+  float softEps = mix(0.0, mix(4e-5, 8e-5, t12), t01);
+  float glowBase = mix(0.006, mix(0.009, 0.018, t12), t01);
+  float glowK = mix(0.08, mix(0.10, 0.135, t12), t01);
+  float maxIter = mix(99.0, mix(110.0, 150.0, t12), t01);
+  float hitEps = mix(1e-4, 5e-5, t01);
+
+  for (; i < 150.0 && d > hitEps; i++) {
+    if (i >= maxIter) break;
+    float step = d * stepMul;
+    g += minStep > 0.0 ? max(step, minStep) : step;
+    P = rd * g;
+    P.z += flyT;
+    P.xy *= r(P.z * 0.8);
+    d = 1.0 - abs(P.y);
+
+    for (a = 2.0; a < 6e2; a += a) {
+      Q = P * a;
+      Q.z += d * 12.5;
+      d -= abs(dot(sin(Q), vec3(1.0))) / (a * 3.0);
+    }
+
+    float ad = softEps > 0.0 ? sqrt(d * d + softEps) : abs(d);
+    vec4 pal =
+      (0.5 + 0.5 * cos(d * 40.0 + P.z * 2.0 + vec4(1.0, 4.4, 4.0, 0.0) + phase)) /
+      (glowBase + ad * glowK);
+
+    if (mode < 1.5) {
+      o += pal * punch;
+    } else {
+      float dens = dot(pal.rgb, LUMA);
+      o.rgb += tint * dens;
+      o.a += dens;
+    }
+  }
+  return o;
+}
+
 void main() {
   vec2 F = vUv * iResolution.xy;
   vec2 R = iResolution.xy;
@@ -65,7 +129,6 @@ void main() {
   float pitch = uPitch;
 
   if (uCamMode > 0.5) {
-    // Same flex recipe as Kali Star Nest — wander + center bias
     float yRaw =
       sin(t * 0.11) * 0.42 +
       sin(t * 0.27 + 1.7) * 0.28 +
@@ -84,53 +147,35 @@ void main() {
   }
   pitch = clamp(pitch, -1.45, 1.45);
 
-  // Look basis — 0/0 = down the tunnel (+Z). Flight scroll stays on +Z.
-  // Horizontal right from yaw only — no worldUp flip near ±90° pitch (was jumping ~70°).
   vec3 fwd = dirFrom(yaw, pitch);
   vec3 rt = vec3(cos(yaw), 0.0, -sin(yaw));
   vec3 up = cross(rt, fwd);
-  // Match original FOV: unnormalized (uv, 1) when looking straight
-  vec3 rd = uv.x * rt + uv.y * up + fwd;
 
-  vec3 P, Q;
-  float i = 0.0;
-  float g = 0.0;
-  float d = 0.1;
-  float a;
-
-  vec4 o = vec4(0.0);
   float mode = floor(uColorMode + 0.5);
   float flicker = clamp(uPeakFlicker, 0.0, 1.0);
   float punch = 1.0 + flicker * 0.55;
   vec3 tint = mix(uColor, uHighlight, flicker);
   float phase = (mode > 0.5 && mode < 1.5) ? uPalettePhase : 0.0;
 
-  for (; i < 99.0 && d > 1e-4; i++) {
-    g += d * 0.3;
-    // Original: P = vec3(uv*g, g); P.z += t  →  rd*g + flight when fwd=+Z
-    P = rd * g;
-    P.z += uFlyT;
-    P.xy *= r(P.z * 0.8);
-    d = 1.0 - abs(P.y);
-
-    for (a = 2.0; a < 6e2; a += a) {
-      Q = P * a;
-      Q.z += d * 12.5;
-      d -= abs(dot(sin(Q), vec3(1.0))) / (a * 3.0);
+  // AA: 0 → 1 tap (stock), 1 → 2, 2 → 4
+  float s = clamp(uShadowSmooth, 0.0, 2.0);
+  float aaN = s <= 0.0 ? 1.0 : (s <= 1.0 ? 2.0 : 4.0);
+  vec4 o = vec4(0.0);
+  for (int k = 0; k < 4; k++) {
+    if (float(k) >= aaN) break;
+    vec2 offs = vec2(0.0);
+    if (aaN > 1.5 && aaN < 2.5) {
+      offs = k == 0 ? vec2(-0.25) : vec2(0.25);
+    } else if (aaN > 2.5) {
+      float fx = mod(float(k), 2.0);
+      float fy = floor(float(k) / 2.0);
+      offs = vec2(fx - 0.5, fy - 0.5) * 0.35;
     }
-
-    vec4 pal =
-      (0.5 + 0.5 * cos(d * 40.0 + P.z * 2.0 + vec4(1.0, 4.4, 4.0, 0.0) + phase)) /
-      (0.006 + abs(d) * 0.08);
-
-    if (mode < 1.5) {
-      o += pal * punch;
-    } else {
-      float dens = dot(pal.rgb, LUMA);
-      o.rgb += tint * dens;
-      o.a += dens;
-    }
+    vec2 uva = uv + offs / R.y;
+    vec3 rd = uva.x * rt + uva.y * up + fwd;
+    o += traceReef(rd, uFlyT, mode, phase, punch, tint, s);
   }
+  o /= aaN;
 
   float vignette = length(uv);
   o = tanh(o / (2e4 * max(vignette, 1e-3)));

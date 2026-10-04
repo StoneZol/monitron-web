@@ -40,6 +40,8 @@ export type CoralreefLive = {
   twinkleSpeed: number;
   twinkleS: number;
   twinkleL: number;
+  /** Shadow / edge smooth (0 = stock Yusef28, 1 = default soft, 2 = 2× softer) */
+  shadowSmooth: number;
   saturation: number;
   colorChannel: ReactiveChannel;
   colorDrive: number;
@@ -62,6 +64,7 @@ export const CORALREEF_DEFAULTS: CoralreefLive = {
   twinkleSpeed: 1,
   twinkleS: 100,
   twinkleL: 55,
+  shadowSmooth: 1,
   saturation: 1,
   colorChannel: "bass",
   colorDrive: 1.2,
@@ -74,6 +77,7 @@ export const CORALREEF_RANGES = {
   yaw: { min: -180, max: 180, step: 0.5 },
   pitch: { min: -80, max: 80, step: 0.5 },
   cameraBank: { min: 0, max: 2, step: 0.05 },
+  shadowSmooth: { min: 0, max: 2, step: 0.05 },
   saturation: { min: 0, max: 2, step: 0.05 },
   colorDrive: { min: 0, max: CORALREEF_COLOR_DRIVE_MAX, step: 0.05 },
   speedDrive: { min: 0, max: CORALREEF_DRIVE_MAX, step: 0.1 },

@@ -128,6 +128,12 @@ function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
       100,
       STORED_DEFAULTS.twinkleL ?? TWINKLE_DEFAULT_L,
     ),
+    shadowSmooth: clamp(
+      Number(raw.shadowSmooth),
+      0,
+      2,
+      STORED_DEFAULTS.shadowSmooth,
+    ),
     saturation: clamp(
       Number(raw.saturation),
       0,
@@ -220,6 +226,7 @@ export default function useCoralreefHook() {
       twinkleSpeed: live.twinkleSpeed,
       twinkleS: live.twinkleS,
       twinkleL: live.twinkleL,
+      shadowSmooth: live.shadowSmooth,
       saturation: live.saturation,
       colorChannel: live.colorChannel,
       colorDrive: live.colorDrive,
@@ -239,6 +246,7 @@ export default function useCoralreefHook() {
       setTwinkleSpeed: (twinkleSpeed: number) => commit({ twinkleSpeed }),
       setTwinkleS: (twinkleS: number) => commit({ twinkleS }),
       setTwinkleL: (twinkleL: number) => commit({ twinkleL }),
+      setShadowSmooth: (shadowSmooth: number) => commit({ shadowSmooth }),
       setSaturation: (saturation: number) => commit({ saturation }),
       setColorChannel: (colorChannel: ReactiveChannel) =>
         commit({ colorChannel }),

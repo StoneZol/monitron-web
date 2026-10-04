@@ -91,6 +91,7 @@ function CoralreefQuad({
           uPeakFlicker: { value: 0 },
           uPalettePhase: { value: 0 },
           uColorMode: { value: 0 },
+          uShadowSmooth: { value: 1 },
         },
       }),
     [],
@@ -226,6 +227,7 @@ function CoralreefQuad({
     m.uniforms.uCamBank!.value = Math.max(0, live.cameraBank);
     m.uniforms.uCamMode!.value = live.cameraMode === "flex" ? 1 : 0;
     m.uniforms.uSaturation!.value = Math.max(0, live.saturation);
+    m.uniforms.uShadowSmooth!.value = Math.max(0, live.shadowSmooth);
     m.uniforms.uPeakFlicker!.value = peakFlicker;
     m.uniforms.uPalettePhase!.value = phase;
     m.uniforms.uColorMode!.value = MODE_CODE[mode];

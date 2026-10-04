@@ -67,6 +67,8 @@ const INFO = {
   twinkleSpeed: "How fast hue / palette phase runs a full lap (1 ≈ 6s).",
   twinkleS: "Saturation % for solid twinkle hsl().",
   twinkleL: "Lightness % for solid twinkle hsl().",
+  shadowSmooth:
+    "Shadow / edge smooth. 0 = stock Yusef28, ×1 = default soft, ×2 = softer + finer march + 4× AA (heavier GPU).",
   saturation: "Look chroma (0 = gray, 1 = default).",
   colorChannel: "Band that punches light / color.",
   speedChannel: "Band that punches flight speed (rising-edge hits).",
@@ -226,6 +228,16 @@ const Coralreef = ({ showOverlay = true }: CoralreefProps) => {
                   ]}
                 />
               ) : null}
+              <Slider
+                label="Shadow smooth"
+                value={controls.shadowSmooth}
+                min={CORALREEF_RANGES.shadowSmooth.min}
+                max={CORALREEF_RANGES.shadowSmooth.max}
+                step={CORALREEF_RANGES.shadowSmooth.step}
+                onChange={controls.setShadowSmooth}
+                format={(v) => `×${v.toFixed(2)}`}
+                info={INFO.shadowSmooth}
+              />
               <Slider
                 label="Saturation"
                 value={controls.saturation}
