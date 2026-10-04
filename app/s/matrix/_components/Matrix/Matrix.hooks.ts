@@ -15,6 +15,7 @@ import {
   risingEdge,
   sliceBands,
 } from "@/lib/audioDerive";
+import { resetFxOverlay } from "@/components/FxOverlay";
 import { toggleFullscreen } from "@/lib/fullscreen";
 import { loadScreenPrefs, saveScreenPrefs } from "@/lib/screenPrefs";
 import {
@@ -356,6 +357,7 @@ const useMatrixHook = () => {
 
   const reset = () => {
     commitPrefs({ ...DEFAULTS });
+    resetFxOverlay(SCREEN_ID);
   };
 
   useEffect(() => {

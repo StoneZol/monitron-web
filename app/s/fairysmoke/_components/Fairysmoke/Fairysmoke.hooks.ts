@@ -9,6 +9,7 @@ import {
   type AudioSource,
 } from "@/hooks/useAudioReactive";
 import { toggleFullscreen } from "@/lib/fullscreen";
+import { resetFxOverlay } from "@/components/FxOverlay";
 import { loadScreenPrefs, saveScreenPrefs } from "@/lib/screenPrefs";
 import {
   TWINKLE_DEFAULT_L,
@@ -245,6 +246,7 @@ export default function useFairysmokeHook() {
       fullscreen: () => void toggleFullscreen(),
       reset: () => {
         writePrefs({ ...STORED_DEFAULTS });
+        resetFxOverlay(SCREEN_ID);
         window.location.reload();
       },
     },

@@ -9,6 +9,7 @@ import {
     PEAK_GAIN_DEFAULT,
     useAudioReactive,
 } from "@/hooks/useAudioReactive";
+import { resetFxOverlay } from "@/components/FxOverlay";
 import { toggleFullscreen } from "@/lib/fullscreen";
 import { loadScreenPrefs, saveScreenPrefs } from "@/lib/screenPrefs";
 import {
@@ -506,7 +507,10 @@ export default function useSynthwaveHook() {
             commit({ skyTwinkleSpeed }),
         setSkyTwinkleS: (skyTwinkleS: number) => commit({ skyTwinkleS }),
         setSkyTwinkleL: (skyTwinkleL: number) => commit({ skyTwinkleL }),
-        reset: () => writePrefs({ ...SYNTHWAVE_DEFAULTS }),
+        reset: () => {
+            writePrefs({ ...SYNTHWAVE_DEFAULTS });
+            resetFxOverlay(SCREEN_ID);
+        },
         fullscreen: () => void toggleFullscreen(),
     };
 

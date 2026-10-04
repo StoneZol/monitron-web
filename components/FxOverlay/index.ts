@@ -1,6 +1,10 @@
 export { FxOverlayLayer } from "./FxOverlay.Layer";
 export { FxOverlaySection } from "./FxOverlay.Section";
-export { useFxOverlay, invalidateFxOverlayCache } from "./FxOverlay.store";
+export {
+  useFxOverlay,
+  resetFxOverlay,
+  invalidateFxOverlayCache,
+} from "./FxOverlay.store";
 export type {
   FxBlendMode,
   FxOverlayMode,
@@ -18,6 +22,8 @@ export {
   bwMod,
   sepiaMod,
   negativeMod,
+  hueMod,
+  blurMod,
   grainMod,
   FX_MODE_MODS,
   applyFxMode,

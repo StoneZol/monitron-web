@@ -17,17 +17,23 @@ import {
 
 const INFO = {
   section:
-    "Looks on top of the scene — never rewrite the frame. B&W / Sepia / Negative = canvas CSS filter; Grain = transparent layer inside the R3F shell (PiP takes both).",
-  mode: "Base look. B&W = grayscale, Sepia = warm tone, Negative = invert on the scene canvas. Grain = drifting film grain / vignette stack.",
+    "Looks on top of the scene — never rewrite the frame. B&W / Sepia / Negative / Hue / Blur = canvas CSS filter; Grain = transparent layer inside the R3F shell (PiP takes both).",
+  mode: "Base look. B&W / Sepia / Negative / Blur = CSS on the scene canvas. Hue = offset + saturate + optional spin against twinkle. Grain = film stack.",
   intensity: {
     bw: "B&W amount: 0 = full color, 1 = full grayscale.",
     sepia: "Sepia amount: 0 = full color, 1 = full warm tone.",
     negative: "Invert amount: 0 = normal, 1 = full negative.",
+    hue: "Base hue offset before the spin: 0 = none, 1 = 360°.",
+    blur: "Soft blur: 0 = sharp, 1 = ~12px (heavy on GPU).",
     grain: "Overall overlay strength (grain + vignette).",
     default: "Overlay strength for the active look.",
   },
   contrast: "Contrast boost on the scene (1 = unchanged).",
+  contrastHue:
+    "Saturation after the hue shift. Push above 1 so the new tint fights twinkle instead of looking like a phase nudge.",
   speed: "Reserved — Grain uses a fixed drift.",
+  speedHue:
+    "Second hue clock on the whole frame (°/s). 0 = static offset; ~0.5–1 drifts against scene twinkle.",
   particles:
     "Film-grain density & strength (0 = clean, 1 = stock, 2 = heavy speckle).",
   blend:
@@ -39,6 +45,8 @@ function intensityInfo(mode: string): string {
   if (mode === "bw") return INFO.intensity.bw;
   if (mode === "sepia") return INFO.intensity.sepia;
   if (mode === "negative") return INFO.intensity.negative;
+  if (mode === "hue") return INFO.intensity.hue;
+  if (mode === "blur") return INFO.intensity.blur;
   if (mode === "grain") return INFO.intensity.grain;
   return INFO.intensity.default;
 }
@@ -91,20 +99,24 @@ export function FxOverlaySection() {
               max={FX_RANGES.intensity.max}
               step={FX_RANGES.intensity.step}
               onChange={fx.setIntensity}
-              format={(v) => v.toFixed(2)}
+              format={(v) => {
+                if (fx.mode === "hue") return `${Math.round(v * 360)}°`;
+                if (fx.mode === "blur") return `${(v * 12).toFixed(1)}px`;
+                return v.toFixed(2);
+              }}
               info={intensityInfo(fx.mode)}
             />
           ) : null}
           {knobs.has("contrast") ? (
             <Slider
-              label="Contrast"
+              label={fx.mode === "hue" ? "Saturate" : "Contrast"}
               value={fx.contrast}
               min={FX_RANGES.contrast.min}
               max={FX_RANGES.contrast.max}
               step={FX_RANGES.contrast.step}
               onChange={fx.setContrast}
               format={(v) => `×${v.toFixed(2)}`}
-              info={INFO.contrast}
+              info={fx.mode === "hue" ? INFO.contrastHue : INFO.contrast}
             />
           ) : null}
           {knobs.has("speed") ? (
@@ -115,8 +127,12 @@ export function FxOverlaySection() {
               max={FX_RANGES.speed.max}
               step={FX_RANGES.speed.step}
               onChange={fx.setSpeed}
-              format={(v) => `×${v.toFixed(2)}`}
-              info={INFO.speed}
+              format={(v) =>
+                fx.mode === "hue"
+                  ? `${Math.round(v * 60)}°/s`
+                  : `×${v.toFixed(2)}`
+              }
+              info={fx.mode === "hue" ? INFO.speedHue : INFO.speed}
             />
           ) : null}
           {knobs.has("particles") ? (

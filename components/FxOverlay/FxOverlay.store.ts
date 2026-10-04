@@ -30,7 +30,15 @@ const BLENDS = new Set<FxBlendMode>([
   "luminosity",
 ]);
 
-const MODES = new Set<FxOverlayMode>(["off", "bw", "sepia", "negative", "grain"]);
+const MODES = new Set<FxOverlayMode>([
+  "off",
+  "bw",
+  "sepia",
+  "negative",
+  "hue",
+  "blur",
+  "grain",
+]);
 
 const listeners = new Map<string, Set<() => void>>();
 const cache = new Map<string, FxOverlayPrefs>();
@@ -148,6 +156,11 @@ export function useFxOverlay(screenId: string) {
     setWash: (wash: number) =>
       commit({ wash: clamp(wash, 0, 1, prefs.wash) }),
   };
+}
+
+/** Restore overlay to factory defaults (mode off). Call from screen Reset. */
+export function resetFxOverlay(screenId: string) {
+  writeFx(screenId, { ...FX_OVERLAY_DEFAULTS });
 }
 
 /** Drop in-memory cache after external prefs apply (share paste / tab sync). */

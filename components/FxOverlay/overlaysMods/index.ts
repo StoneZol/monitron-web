@@ -1,5 +1,7 @@
+import { blurMod } from "./blur";
 import { bwMod } from "./bw";
 import { grainMod } from "./grain";
+import { hueMod } from "./hue";
 import { negativeMod } from "./negative";
 import { sepiaMod } from "./sepia";
 import type { FxModeMod, FxModePaintContext } from "./types";
@@ -10,8 +12,10 @@ export type {
   FxModeKnob,
   FxModeSource,
 } from "./types";
+export { blurMod } from "./blur";
 export { bwMod } from "./bw";
 export { grainMod } from "./grain";
+export { hueMod } from "./hue";
 export { negativeMod } from "./negative";
 export { sepiaMod } from "./sepia";
 
@@ -24,6 +28,8 @@ export const FX_MODE_MODS: Record<string, FxModeMod> = {
   [bwMod.id]: bwMod,
   [sepiaMod.id]: sepiaMod,
   [negativeMod.id]: negativeMod,
+  [hueMod.id]: hueMod,
+  [blurMod.id]: blurMod,
   [grainMod.id]: grainMod,
 };
 

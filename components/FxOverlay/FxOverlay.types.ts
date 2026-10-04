@@ -1,8 +1,22 @@
-import { bwMod, grainMod, negativeMod, sepiaMod } from "./overlaysMods";
+import {
+  blurMod,
+  bwMod,
+  grainMod,
+  hueMod,
+  negativeMod,
+  sepiaMod,
+} from "./overlaysMods";
 import type { FxBlendMode, FxModeKnob } from "./overlaysMods/types";
 
 export type { FxBlendMode, FxModeKnob };
-export type FxOverlayMode = "off" | "bw" | "sepia" | "negative" | "grain";
+export type FxOverlayMode =
+  | "off"
+  | "bw"
+  | "sepia"
+  | "negative"
+  | "hue"
+  | "blur"
+  | "grain";
 
 export type FxOverlayPrefs = {
   mode: FxOverlayMode;
@@ -39,6 +53,8 @@ export const FX_MODE_OPTIONS: { value: FxOverlayMode; label: string }[] = [
   { value: bwMod.id as FxOverlayMode, label: bwMod.label },
   { value: sepiaMod.id as FxOverlayMode, label: sepiaMod.label },
   { value: negativeMod.id as FxOverlayMode, label: negativeMod.label },
+  { value: hueMod.id as FxOverlayMode, label: hueMod.label },
+  { value: blurMod.id as FxOverlayMode, label: blurMod.label },
   { value: grainMod.id as FxOverlayMode, label: grainMod.label },
 ];
 

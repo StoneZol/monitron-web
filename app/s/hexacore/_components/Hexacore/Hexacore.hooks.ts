@@ -10,6 +10,7 @@ import {
   useAudioReactive,
   type AudioSource,
 } from "@/hooks/useAudioReactive";
+import { resetFxOverlay } from "@/components/FxOverlay";
 import { toggleFullscreen } from "@/lib/fullscreen";
 import { loadScreenPrefs, saveScreenPrefs } from "@/lib/screenPrefs";
 import {
@@ -225,6 +226,7 @@ export default function useHexacoreHook() {
       fullscreen: () => void toggleFullscreen(),
       reset: () => {
         writePrefs({ ...STORED_DEFAULTS });
+        resetFxOverlay(SCREEN_ID);
         window.location.reload();
       },
     },
