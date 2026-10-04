@@ -71,7 +71,7 @@ export class FxOverlayPass {
       if (pos === "static") host.style.position = "relative";
       host.appendChild(this.canvas!);
       this.host = host;
-    } else if (this.canvas.parentElement !== host) {
+    } else if (this.canvas && this.canvas.parentElement !== host) {
       host.appendChild(this.canvas);
       this.host = host;
     }

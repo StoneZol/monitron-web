@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useEffectEvent, useRef } from "react";
 import { getVisualPipWindow, VISUAL_PIP_CHANGE } from "@/lib/visualPip";
 import { applyFxMode, clearAllFxModes } from "./overlaysMods";
 import { useFxOverlay } from "./FxOverlay.store";
@@ -26,23 +26,22 @@ function isSceneCanvasNode(node: Node): boolean {
 export function FxOverlayLayer({ screenId }: FxOverlayLayerProps) {
   const fx = useFxOverlay(screenId);
   const markerRef = useRef<HTMLDivElement>(null);
-  const fxRef = useRef(fx);
-  fxRef.current = fx;
+
+  const sync = useEffectEvent(() => {
+    const root = markerRef.current?.parentElement;
+    if (!root) return;
+    applyFxMode(fx.mode, {
+      root,
+      intensity: fx.intensity,
+      contrast: fx.contrast,
+      speed: fx.speed,
+      particles: fx.particles,
+    });
+  });
 
   useEffect(() => {
     const root = markerRef.current?.parentElement;
     if (!root) return;
-
-    const sync = () => {
-      const live = fxRef.current;
-      applyFxMode(live.mode, {
-        root,
-        intensity: live.intensity,
-        contrast: live.contrast,
-        speed: live.speed,
-        particles: live.particles,
-      });
-    };
 
     /**
      * Document PiP adopts the R3F shell (overlay child included). Do NOT clear
@@ -50,14 +49,12 @@ export function FxOverlayLayer({ screenId }: FxOverlayLayerProps) {
      */
     const timers: number[] = [];
     const syncAfterPip = () => {
-      const run = () => sync();
       requestAnimationFrame(() => {
-        run();
-        timers.push(window.setTimeout(run, 50));
-        timers.push(window.setTimeout(run, 200));
+        sync();
+        timers.push(window.setTimeout(() => sync(), 50));
+        timers.push(window.setTimeout(() => sync(), 200));
       });
-      const pip = getVisualPipWindow();
-      pip?.addEventListener("resize", run, { once: true });
+      getVisualPipWindow()?.addEventListener("resize", sync, { once: true });
     };
 
     sync();
@@ -85,15 +82,8 @@ export function FxOverlayLayer({ screenId }: FxOverlayLayerProps) {
   }, [fx.mode, screenId]);
 
   useEffect(() => {
-    const root = markerRef.current?.parentElement;
-    if (!root || fx.mode === "off") return;
-    applyFxMode(fx.mode, {
-      root,
-      intensity: fx.intensity,
-      contrast: fx.contrast,
-      speed: fx.speed,
-      particles: fx.particles,
-    });
+    if (fx.mode === "off") return;
+    sync();
   }, [fx.mode, fx.intensity, fx.contrast, fx.speed, fx.particles]);
 
   const washOn =
@@ -109,7 +99,7 @@ export function FxOverlayLayer({ screenId }: FxOverlayLayerProps) {
       {washOn ? (
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0 z-[6]"
+          className="pointer-events-none absolute inset-0 z-6"
           style={{
             backgroundColor: "#000000",
             opacity: fx.wash,
