@@ -21,6 +21,7 @@ import {
   CORALREEF_DRIVE_MAX,
   type CoralreefCameraMode,
   type CoralreefColorMode,
+  type CoralreefLightMode,
   type CoralreefLive,
   type ReactiveChannel,
 } from "./Coralreef.types";
@@ -40,6 +41,7 @@ const COLOR_MODES = new Set<CoralreefColorMode>([
   "twinkle",
   "palette",
 ]);
+const LIGHT_MODES = new Set<CoralreefLightMode>(["original", "custom"]);
 
 type Stored = CoralreefLive & {
   audioSource: AudioSource;
@@ -86,6 +88,12 @@ function colorMode(v: unknown): CoralreefColorMode {
     : STORED_DEFAULTS.colorMode;
 }
 
+function lightMode(v: unknown): CoralreefLightMode {
+  return typeof v === "string" && LIGHT_MODES.has(v as CoralreefLightMode)
+    ? (v as CoralreefLightMode)
+    : STORED_DEFAULTS.lightMode;
+}
+
 function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
   return {
     ...STORED_DEFAULTS,
@@ -127,6 +135,31 @@ function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
       0,
       100,
       STORED_DEFAULTS.twinkleL ?? TWINKLE_DEFAULT_L,
+    ),
+    lightMode: lightMode(raw.lightMode),
+    lightColor: asHex(raw.lightColor, STORED_DEFAULTS.lightColor),
+    lightColorPeak: asHex(raw.lightColorPeak, STORED_DEFAULTS.lightColorPeak),
+    lightTwinkle:
+      raw.lightTwinkle === undefined
+        ? STORED_DEFAULTS.lightTwinkle
+        : Boolean(raw.lightTwinkle),
+    lightTwinkleSpeed: clamp(
+      Number(raw.lightTwinkleSpeed),
+      0,
+      4,
+      STORED_DEFAULTS.lightTwinkleSpeed ?? TWINKLE_DEFAULT_SPEED,
+    ),
+    lightTwinkleS: clamp(
+      Number(raw.lightTwinkleS),
+      0,
+      100,
+      STORED_DEFAULTS.lightTwinkleS ?? TWINKLE_DEFAULT_S,
+    ),
+    lightTwinkleL: clamp(
+      Number(raw.lightTwinkleL),
+      0,
+      100,
+      STORED_DEFAULTS.lightTwinkleL ?? TWINKLE_DEFAULT_L,
     ),
     shadowSmooth: clamp(
       Number(raw.shadowSmooth),
@@ -226,6 +259,13 @@ export default function useCoralreefHook() {
       twinkleSpeed: live.twinkleSpeed,
       twinkleS: live.twinkleS,
       twinkleL: live.twinkleL,
+      lightMode: live.lightMode,
+      lightColor: live.lightColor,
+      lightColorPeak: live.lightColorPeak,
+      lightTwinkle: live.lightTwinkle,
+      lightTwinkleSpeed: live.lightTwinkleSpeed,
+      lightTwinkleS: live.lightTwinkleS,
+      lightTwinkleL: live.lightTwinkleL,
       shadowSmooth: live.shadowSmooth,
       saturation: live.saturation,
       colorChannel: live.colorChannel,
@@ -246,6 +286,15 @@ export default function useCoralreefHook() {
       setTwinkleSpeed: (twinkleSpeed: number) => commit({ twinkleSpeed }),
       setTwinkleS: (twinkleS: number) => commit({ twinkleS }),
       setTwinkleL: (twinkleL: number) => commit({ twinkleL }),
+      setLightMode: (lightMode: CoralreefLightMode) => commit({ lightMode }),
+      setLightColor: (lightColor: string) => commit({ lightColor }),
+      setLightColorPeak: (lightColorPeak: string) =>
+        commit({ lightColorPeak }),
+      setLightTwinkle: (lightTwinkle: boolean) => commit({ lightTwinkle }),
+      setLightTwinkleSpeed: (lightTwinkleSpeed: number) =>
+        commit({ lightTwinkleSpeed }),
+      setLightTwinkleS: (lightTwinkleS: number) => commit({ lightTwinkleS }),
+      setLightTwinkleL: (lightTwinkleL: number) => commit({ lightTwinkleL }),
       setShadowSmooth: (shadowSmooth: number) => commit({ shadowSmooth }),
       setSaturation: (saturation: number) => commit({ saturation }),
       setColorChannel: (colorChannel: ReactiveChannel) =>

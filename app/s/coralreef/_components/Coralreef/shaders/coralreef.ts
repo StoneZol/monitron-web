@@ -8,6 +8,10 @@
  *  2 twinkle        — solid HSL fill; density from palette luminance
  *  3 palette        — solid idle→peak; density from palette luminance
  *
+ * Tunnel sun (uLightMode):
+ *  0 original — stock bloom from the reef accumulation (1:1)
+ *  1 custom   — recolor bright +Z core with uLight / uLightHighlight
+ *
  * Camera: flight scrolls along +Z; look is freelook X/Y or flex bank wander.
  *
  * Smoothing vs original: soft-abs glow, slightly finer march, 2-tap AA
@@ -43,6 +47,11 @@ uniform float uPeakFlicker;
 uniform float uPalettePhase;
 /** 0 original, 1 paletteTwinkle, 2 twinkle, 3 palette */
 uniform float uColorMode;
+/** 0 = stock tunnel sun, 1 = custom light tint on bright core */
+uniform float uLightMode;
+uniform vec3 uLight;
+uniform vec3 uLightHighlight;
+uniform float uLightFlicker;
 /** Shadow / edge smooth — 0 = stock, 1 = default soft, 2 = 2× softer */
 uniform float uShadowSmooth;
 
@@ -178,6 +187,16 @@ void main() {
     // Use angle off the tunnel axis (+Z) so the light lives down the tunnel instead.
     float offAxis = length(normalize(rd).xy);
     sampleCol = tanh(sampleCol / (2e4 * max(offAxis, 1e-3)));
+
+    // Custom tunnel sun: recolor the bright +Z core, keep stock energy.
+    if (uLightMode > 0.5) {
+      vec3 L = mix(uLight, uLightHighlight, clamp(uLightFlicker, 0.0, 1.0));
+      float e = max(dot(sampleCol.rgb, LUMA), 0.0);
+      float sun =
+        smoothstep(0.06, 0.5, e) * (1.0 - smoothstep(0.0, 0.42, offAxis));
+      float lRef = max(dot(L, LUMA), 1e-3);
+      sampleCol.rgb = mix(sampleCol.rgb, L * (e / lRef), sun);
+    }
     o += sampleCol;
   }
   o /= aaN;

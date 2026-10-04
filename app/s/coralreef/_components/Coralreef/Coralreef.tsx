@@ -18,6 +18,7 @@ import {
   CORALREEF_RANGES,
   type CoralreefCameraMode,
   type CoralreefColorMode,
+  type CoralreefLightMode,
   type CoralreefProps,
   type ReactiveChannel,
 } from "./Coralreef.types";
@@ -48,6 +49,14 @@ const COLOR_MODE_OPTIONS: {
   { value: "palette", label: "palette (idle / peak)" },
 ];
 
+const LIGHT_MODE_OPTIONS: {
+  value: CoralreefLightMode;
+  label: string;
+}[] = [
+  { value: "original", label: "original (stock sun)" },
+  { value: "custom", label: "custom (idle / peak / twinkle)" },
+];
+
 const INFO = {
   look: "Coral Reef volumetric tunnel (Yusef28) — four color modes + freelook.",
   flightSpeed: "Base tunnel clock (1 ≈ Shadertoy iTime).",
@@ -67,6 +76,14 @@ const INFO = {
   twinkleSpeed: "How fast hue / palette phase runs a full lap (1 ≈ 6s).",
   twinkleS: "Saturation % for solid twinkle hsl().",
   twinkleL: "Lightness % for solid twinkle hsl().",
+  lightMode:
+    "original = stock +Z bloom from the reef palette (Yusef28). custom = recolor only the bright tunnel sun.",
+  lightPalette:
+    "Idle ≈ stock warm sun (#fff0d6). Peak = audio target. Recolors the bright core only.",
+  lightTwinkle: "HSL hue walk on the tunnel-end sun (reef fill stays on Color mode).",
+  lightTwinkleSpeed: "How fast the sun hue runs a full lap (1 ≈ 6s).",
+  lightTwinkleS: "Saturation % for sun twinkle hsl().",
+  lightTwinkleL: "Lightness % for sun twinkle hsl().",
   shadowSmooth:
     "Shadow / edge smooth. 0 = stock Yusef28, ×1 = default soft, ×2 = softer + finer march + 4× AA (heavier GPU).",
   saturation: "Look chroma (0 = gray, 1 = default).",
@@ -89,6 +106,7 @@ const Coralreef = ({ showOverlay = true }: CoralreefProps) => {
   const audioLocked = !visualizer.reactive;
   const audioStamp = audioLocked ? ({ peak: "audio" } as const) : undefined;
   const mode = controls.colorMode;
+  const lightCustom = controls.lightMode === "custom";
   const flex = controls.cameraMode === "flex";
 
   return (
@@ -227,6 +245,56 @@ const Coralreef = ({ showOverlay = true }: CoralreefProps) => {
                     },
                   ]}
                 />
+              ) : null}
+              <Select
+                label="Tunnel light"
+                value={controls.lightMode}
+                options={LIGHT_MODE_OPTIONS}
+                onChange={controls.setLightMode}
+                info={INFO.lightMode}
+              />
+              {lightCustom ? (
+                <>
+                  <TwinkleControls
+                    title="sun twinkle"
+                    checked={controls.lightTwinkle}
+                    onCheckedChange={controls.setLightTwinkle}
+                    speed={controls.lightTwinkleSpeed}
+                    onSpeedChange={controls.setLightTwinkleSpeed}
+                    s={controls.lightTwinkleS}
+                    onSChange={controls.setLightTwinkleS}
+                    l={controls.lightTwinkleL}
+                    onLChange={controls.setLightTwinkleL}
+                    info={INFO.lightTwinkle}
+                    speedInfo={INFO.lightTwinkleSpeed}
+                    sInfo={INFO.lightTwinkleS}
+                    lInfo={INFO.lightTwinkleL}
+                  />
+                  {!controls.lightTwinkle ? (
+                    <ColorTable
+                      label="sun palette"
+                      info={INFO.lightPalette}
+                      columns={["idle", "peak"]}
+                      lockedColumns={audioLocked ? ["peak"] : []}
+                      columnStamps={audioStamp}
+                      rows={[
+                        {
+                          label: "sun",
+                          cells: [
+                            {
+                              value: controls.lightColor,
+                              onChange: controls.setLightColor,
+                            },
+                            {
+                              value: controls.lightColorPeak,
+                              onChange: controls.setLightColorPeak,
+                            },
+                          ],
+                        },
+                      ]}
+                    />
+                  ) : null}
+                </>
               ) : null}
               <Slider
                 label="Shadow smooth"

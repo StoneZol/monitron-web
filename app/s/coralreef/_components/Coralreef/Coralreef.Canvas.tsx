@@ -58,6 +58,8 @@ function CoralreefQuad({
 }) {
   const tint = useMemo(() => new THREE.Color("#ff8e4a"), []);
   const highlight = useMemo(() => new THREE.Color("#ffd100"), []);
+  const lightTint = useMemo(() => new THREE.Color("#fff0d6"), []);
+  const lightHighlight = useMemo(() => new THREE.Color("#ffffff"), []);
   const flyT = useRef(0);
   const lastT = useRef(0);
   const colorEnv = useRef(0);
@@ -67,8 +69,10 @@ function CoralreefQuad({
   const speedEnv = useRef(0);
   const speedPrev = useRef(0);
   const twinkleHue = useRef(0);
+  const lightTwinkleHue = useRef(0);
   const palettePhase = useRef(0);
   const twinklePulse = useRef(createTwinklePulseEnv());
+  const lightTwinklePulse = useRef(createTwinklePulseEnv());
 
   const mat = useMemo(
     () =>
@@ -91,6 +95,10 @@ function CoralreefQuad({
           uPeakFlicker: { value: 0 },
           uPalettePhase: { value: 0 },
           uColorMode: { value: 0 },
+          uLightMode: { value: 0 },
+          uLight: { value: new THREE.Color("#fff0d6") },
+          uLightHighlight: { value: new THREE.Color("#ffffff") },
+          uLightFlicker: { value: 0 },
           uShadowSmooth: { value: 1 },
         },
       }),
@@ -220,6 +228,49 @@ function CoralreefQuad({
       hexToVec3(live.colorPeak, highlight);
     }
 
+    let lightFlicker = 0;
+    const lightCustom = live.lightMode === "custom";
+    if (lightCustom) {
+      if (live.lightTwinkle) {
+        lightTwinkleHue.current = advanceTwinkleHue(
+          lightTwinkleHue.current,
+          dt,
+          live.lightTwinkleSpeed,
+        );
+        resolveTwinkleColor(
+          lightTwinkleHue.current,
+          live.lightTwinkleS,
+          live.lightTwinkleL,
+          lightTint,
+        );
+        if (colorArmed) {
+          const pulseAmt = updateTwinklePulseEnv(
+            lightTwinklePulse.current,
+            colorRaw,
+            live.colorDrive,
+            dt,
+          );
+          pulseTwinkleLight(lightTint, pulseAmt, live.colorDrive);
+          lightHighlight.copy(lightTint);
+          pulseTwinkleLight(
+            lightHighlight,
+            Math.min(1, pulseAmt * 1.1),
+            live.colorDrive,
+          );
+          lightFlicker = Math.max(lightFlicker, pulseAmt);
+        } else {
+          lightHighlight.copy(lightTint);
+        }
+      } else if (colorArmed && colorAmt > 0.001) {
+        lerpHex(live.lightColor, live.lightColorPeak, colorAmt, lightTint);
+        hexToVec3(live.lightColorPeak, lightHighlight);
+        lightFlicker = colorAmt;
+      } else {
+        hexToVec3(live.lightColor, lightTint);
+        hexToVec3(live.lightColorPeak, lightHighlight);
+      }
+    }
+
     m.uniforms.iTime!.value = t;
     m.uniforms.uFlyT!.value = flyT.current;
     m.uniforms.uYaw!.value = live.yaw * DEG;
@@ -233,6 +284,10 @@ function CoralreefQuad({
     m.uniforms.uColorMode!.value = MODE_CODE[mode];
     m.uniforms.uColor!.value.copy(tint);
     m.uniforms.uHighlight!.value.copy(highlight);
+    m.uniforms.uLightMode!.value = lightCustom ? 1 : 0;
+    m.uniforms.uLight!.value.copy(lightTint);
+    m.uniforms.uLightHighlight!.value.copy(lightHighlight);
+    m.uniforms.uLightFlicker!.value = lightFlicker;
   });
 
   return (
