@@ -35,7 +35,7 @@ const STORED_DEFAULTS: Stored = {
   twinkleSpeed: TWINKLE_DEFAULT_SPEED,
   twinkleS: TWINKLE_DEFAULT_S,
   twinkleL: TWINKLE_DEFAULT_L,
-  audioSource: "plugin",
+  audioSource: "off",
   micGate: 0.02,
   peakGain: 1.5,
 };
