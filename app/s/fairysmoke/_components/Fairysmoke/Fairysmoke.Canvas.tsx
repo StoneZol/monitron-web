@@ -72,6 +72,8 @@ function FairysmokeQuad({
                     uHighlight: { value: new THREE.Color("#7af0ff") },
                     uSaturation: { value: 1 },
                     uPeakFlicker: { value: 0 },
+                    uChaos: { value: 0 },
+                    uSteps: { value: 80 },
                     uColorMode: { value: 0 },
                 },
             }),
@@ -180,6 +182,9 @@ function FairysmokeQuad({
         m.uniforms.uSmokeT!.value = smokeT.current;
         m.uniforms.uSaturation!.value = Math.max(0, live.saturation);
         m.uniforms.uPeakFlicker!.value = peakFlicker;
+        m.uniforms.uChaos!.value = Math.max(0, live.chaos);
+        // Density is ×40 multiplier (2 → Himred 80)
+        m.uniforms.uSteps!.value = 40 * Math.max(1, live.density);
         m.uniforms.uColorMode!.value = MODE_CODE[mode];
         m.uniforms.uColor!.value.copy(tint);
         m.uniforms.uHighlight!.value.copy(highlight);

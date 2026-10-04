@@ -17,6 +17,10 @@ export type FairysmokeColorMode = "original" | "twinkle" | "palette";
 export type FairysmokeLive = {
     /** Smoke / turbulence clock (1 ≈ Shadertoy iTime) */
     smokeSpeed: number;
+    /** Turbulence chaos — phase warp + amplitude (0 = pure Himred cycle) */
+    chaos: number;
+    /** Sample multiplier ×40 (2 → 80 Himred; crank with high chaos) */
+    density: number;
     colorMode: FairysmokeColorMode;
     /** Shell tint — idle (palette mode) */
     color: string;
@@ -41,6 +45,8 @@ export const FAIRYSMOKE_COLOR_DRIVE_MAX = 2;
 
 export const FAIRYSMOKE_DEFAULTS: FairysmokeLive = {
     smokeSpeed: 1,
+    chaos: 0,
+    density: 2,
     colorMode: "original",
     color: "#7afdff",
     colorPeak: "#98ff7a",
@@ -56,6 +62,9 @@ export const FAIRYSMOKE_DEFAULTS: FairysmokeLive = {
 
 export const FAIRYSMOKE_RANGES = {
     smokeSpeed: { min: 0.1, max: 3, step: 0.05 },
+    chaos: { min: 0, max: 2, step: 0.05 },
+    /** Base raymarch budget = 40 × density */
+    density: { min: 1, max: 8, step: 0.25 },
     saturation: { min: 0, max: 2, step: 0.05 },
     colorDrive: { min: 0, max: FAIRYSMOKE_COLOR_DRIVE_MAX, step: 0.05 },
     speedDrive: { min: 0, max: FAIRYSMOKE_DRIVE_MAX, step: 0.1 },

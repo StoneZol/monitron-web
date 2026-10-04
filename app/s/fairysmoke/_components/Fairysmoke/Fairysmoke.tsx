@@ -38,6 +38,10 @@ const COLOR_MODE_OPTIONS: { value: FairysmokeColorMode; label: string }[] = [
 const INFO = {
   look: "Volumetric fairy smoke shell (Himred) — three color modes + speed.",
   smokeSpeed: "Base smoke / turbulence clock (1 ≈ Shadertoy iTime).",
+  chaos:
+    "Breaks the cyclic cos lock — secondary phase warp + turbulence amplitude. 0 = pure Himred.",
+  density:
+    "Sample budget ×40 (×2 = Himred 80). Crank with high chaos when the shell thins out. Heavier GPU.",
   colorMode:
     "original = Himred cos phase rainbow. twinkle = solid HSL walk + pulse. palette = solid idle→peak, no phase hue.",
   colorPalette:
@@ -101,6 +105,26 @@ const Fairysmoke = ({ showOverlay = true }: FairysmokeProps) => {
                 onChange={controls.setSmokeSpeed}
                 format={(v) => `×${v.toFixed(2)}`}
                 info={INFO.smokeSpeed}
+              />
+              <Slider
+                label="Chaos"
+                value={controls.chaos}
+                min={FAIRYSMOKE_RANGES.chaos.min}
+                max={FAIRYSMOKE_RANGES.chaos.max}
+                step={FAIRYSMOKE_RANGES.chaos.step}
+                onChange={controls.setChaos}
+                format={(v) => v.toFixed(2)}
+                info={INFO.chaos}
+              />
+              <Slider
+                label="Density"
+                value={controls.density}
+                min={FAIRYSMOKE_RANGES.density.min}
+                max={FAIRYSMOKE_RANGES.density.max}
+                step={FAIRYSMOKE_RANGES.density.step}
+                onChange={controls.setDensity}
+                format={(v) => `×${v.toFixed(2)}`}
+                info={INFO.density}
               />
               <Select
                 label="Color mode"

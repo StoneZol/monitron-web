@@ -83,6 +83,14 @@ function migrateColorMode(
   return STORED_DEFAULTS.colorMode;
 }
 
+/** Density is ×40 multiplier (1…8). Legacy absolute step counts (>8) → /40. */
+function migrateDensity(raw: unknown): number {
+  const n = Number(raw);
+  if (!Number.isFinite(n)) return STORED_DEFAULTS.density;
+  if (n > 8) return clamp(n / 40, 1, 8, STORED_DEFAULTS.density);
+  return clamp(n, 1, 8, STORED_DEFAULTS.density);
+}
+
 function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
   const next: Stored = {
     ...STORED_DEFAULTS,
@@ -96,6 +104,8 @@ function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
       3,
       STORED_DEFAULTS.smokeSpeed,
     ),
+    chaos: clamp(Number(raw.chaos), 0, 2, STORED_DEFAULTS.chaos),
+    density: migrateDensity(raw.density),
     colorMode: migrateColorMode(raw),
     color: asHex(raw.color, STORED_DEFAULTS.color),
     colorPeak: asHex(raw.colorPeak, STORED_DEFAULTS.colorPeak),
@@ -201,6 +211,8 @@ export default function useFairysmokeHook() {
     visualizer,
     controls: {
       smokeSpeed: live.smokeSpeed,
+      chaos: live.chaos,
+      density: live.density,
       colorMode: live.colorMode,
       color: live.color,
       colorPeak: live.colorPeak,
@@ -215,6 +227,8 @@ export default function useFairysmokeHook() {
       colorDriveMax: FAIRYSMOKE_COLOR_DRIVE_MAX,
       speedDriveMax: FAIRYSMOKE_DRIVE_MAX,
       setSmokeSpeed: (smokeSpeed: number) => commit({ smokeSpeed }),
+      setChaos: (chaos: number) => commit({ chaos }),
+      setDensity: (density: number) => commit({ density }),
       setColorMode: (colorMode: FairysmokeColorMode) => commit({ colorMode }),
       setColor: (color: string) => commit({ color }),
       setColorPeak: (colorPeak: string) => commit({ colorPeak }),

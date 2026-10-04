@@ -28,6 +28,10 @@ uniform vec3 uColor;
 uniform vec3 uHighlight;
 uniform float uSaturation;
 uniform float uPeakFlicker;
+/** Breaks cyclic cos lock — secondary phase warp (0 = Himred) */
+uniform float uChaos;
+/** Raymarch samples = 40 × density (Himred ≈ 80) */
+uniform float uSteps;
 /** 0 = original, 1 = twinkle, 2 = palette */
 uniform float uColorMode;
 
@@ -47,32 +51,46 @@ void main() {
   float flicker = clamp(uPeakFlicker, 0.0, 1.0);
   vec3 tint = mix(uColor, uHighlight, flicker);
 
-  for (int step = 0; step < 80; step++) {
+  float chaos = max(0.0, uChaos);
+  float steps = clamp(uSteps, 40.0, 320.0);
+  // Old density-40 punch was really a 2× tone boost — bake that into chaos instead
+  float chaosGain = 1.0 + chaos;
+  // ×2 (80) = Himred step size; higher density = finer march through the same shell
+  float stepScale = 80.0 / steps;
+
+  for (int step = 0; step < 320; step++) {
+    if (float(step) >= steps) break;
     vec3 p = z * normalize(vec3(I + I, 0.0) - iResolution.xyy);
     p.z += 5.0;
     d = 1.0;
     for (int oct = 0; oct < 16; oct++) {
       if (d >= 9.0) break;
-      p += cos(p.yzx * d + t) / d;
+      // Secondary incommensurate warp — kills the perfect cos(t) loop
+      vec3 warp = sin(p.zxy * vec3(1.17, 0.83, 1.41) + t * vec3(0.31, -0.19, 0.23));
+      float amp = 1.0 + chaos * 0.55;
+      p += cos(p.yzx * d + t + warp * chaos * 1.8) * amp / d;
       d /= 0.7;
     }
     d = 0.01 + abs(length(p) - 2.0) / 7.0;
-    z += d;
+    z += d * stepScale;
 
     vec4 pal = cos(z + t + vec4(6.0, 1.0, 2.0, 0.0)) + 1.0;
+    // Mild energy keep — still denser at high ×, but not a flat tanh wall after ×4
+    float w = chaosGain * mix(1.0, stepScale, 0.35);
 
     if (mode < 0.5) {
       // Original Himred phase rainbow (+ mild brightness punch)
       float punch = 1.0 + flicker * 0.55;
-      O += pal * punch / d;
+      O += pal * punch * w / d;
     } else {
       // Solid tint — keep volumetric weight from palette luminance, drop hue phase
-      float dens = dot(pal.rgb, vec3(0.333333)) / d;
+      float dens = dot(pal.rgb, vec3(0.333333)) * w / d;
       O.rgb += tint * dens;
       O.a += dens;
     }
   }
 
+  // Himred tone map; chaosGain already restores the first-iter pop
   O = tanh(O / 3e3);
   O.rgb = satMix(O.rgb);
   gl_FragColor = vec4(O.rgb, 1.0);
