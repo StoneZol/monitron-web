@@ -66,7 +66,7 @@ const INFO = {
   yaw: "Look X in degrees — 0 = along tunnel. Turns the view, not the path.",
   pitch: "Look Y in degrees — 0 = along tunnel. Turns the view, not the path.",
   cameraBank:
-    "Flex look wander around the tunnel heading. High bank = wider glances, still returns to center.",
+    "Flex look cone radius. Wander stays inside a circle; bank scales how wide that circle gets.",
   colorMode:
     "original = stock cos palette. palette twinkle = phase-walk. twinkle = solid HSL. palette = idle→peak. duo = stock wave, linear A→B.",
   colorPalette:
