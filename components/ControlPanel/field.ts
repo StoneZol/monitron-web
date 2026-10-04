@@ -1,3 +1,5 @@
+import { cn } from "@/lib/utils";
+
 /** Shared ControlPanel field rhythm — label + control, separation via parent gaps */
 export const fieldRoot =
   "flex flex-col gap-0.5 text-[10px] uppercase tracking-[0.2em]";
@@ -11,3 +13,11 @@ export const fieldControlRow =
 /** Native color swatch size (ColorField + ColorTable) */
 export const fieldSwatch =
   "h-6 w-8 shrink-0 cursor-pointer border border-signal bg-screen p-0.5 disabled:cursor-default disabled:border-muted";
+
+/** Stepper ± / ‹› buttons (Select + Slider) */
+export const fieldStepBtn = cn(
+  "flex h-7 w-7 shrink-0 items-center justify-center border border-signal bg-screen text-[11px] text-signal",
+  "hover:border-cyan hover:text-cyan",
+  "focus-visible:outline focus-visible:outline-offset-2 focus-visible:outline-signal",
+  "disabled:pointer-events-none disabled:opacity-40",
+);

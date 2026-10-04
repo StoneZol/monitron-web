@@ -3,7 +3,12 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { FieldLabel } from "./FieldInfo";
-import { fieldControlRow, fieldLabelRow, fieldRoot } from "./field";
+import {
+  fieldControlRow,
+  fieldLabelRow,
+  fieldRoot,
+  fieldStepBtn,
+} from "./field";
 
 export type SelectOption<T extends string = string> = {
   value: T;
@@ -39,13 +44,6 @@ function stepEnabledIndex<T extends string>(
   else pos = (pos + delta + enabled.length) % enabled.length;
   return enabled[pos]!.o.value;
 }
-
-const stepBtnClass = cn(
-  "flex h-7 w-7 shrink-0 items-center justify-center border border-signal bg-screen text-[11px] text-signal",
-  "hover:border-cyan hover:text-cyan",
-  "focus-visible:outline focus-visible:outline-offset-2 focus-visible:outline-signal",
-  "disabled:pointer-events-none disabled:opacity-40",
-);
 
 export function Select<T extends string>({
   label,
@@ -102,7 +100,7 @@ export function Select<T extends string>({
           aria-label={`Previous ${label}`}
           disabled={disabled || !canStep}
           onClick={() => step(-1)}
-          className={stepBtnClass}
+          className={fieldStepBtn}
         >
           ‹
         </button>
@@ -172,7 +170,7 @@ export function Select<T extends string>({
           aria-label={`Next ${label}`}
           disabled={disabled || !canStep}
           onClick={() => step(1)}
-          className={stepBtnClass}
+          className={fieldStepBtn}
         >
           ›
         </button>

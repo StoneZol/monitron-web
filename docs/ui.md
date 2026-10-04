@@ -114,7 +114,7 @@ One job per section. Label is muted uppercase.
 
 ## `Slider`
 
-Numeric range. Wheel blurs the input so the panel keeps scrolling.
+Numeric range with **− / +** steppers on the sides (same chrome as Select’s ‹ ›). Each click nudges by `step` and snaps to the min-aligned grid. Wheel blurs the input so the panel keeps scrolling.
 
 | Prop        | Type                         | Default        | Notes                    |
 | ----------- | ---------------------------- | -------------- | ------------------------ |
@@ -122,7 +122,7 @@ Numeric range. Wheel blurs the input so the panel keeps scrolling.
 | `value`     | `number`                     | —              |                          |
 | `min`       | `number`                     | —              |                          |
 | `max`       | `number`                     | —              |                          |
-| `step`      | `number?`                    | `1`            |                          |
+| `step`      | `number?`                    | `1`            | Range drag + ±/decrement |
 | `onChange`  | `(value: number) => void`    | —              |                          |
 | `disabled`  | `boolean?`                   | `false`        | Dim + non-interactive    |
 | `format`    | `(value: number) => string?` | `String(v)`    | Cyan value on the right  |
