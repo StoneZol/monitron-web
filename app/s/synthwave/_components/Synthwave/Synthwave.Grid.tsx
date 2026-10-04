@@ -16,7 +16,7 @@ import {
     resolveTwinkleColor,
     updateTwinklePulseEnv,
 } from "@/lib/twinkleHsl";
-import { channelLevel, hexToVec3, lerpHex, drivenLevel } from "./Synthwave.audio";
+import { channelLevel, hexToVec3, lerpHex, drivenLevel } from "@/lib/visualAudio";
 import {
     CELL,
     CELL_SQUASH,
@@ -221,7 +221,7 @@ export function NeonGrid({
 
         // Idle dim when glow channel is armed so peaks read as a flash
         const glowArmed = reactive && knobs.glowChannel !== "off";
-        const glowFlash = drivenLevel(flash, knobs.glowDrive);
+        const glowFlash = drivenLevel(flash, knobs.glowDrive, 1);
         const glowUi = Math.min(
             40,
             knobs.roadGlow * (glowArmed ? 0.7 + glowFlash * 0.3 : 1) +

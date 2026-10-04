@@ -1,11 +1,11 @@
 import type { AudioSource } from "@/hooks/useAudioReactive";
+import type { ReactiveChannel } from "@/lib/visualAudio";
+
+export type { ReactiveChannel };
 
 export type HexagonsPlaceProps = {
   showOverlay?: boolean;
 };
-
-/** Shared reactive driver for fog / grid / spin */
-export type ReactiveChannel = "off" | "bass" | "mid" | "high" | "beat";
 
 /** Live knobs read each frame by the Three scene */
 export type HexagonsPlaceLive = {

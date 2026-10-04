@@ -17,7 +17,7 @@ import {
   drivenLevel,
   hexToVec3,
   lerpHex,
-} from "./Warpburst.audio";
+} from "@/lib/visualAudio";
 import type { WarpburstLive } from "./Warpburst.types";
 import {
   warpburstFragmentShader,

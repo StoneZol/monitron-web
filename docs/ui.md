@@ -210,6 +210,7 @@ Framed HSL hue-walk block: master toggle + speed / S / L. Canvas owns the hue ph
 - Hide object color pickers while twinkle is on (S/L come from the framed sliders).
 - Color / twinkle audio punch stays on a short drive `0…2`; motion drives stay `0…8`.
 - Prefer shared pulse helpers from `lib/twinkleHsl` over hand-rolled L flashes.
+- Bus channels / idle→peak tint: use defaults from [`lib/visualAudio.ts`](../lib/visualAudio.ts) (`channelLevel`, `drivenLevel`, `lerpHex`, …) — do not fork per-screen `*.audio.ts`. Full table → [README § Shared helpers](../README.md#5-shared-helpers).
 
 ---
 

@@ -1,9 +1,10 @@
+import type { ReactiveChannel } from "@/lib/visualAudio";
+
+export type { ReactiveChannel };
+
 export type BlackholeProps = {
   showOverlay?: boolean;
 };
-
-/** Audio band that drives a motion/look slot (same vocabulary as synthwave). */
-export type ReactiveChannel = "off" | "bass" | "mid" | "high" | "beat";
 
 /**
  * Live knobs.

@@ -1,10 +1,11 @@
 import type { AudioSource } from "@/hooks/useAudioReactive";
+import type { ReactiveChannel } from "@/lib/visualAudio";
+
+export type { ReactiveChannel };
 
 export type SynthwaveProps = {
     showOverlay?: boolean;
 };
-
-export type ReactiveChannel = "off" | "bass" | "mid" | "high" | "beat";
 
 export type SynthwaveLive = {
     /** Grid near idle — WE gridnear */

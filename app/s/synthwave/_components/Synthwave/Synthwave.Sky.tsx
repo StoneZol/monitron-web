@@ -19,7 +19,7 @@ import {
     channelLevel,
     hexToVec3,
     lerpHex,
-} from "./Synthwave.audio";
+} from "@/lib/visualAudio";
 import type { SynthwaveLive } from "./Synthwave.types";
 
 /** WE-ish UV units per second at skySpeed = 1 */

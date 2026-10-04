@@ -1,9 +1,10 @@
-export type FairysmokeProps = {
-    showOverlay?: boolean;
-};
+import type { ReactiveChannel } from "@/lib/visualAudio";
 
-/** Audio band that drives a motion/look slot. */
-export type ReactiveChannel = "off" | "bass" | "mid" | "high" | "beat";
+export type { ReactiveChannel };
+
+export type FairysmokeProps = {
+  showOverlay?: boolean;
+};
 
 /**
  * Color look:

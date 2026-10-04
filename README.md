@@ -73,11 +73,11 @@ Without the extension the site still works — visualizer UI stays dormant, scre
   id: "waves",
   title: "Waves",
   href: "/s/waves",
-  previewSrc: "/s/waves.webp", // optional screenshot for the home card
+  previewSrc: "/s/waves.webp", // home card — from npm run convert
 }
 ```
 
-Put preview images under `public/s/`.
+Card + Open Graph images: see **Preview + Open Graph** below (don’t hand-drop files into `public/s` / `public/og`).
 
 ### 2. Create the screen
 
@@ -166,6 +166,7 @@ if (viz.enabled) {
 | [`lib/audioBus.ts`](lib/audioBus.ts)                       | Message protocol + subscribe / `postVisualizerToggle` |
 | [`hooks/useAudioReactive.ts`](hooks/useAudioReactive.ts)   | Extension handshake + `vizRef` + bus panel state      |
 | [`lib/audioDerive.ts`](lib/audioDerive.ts)                 | `sliceBands` / `bandAtColumn` / `risingEdge` helpers  |
+| [`lib/visualAudio.ts`](lib/visualAudio.ts)                 | Default reactive channel + tint helpers (use these)   |
 | [`lib/twinkleHsl.ts`](lib/twinkleHsl.ts)                   | Shared HSL twinkle: hue advance, resolve, audio pulse |
 | [`lib/fullscreen.ts`](lib/fullscreen.ts)                   | `toggleFullscreen()`                                  |
 | [`lib/visualPip.ts`](lib/visualPip.ts)                     | Document PiP (+ video fallback) for the live canvas   |
@@ -175,6 +176,38 @@ if (viz.enabled) {
 | [`components/NavBackButton`](components/NavBackButton.tsx) | Back to library                                       |
 
 **UI reference:** props and usage for every shared control → [`docs/ui.md`](docs/ui.md).
+
+#### Default reactive helpers (`lib/visualAudio.ts`)
+
+Do **not** copy `channelLevel` / `beatRaw` / `lerpHex` into a per-screen `*.audio.ts`. Import from `@/lib/visualAudio` (and re-export `ReactiveChannel` from your `*.types.ts` if the screen API needs it).
+
+```ts
+import type { ReactiveChannel } from "@/lib/visualAudio";
+import {
+  channelLevel,
+  drivenLevel,
+  hexToVec3,
+  lerpHex,
+} from "@/lib/visualAudio";
+
+const level = channelLevel(viz, live.colorChannel); // off | bass | mid | high | beat
+const punch = drivenLevel(level, live.colorDrive);  // optional 3rd arg = ceiling (default 1.5)
+lerpHex(live.color, live.colorPeak, punch, tint);
+```
+
+| Export            | Role |
+| ----------------- | ---- |
+| `ReactiveChannel` | `"off" \| "bass" \| "mid" \| "high" \| "beat"` |
+| `channelLevel`    | Named band → `0…1` from `vizRef` |
+| `beatRaw`         | Unclipped crest-aware beat (onset detectors) |
+| `softPeak01`      | `tanh` soft-clip into ~0…1 |
+| `drivenLevel`     | `level × drive`, ceiling default `1.5` (pass `1` for strict lerps) |
+| `hexToVec3`       | Hex → `THREE.Color` |
+| `lerpHex`         | Idle→peak color lerp |
+| `hueWalkHex`      | Legacy hue offset from a base hex |
+| `pulseBrightness` | Idle-dim → peak brightness scale |
+
+Low-level spectrum math stays in [`lib/audioDerive.ts`](lib/audioDerive.ts) (`sliceBands`, `risingEdge`, …). HSL twinkle runtime stays in [`lib/twinkleHsl.ts`](lib/twinkleHsl.ts) — see `TwinkleControls` in [`docs/ui.md`](docs/ui.md).
 
 ---
 
@@ -280,14 +313,47 @@ type VizBands = {
 
 ---
 
+## Preview + Open Graph
+
+Screenshots feed two outputs from one source file (config: [`image-converter.config.mjs`](image-converter.config.mjs)):
+
+| Output | Path | Used for |
+| ------ | ---- | -------- |
+| WebP preview | `public/s/<id>.webp` | Home catalog card (`previewSrc`) |
+| PNG Open Graph | `public/og/<id>.png` | Share / SEO (`screenMetadata` → `/og/<id>.png`) |
+
+Both are **1200×630** (`cover` / center).
+
+### Steps
+
+1. Capture a still of the screen (fullscreen, HUD hidden if you can).
+2. Drop it into [`public/original/`](public/original/) as **`<screenId>.png`** (or `.jpg` / `.jpeg` / `.tiff`) — same id as in `placeholders` / `/s/<id>` (e.g. `fairysmoke.png`, `hexagons_place.png`).
+3. Run:
+
+```bash
+npm run convert
+```
+
+4. Check outputs:
+   - `public/s/<id>.webp` — site card
+   - `public/og/<id>.png` — Open Graph
+5. Point the catalog at the webp (`previewSrc: "/s/<id>.webp"`). SEO picks up `/og/<id>.png` automatically via [`screenMetadata`](lib/seo.ts).
+
+`convert` **deletes** the file from `public/original/` after a successful run (`removeOriginal: true`). Keep a master elsewhere if you need to re-export.
+
+Homepage OG is separate: `public/og/monitronOG.png` (wired in [`rootMetadata`](lib/seo.ts)).
+
+---
+
 ## Scripts
 
 ```bash
-npm run dev      # local
-npm run build    # production build
-npm run start    # serve build
-npm run lint     # eslint
-npm run convert     # convert prew in webp
+npm run dev       # local
+npm run build     # production build
+npm run start     # serve build
+npm run lint      # eslint
+npm run convert   # original/ → s/*.webp + og/*.png (1200×630)
+npm run resize    # resize only (see image-converter.config.mjs)
 ```
 
 ---

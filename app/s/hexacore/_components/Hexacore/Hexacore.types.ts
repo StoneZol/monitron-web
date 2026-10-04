@@ -1,9 +1,10 @@
+import type { ReactiveChannel } from "@/lib/visualAudio";
+
+export type { ReactiveChannel };
+
 export type HexacoreProps = {
   showOverlay?: boolean;
 };
-
-/** Audio band that drives a motion/look slot. */
-export type ReactiveChannel = "off" | "bass" | "mid" | "high" | "beat";
 
 export type HexacoreLive = {
   /** Camera advance along the tunnel (1 ≈ Shadertoy default) */

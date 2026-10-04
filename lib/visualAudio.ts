@@ -1,19 +1,37 @@
+/**
+ * Shared reactive-screen helpers: named EQ channels + tint math.
+ * Used by Warpburst / Hexacore / Blackhole / Synthwave / Fairysmoke / Hexagons.
+ */
+
 import * as THREE from "three";
 import type { VizBands } from "@/lib/audioBus";
 import { sliceBands } from "@/lib/audioDerive";
-import type { ReactiveChannel } from "./Warpburst.types";
+
+/** Named bus bands every reactive screen can bind a slot to. */
+export type ReactiveChannel = "off" | "bass" | "mid" | "high" | "beat";
+
+export const REACTIVE_CHANNELS = [
+  "off",
+  "bass",
+  "mid",
+  "high",
+  "beat",
+] as const satisfies readonly ReactiveChannel[];
 
 const BEAT_GAIN = 5;
 
-function beatRaw(viz: VizBands) {
+/** Unclipped beat energy (crest-aware) — good for rising-edge detectors. */
+export function beatRaw(viz: VizBands): number {
   const crest = Math.max(0, viz.peak - viz.rms * 1.2);
   return Math.max(viz.peak, crest * 1.35) * BEAT_GAIN;
 }
 
-function softPeak01(x: number) {
+/** Soft-clip a raw level into ~0…1 (Peak gain stays in the tanh slope). */
+export function softPeak01(x: number): number {
   return Math.tanh(Math.max(0, x));
 }
 
+/** 0…1 level for a named channel from the live bus. */
 export function channelLevel(viz: VizBands, ch: ReactiveChannel): number {
   if (ch === "off") return 0;
   if (ch === "beat") return softPeak01(beatRaw(viz));
@@ -22,12 +40,21 @@ export function channelLevel(viz: VizBands, ch: ReactiveChannel): number {
   return sliceBands(viz.bands, 2000, 10000);
 }
 
-export function drivenLevel(level: number, drive: number): number {
+/**
+ * Scale a 0…1 channel envelope by drive.
+ * Default ceiling 1.5 (motion/color punch); pass 1 for strict lerp levels.
+ */
+export function drivenLevel(
+  level: number,
+  drive: number,
+  ceiling = 1.5,
+): number {
   const d = Number.isFinite(drive) ? Math.max(0, drive) : 1;
-  return Math.min(1.5, Math.max(0, level) * d);
+  const cap = Number.isFinite(ceiling) && ceiling > 0 ? ceiling : 1.5;
+  return Math.min(cap, Math.max(0, level) * d);
 }
 
-export function hexToVec3(hex: string, target: THREE.Color) {
+export function hexToVec3(hex: string, target: THREE.Color): THREE.Color {
   return target.set(hex);
 }
 
@@ -35,32 +62,38 @@ const _hsl = { h: 0, s: 0, l: 0 };
 const _lerpA = new THREE.Color();
 const _lerpB = new THREE.Color();
 
+/** Idle dim when audio punches brightness (legacy pulseBrightness). */
+export const TWINKLE_IDLE = 0.52;
+
+/** Scale current color: idle dim → full on peaks (`level` 0…1). */
 export function pulseBrightness(
   target: THREE.Color,
   level: number,
-  idleMul = 0.88,
-) {
+  idleMul = TWINKLE_IDLE,
+): THREE.Color {
   const t = Math.min(1, Math.max(0, level));
   return target.multiplyScalar(idleMul + (1 - idleMul) * t);
 }
 
+/** Hex idle→peak lerp. */
 export function lerpHex(
   idle: string,
   peak: string,
   level: number,
   target: THREE.Color,
-) {
+): THREE.Color {
   const t = Math.min(1, Math.max(0, level));
   _lerpA.set(idle);
   _lerpB.set(peak);
   return target.copy(_lerpA).lerp(_lerpB, t);
 }
 
+/** Hue walk from a picked base (legacy garland). */
 export function hueWalkHex(
   hex: string,
   hueOffsetDeg: number,
   target: THREE.Color,
-) {
+): THREE.Color {
   target.set(hex);
   if (!hueOffsetDeg) return target;
 

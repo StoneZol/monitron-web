@@ -13,11 +13,11 @@ import {
     updateTwinklePulseEnv,
 } from "@/lib/twinkleHsl";
 import {
-    channelLevel,
-    drivenLevel,
-    hexToVec3,
-    lerpHex,
-} from "./Fairysmoke.audio";
+  channelLevel,
+  drivenLevel,
+  hexToVec3,
+  lerpHex,
+} from "@/lib/visualAudio";
 import type { FairysmokeLive } from "./Fairysmoke.types";
 import {
     fairysmokeFragmentShader,
