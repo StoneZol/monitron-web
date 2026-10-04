@@ -1,5 +1,6 @@
 import { bwMod } from "./bw";
 import { grainMod } from "./grain";
+import { negativeMod } from "./negative";
 import { sepiaMod } from "./sepia";
 import type { FxModeMod, FxModePaintContext } from "./types";
 
@@ -11,6 +12,7 @@ export type {
 } from "./types";
 export { bwMod } from "./bw";
 export { grainMod } from "./grain";
+export { negativeMod } from "./negative";
 export { sepiaMod } from "./sepia";
 
 /**
@@ -21,6 +23,7 @@ export { sepiaMod } from "./sepia";
 export const FX_MODE_MODS: Record<string, FxModeMod> = {
   [bwMod.id]: bwMod,
   [sepiaMod.id]: sepiaMod,
+  [negativeMod.id]: negativeMod,
   [grainMod.id]: grainMod,
 };
 

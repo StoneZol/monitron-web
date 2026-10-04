@@ -17,6 +17,7 @@ export {
 export {
   bwMod,
   sepiaMod,
+  negativeMod,
   grainMod,
   FX_MODE_MODS,
   applyFxMode,

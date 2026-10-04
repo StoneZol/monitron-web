@@ -17,11 +17,12 @@ import {
 
 const INFO = {
   section:
-    "Looks on top of the scene — never rewrite the frame. B&W / Sepia = canvas CSS filter; Grain = transparent layer inside the R3F shell (PiP takes both).",
-  mode: "Base look. B&W = grayscale, Sepia = warm tone on the scene canvas. Grain = drifting film grain / vignette stack.",
+    "Looks on top of the scene — never rewrite the frame. B&W / Sepia / Negative = canvas CSS filter; Grain = transparent layer inside the R3F shell (PiP takes both).",
+  mode: "Base look. B&W = grayscale, Sepia = warm tone, Negative = invert on the scene canvas. Grain = drifting film grain / vignette stack.",
   intensity: {
     bw: "B&W amount: 0 = full color, 1 = full grayscale.",
     sepia: "Sepia amount: 0 = full color, 1 = full warm tone.",
+    negative: "Invert amount: 0 = normal, 1 = full negative.",
     grain: "Overall overlay strength (grain + vignette).",
     default: "Overlay strength for the active look.",
   },
@@ -37,6 +38,7 @@ const INFO = {
 function intensityInfo(mode: string): string {
   if (mode === "bw") return INFO.intensity.bw;
   if (mode === "sepia") return INFO.intensity.sepia;
+  if (mode === "negative") return INFO.intensity.negative;
   if (mode === "grain") return INFO.intensity.grain;
   return INFO.intensity.default;
 }

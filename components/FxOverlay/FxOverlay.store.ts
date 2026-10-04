@@ -30,7 +30,7 @@ const BLENDS = new Set<FxBlendMode>([
   "luminosity",
 ]);
 
-const MODES = new Set<FxOverlayMode>(["off", "bw", "sepia", "grain"]);
+const MODES = new Set<FxOverlayMode>(["off", "bw", "sepia", "negative", "grain"]);
 
 const listeners = new Map<string, Set<() => void>>();
 const cache = new Map<string, FxOverlayPrefs>();
