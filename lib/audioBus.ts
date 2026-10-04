@@ -49,13 +49,22 @@ export type AudioVisualizerToggle = {
   enabled: boolean;
 };
 
-/** What screens read each frame (raw bus mirror; meaning derived on the screen) */
+/**
+ * What screens read each frame.
+ * `bands` / rms / peak are the raw bus; bass/mid/high/beat are page-derived punches.
+ */
 export type VizBands = {
   enabled: boolean;
   /** Live spectrum (same layout as AudioFrame.bands) */
   bands: number[];
   rms: number;
   peak: number;
+  /** Adaptive bass punch (above slow floor) */
+  bass: number;
+  mid: number;
+  high: number;
+  /** Kick / onset envelope */
+  beat: number;
 };
 
 export function emptyVizBands(enabled = false): VizBands {
@@ -64,6 +73,10 @@ export function emptyVizBands(enabled = false): VizBands {
     bands: new Array(AUDIO_BAND_COUNT).fill(0),
     rms: 0,
     peak: 0,
+    bass: 0,
+    mid: 0,
+    high: 0,
+    beat: 0,
   };
 }
 

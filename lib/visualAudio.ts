@@ -5,7 +5,6 @@
 
 import * as THREE from "three";
 import type { VizBands } from "@/lib/audioBus";
-import { sliceBands } from "@/lib/audioDerive";
 
 /** Named bus bands every reactive screen can bind a slot to. */
 export type ReactiveChannel = "off" | "bass" | "mid" | "high" | "beat";
@@ -20,8 +19,9 @@ export const REACTIVE_CHANNELS = [
 
 const BEAT_GAIN = 5;
 
-/** Unclipped beat energy (crest-aware) — good for rising-edge detectors. */
+/** Unclipped beat energy — derived onset × gain, crest fallback. */
 export function beatRaw(viz: VizBands): number {
+  if (typeof viz.beat === "number") return viz.beat * BEAT_GAIN;
   const crest = Math.max(0, viz.peak - viz.rms * 1.2);
   return Math.max(viz.peak, crest * 1.35) * BEAT_GAIN;
 }
@@ -34,10 +34,11 @@ export function softPeak01(x: number): number {
 /** 0…1 level for a named channel from the live bus. */
 export function channelLevel(viz: VizBands, ch: ReactiveChannel): number {
   if (ch === "off") return 0;
-  if (ch === "beat") return softPeak01(beatRaw(viz));
-  if (ch === "bass") return sliceBands(viz.bands, 30, 180);
-  if (ch === "mid") return sliceBands(viz.bands, 200, 2000);
-  return sliceBands(viz.bands, 2000, 10000);
+  // Prefer page-derived punches from AudioDeriver (useAudioReactive).
+  if (ch === "beat") return viz.beat;
+  if (ch === "bass") return viz.bass;
+  if (ch === "mid") return viz.mid;
+  return viz.high;
 }
 
 /**

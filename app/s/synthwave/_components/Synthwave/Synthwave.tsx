@@ -12,7 +12,6 @@ import {
     PanelButton,
     Select,
     Slider,
-    Toggle,
     TwinkleControls,
 } from "@/components/ControlPanel";
 import useSynthwaveHook from "./Synthwave.hooks";
@@ -61,10 +60,12 @@ const INFO = {
         "Camera foreshortening only (0 = higher eye, 40 = lower + wider FOV). Does not warp the grid mesh.",
     roadLength:
         "How far the neon road runs toward the sun. Default is short (~⅓ of the view); slide up to extend.",
-    roadStretch:
-        "Kick stretches the road toward the horizon with grid speed channel; idle eases back to Road length.",
-    roadChannel: "Band that punches grid scroll speed (and stretch).",
+    roadChannel: "Band that punches grid scroll speed.",
     roadDrive: "Scroll punch strength for grid speed (0…8).",
+    stretchChannel:
+        "Band that elongates the road toward the horizon; idle eases back to Road length.",
+    stretchDrive:
+        "How far the road grows on a full channel hit (0 = off, 8 = max step).",
     glowChannel:
         "Band that flashes grid line glow and palette / twinkle pulse.",
     glowDrive: "Color / twinkle pulse boost for grid color (0…2).",
@@ -310,12 +311,6 @@ const Synthwave = ({ showOverlay = true }: SynthwaveProps) => {
                                     sInfo={INFO.gridTwinkleS}
                                     lInfo={INFO.gridTwinkleL}
                                 />
-                                <Toggle
-                                    label="Stretch"
-                                    checked={controls.roadStretch}
-                                    onChange={controls.setRoadStretch}
-                                    info={INFO.roadStretch}
-                                />
                                 {!controls.gridTwinkle ? (
                                     <ColorTable
                                         label="grid palette"
@@ -463,6 +458,13 @@ const Synthwave = ({ showOverlay = true }: SynthwaveProps) => {
                                             info={INFO.roadChannel}
                                         />
                                         <Select
+                                            label="Road stretch"
+                                            value={controls.stretchChannel}
+                                            options={[...REACTIVE_CHANNEL_OPTIONS]}
+                                            onChange={controls.setStretchChannel}
+                                            info={INFO.stretchChannel}
+                                        />
+                                        <Select
                                             label="Grid color"
                                             value={controls.glowChannel}
                                             options={[...REACTIVE_CHANNEL_OPTIONS]}
@@ -487,6 +489,16 @@ const Synthwave = ({ showOverlay = true }: SynthwaveProps) => {
                                             onChange={controls.setRoadDrive}
                                             format={(v) => `×${v.toFixed(1)}`}
                                             info={INFO.roadDrive}
+                                        />
+                                        <Slider
+                                            label="Road stretch"
+                                            value={controls.stretchDrive}
+                                            min={0}
+                                            max={controls.speedDriveMax}
+                                            step={0.5}
+                                            onChange={controls.setStretchDrive}
+                                            format={(v) => `×${v.toFixed(1)}`}
+                                            info={INFO.stretchDrive}
                                         />
                                         <Slider
                                             label="Grid color"

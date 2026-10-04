@@ -51,7 +51,6 @@ export const SYNTHWAVE_DEFAULTS: SynthwaveLive = {
     wallPerspective: 40,
     perspV2: true,
     roadLength: 0.2,
-    roadStretch: false,
     skyTop: "#a202f7",
     skyTopPeak: "#ee00ff",
     skyHorizon: "#330028",
@@ -60,6 +59,8 @@ export const SYNTHWAVE_DEFAULTS: SynthwaveLive = {
     skyDirection: 0,
     roadChannel: "bass",
     roadDrive: 2,
+    stretchChannel: "bass",
+    stretchDrive: 2,
     glowChannel: "bass",
     glowDrive: 1,
     sunChannel: "bass",
@@ -149,6 +150,15 @@ function migratePrefs(
                     ? raw.drive
                     : SYNTHWAVE_DEFAULTS.roadDrive,
         ),
+        stretchDrive: clampRoadDrive(
+            typeof raw.stretchDrive === "number"
+                ? raw.stretchDrive
+                : raw.roadStretch === true
+                    ? SYNTHWAVE_DEFAULTS.stretchDrive
+                    : raw.roadStretch === false
+                        ? 0
+                        : SYNTHWAVE_DEFAULTS.stretchDrive,
+        ),
         glowDrive: clampColorDrive(
             typeof raw.glowDrive === "number"
                 ? raw.glowDrive
@@ -162,8 +172,11 @@ function migratePrefs(
     };
     delete (next as { drive?: number }).drive;
     delete (next as { colorSpeed?: number }).colorSpeed;
+    delete (next as { roadStretch?: boolean }).roadStretch;
     if (!CHANNELS.has(next.roadChannel))
         next.roadChannel = SYNTHWAVE_DEFAULTS.roadChannel;
+    if (!CHANNELS.has(next.stretchChannel))
+        next.stretchChannel = SYNTHWAVE_DEFAULTS.stretchChannel;
     if (!CHANNELS.has(next.glowChannel))
         next.glowChannel = SYNTHWAVE_DEFAULTS.glowChannel;
     if (!CHANNELS.has(next.sunChannel))
@@ -314,7 +327,6 @@ function migratePrefs(
         next.roadLength = SYNTHWAVE_DEFAULTS.roadLength;
     }
     next.roadLength = Math.min(1, Math.max(0, next.roadLength));
-    next.roadStretch = Boolean(next.roadStretch);
     if (typeof next.roadGlow !== "number" || !Number.isFinite(next.roadGlow)) {
         next.roadGlow = SYNTHWAVE_DEFAULTS.roadGlow;
     }
@@ -456,7 +468,6 @@ export default function useSynthwaveHook() {
         setWallPerspective: (wallPerspective: number) =>
             commit({ wallPerspective }),
         setRoadLength: (roadLength: number) => commit({ roadLength }),
-        setRoadStretch: (roadStretch: boolean) => commit({ roadStretch }),
         setSkyTop: (skyTop: string) => commit({ skyTop }),
         setSkyTopPeak: (skyTopPeak: string) => commit({ skyTopPeak }),
         setSkyHorizon: (skyHorizon: string) => commit({ skyHorizon }),
@@ -467,6 +478,10 @@ export default function useSynthwaveHook() {
             commit({ roadChannel }),
         setRoadDrive: (roadDrive: number) =>
             commit({ roadDrive: clampRoadDrive(roadDrive) }),
+        setStretchChannel: (stretchChannel: SynthwaveLive["stretchChannel"]) =>
+            commit({ stretchChannel }),
+        setStretchDrive: (stretchDrive: number) =>
+            commit({ stretchDrive: clampRoadDrive(stretchDrive) }),
         setGlowChannel: (glowChannel: SynthwaveLive["glowChannel"]) =>
             commit({ glowChannel }),
         setGlowDrive: (glowDrive: number) =>

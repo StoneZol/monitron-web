@@ -12,6 +12,7 @@ import {
   subscribeAudioBus,
   type VizBands,
 } from "@/lib/audioBus";
+import { AudioDeriver } from "@/lib/audioDerive";
 import { MicCapture, gateMicFrame, MIC_GATE_DEFAULT, MIC_GATE_MAX, clampMicGate, normalizeMicGate } from "@/lib/audioMic";
 import { acquirePluginViz } from "@/lib/pluginVizLease";
 
@@ -112,6 +113,7 @@ export function useAudioReactive({
   const onMicGateChangeRef = useRef(onMicGateChange);
   const onPeakGainChangeRef = useRef(onPeakGainChange);
   const micRef = useRef(new MicCapture());
+  const deriverRef = useRef(new AudioDeriver());
   const pluginVizReleaseRef = useRef<(() => void) | null>(null);
   const applySourceRef = useRef<(next: AudioSource, notify: boolean) => void>(
     () => {},
@@ -203,6 +205,7 @@ export function useAudioReactive({
     if (resolved === "off") {
       void micRef.current.stop();
       sendPluginToggle(false);
+      deriverRef.current.reset();
       vizRef.current = emptyVizBands(false);
       clearBusUi();
       setMicNeedsGesture(false);
@@ -268,7 +271,14 @@ export function useAudioReactive({
       stats.frames += 1;
       stats.receivedAt = now;
       // Peak gain lifts meters + what screens read (quiet tab volume)
-      const peakOut = clip01(peak * peakGainRef.current);
+      const g = peakGainRef.current;
+      const peakOut = clip01(peak * g);
+      // Musical punches (adaptive bass / kick onset) — same path as pre-API split
+      const derived = deriverRef.current.push(bands, rms, peak);
+      const bass = clip01(derived.bass * g);
+      const mid = clip01(derived.mid * g);
+      const high = clip01(derived.high * g);
+      const beat = clip01(derived.beat * g);
 
       if (now - stats.lastUi >= 80) {
         stats.lastUi = now;
@@ -295,6 +305,10 @@ export function useAudioReactive({
         bands,
         rms,
         peak: peakOut,
+        bass,
+        mid,
+        high,
+        beat,
       };
     },
   );
