@@ -2,6 +2,7 @@ import type { FxModeMod, FxModePaintContext } from "./types";
 
 function clearCanvasFilters(root: HTMLElement) {
   for (const c of root.querySelectorAll<HTMLCanvasElement>("canvas")) {
+    if (c.dataset.fxPass != null) continue;
     c.style.filter = "";
   }
 }
@@ -15,6 +16,7 @@ function applyBw({ root, intensity, contrast }: FxModePaintContext) {
   if (Math.abs(c - 1) > 0.001) parts.push(`contrast(${c})`);
   const filter = parts.join(" ");
   for (const el of root.querySelectorAll<HTMLCanvasElement>("canvas")) {
+    if (el.dataset.fxPass != null) continue;
     el.style.filter = filter;
   }
 }
@@ -22,9 +24,13 @@ function applyBw({ root, intensity, contrast }: FxModePaintContext) {
 export const bwMod: FxModeMod = {
   id: "bw",
   label: "B&W",
+  kind: "css",
+  knobs: ["intensity", "contrast"],
   defaults: {
     intensity: 1,
     contrast: 1,
+    speed: 1,
+    particles: 1,
     blend: "normal",
   },
   apply: applyBw,

@@ -30,7 +30,7 @@ const BLENDS = new Set<FxBlendMode>([
   "luminosity",
 ]);
 
-const MODES = new Set<FxOverlayMode>(["off", "bw"]);
+const MODES = new Set<FxOverlayMode>(["off", "bw", "cartoony"]);
 
 const listeners = new Map<string, Set<() => void>>();
 const cache = new Map<string, FxOverlayPrefs>();
@@ -76,6 +76,13 @@ export function migrateFxPrefs(raw: unknown): FxOverlayPrefs {
     mode,
     intensity: clamp(Number(o.intensity), 0, 1, FX_OVERLAY_DEFAULTS.intensity),
     contrast: clamp(Number(o.contrast), 0.5, 2, FX_OVERLAY_DEFAULTS.contrast),
+    speed: clamp(Number(o.speed), 0, 4, FX_OVERLAY_DEFAULTS.speed),
+    particles: clamp(
+      Number(o.particles),
+      0,
+      2,
+      FX_OVERLAY_DEFAULTS.particles,
+    ),
     blend,
     wash: clamp(Number(o.wash), 0, 1, FX_OVERLAY_DEFAULTS.wash),
   };
@@ -121,6 +128,8 @@ export function useFxOverlay(screenId: string) {
         mode,
         intensity: mod.defaults.intensity,
         contrast: mod.defaults.contrast,
+        speed: mod.defaults.speed,
+        particles: mod.defaults.particles,
         blend: mod.defaults.blend,
         wash: FX_WASH_DEFAULT,
       });
@@ -129,6 +138,10 @@ export function useFxOverlay(screenId: string) {
       commit({ intensity: clamp(intensity, 0, 1, prefs.intensity) }),
     setContrast: (contrast: number) =>
       commit({ contrast: clamp(contrast, 0.5, 2, prefs.contrast) }),
+    setSpeed: (speed: number) =>
+      commit({ speed: clamp(speed, 0, 4, prefs.speed) }),
+    setParticles: (particles: number) =>
+      commit({ particles: clamp(particles, 0, 2, prefs.particles) }),
     setBlend: (blend: FxBlendMode) => commit({ blend }),
     setWash: (wash: number) =>
       commit({ wash: clamp(wash, 0, 1, prefs.wash) }),

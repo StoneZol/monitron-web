@@ -14,4 +14,10 @@ export {
   FX_RANGES,
   FX_WASH_DEFAULT,
 } from "./FxOverlay.types";
-export { bwMod, FX_MODE_MODS, applyFxMode, clearAllFxModes } from "./overlaysMods";
+export {
+  bwMod,
+  cartoonyMod,
+  FX_MODE_MODS,
+  applyFxMode,
+  clearAllFxModes,
+} from "./overlaysMods";
