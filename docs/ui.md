@@ -43,7 +43,7 @@ ScreensOverlay          full-screen HUD (hide button / tap to wake)
                  └─ children       screen-only knobs (drive / channels…)
 ```
 
-`AudioSpectrum` (`components/AudioSpectrum`) is a separate canvas deck module — not mounted in the HUD; reserved for a future saver.
+`AudioSpectrum` (`components/AudioSpectrum`) is the HUD-sized canvas deck module. The full-screen saver lives at `/s/spectrum`.
 
 Typical screen:
 
