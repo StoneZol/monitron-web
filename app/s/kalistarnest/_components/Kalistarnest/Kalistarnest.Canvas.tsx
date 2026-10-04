@@ -175,11 +175,13 @@ function KalistarnestQuad({
             live.colorDrive,
             dt,
           );
-          pulseTwinkleLight(starTint, pulseAmt, live.colorDrive);
+          // Soft decay floor: quiet stays ≥ half pulse so the nest doesn’t crush between beats
+          const softAmt = 0.5 + pulseAmt * 0.5;
+          pulseTwinkleLight(starTint, softAmt, live.colorDrive);
           starHighlight.copy(starTint);
           pulseTwinkleLight(
             starHighlight,
-            Math.min(1, pulseAmt * 1.1),
+            Math.min(1, softAmt * 1.1),
             live.colorDrive,
           );
           peakFlicker = Math.max(peakFlicker, pulseAmt);

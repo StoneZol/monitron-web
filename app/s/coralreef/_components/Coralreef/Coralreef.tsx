@@ -47,6 +47,7 @@ const COLOR_MODE_OPTIONS: {
   { value: "paletteTwinkle", label: "palette twinkle (stock walk)" },
   { value: "twinkle", label: "twinkle (solid HSL)" },
   { value: "palette", label: "palette (idle / peak)" },
+  { value: "duo", label: "duo (linear A → B)" },
 ];
 
 const LIGHT_MODE_OPTIONS: {
@@ -58,18 +59,18 @@ const LIGHT_MODE_OPTIONS: {
 ];
 
 const INFO = {
-  look: "Coral Reef volumetric tunnel (Yusef28) — four color modes + freelook.",
+  look: "Coral Reef volumetric tunnel (Yusef28) — five color modes + freelook.",
   flightSpeed: "Base tunnel clock (1 ≈ Shadertoy iTime).",
   cameraMode:
     "manual = freelook X/Y (0/0 = down the tunnel). flex = center + bank wander. Flight stays on +Z.",
   yaw: "Look X in degrees — 0 = along tunnel. Turns the view, not the path.",
   pitch: "Look Y in degrees — 0 = along tunnel. Turns the view, not the path.",
   cameraBank:
-    "Flex look wander around the tunnel heading. High bank = wider glances, still returns to center.",
+    "Flex look cone radius. Wander stays inside a circle; bank scales how wide that circle gets.",
   colorMode:
-    "original = stock cos palette. palette twinkle = phase-walk that palette. twinkle = solid HSL fill. palette = idle→peak.",
+    "original = stock cos palette. palette twinkle = phase-walk. twinkle = solid HSL. palette = idle→peak. duo = stock wave, linear A→B.",
   colorPalette:
-    "Idle = rest tint. Peak = audio target. Only used in palette mode.",
+    "Idle / peak in palette mode, or A / B ends in duo.",
   twinkle: "Solid HSL hue walk for the whole reef fill.",
   paletteTwinkle:
     "Walks the stock Yusef28 cos palette phase — keeps the reef look, shifts hues.",
@@ -222,16 +223,18 @@ const Coralreef = ({ showOverlay = true }: CoralreefProps) => {
                   lInfo={INFO.twinkleL}
                 />
               ) : null}
-              {mode === "palette" ? (
+              {mode === "palette" || mode === "duo" ? (
                 <ColorTable
-                  label="reef palette"
+                  label={mode === "duo" ? "duo ends" : "reef palette"}
                   info={INFO.colorPalette}
-                  columns={["idle", "peak"]}
-                  lockedColumns={audioLocked ? ["peak"] : []}
-                  columnStamps={audioStamp}
+                  columns={mode === "duo" ? ["A", "B"] : ["idle", "peak"]}
+                  lockedColumns={
+                    mode === "palette" && audioLocked ? ["peak"] : []
+                  }
+                  columnStamps={mode === "palette" ? audioStamp : undefined}
                   rows={[
                     {
-                      label: "tint",
+                      label: mode === "duo" ? "mix" : "tint",
                       cells: [
                         {
                           value: controls.color,

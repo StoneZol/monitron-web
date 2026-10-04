@@ -64,7 +64,14 @@ export function PlaceholderCard({
                         CH-{channel}
                     </div>
                     <div className="absolute top-2 right-2 z-10 flex flex-col items-end gap-1">
-                        {placeholder.reactive ? (
+                        {placeholder.reactiveOnly ? (
+                            <div
+                                className="stamp px-1.5 py-0.5 text-[8px] tracking-[0.2em] text-warn"
+                                title="Audio-only — idle without mic or plugin"
+                            >
+                                only reactive
+                            </div>
+                        ) : placeholder.reactive ? (
                             <div
                                 className="stamp px-1.5 py-0.5 text-[8px] tracking-[0.2em]"
                                 title="Works with Monitron Chrome extension"

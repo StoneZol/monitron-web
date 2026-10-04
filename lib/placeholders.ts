@@ -14,6 +14,8 @@ export type PlaceholderMeta = {
     previewSrc?: string;
     /** Compatible with Monitron Chrome extension audio-bus */
     reactive?: boolean;
+    /** Screen is dead without audio — stamp reads “only reactive” */
+    reactiveOnly?: boolean;
     /** Attribution — non-clickable stamp + credit link under the card */
     sources?: PlaceholderSource[];
 };
@@ -123,5 +125,13 @@ export const placeholders: PlaceholderMeta[] = [
                 href: "https://www.shadertoy.com/view/7X3GRS",
             },
         ],
+    },
+    {
+        id: "spectrum",
+        title: "Spectrum",
+        href: "/s/spectrum",
+        previewSrc: "/s/spectrum.webp",
+        reactive: true,
+        reactiveOnly: true,
     },
 ];

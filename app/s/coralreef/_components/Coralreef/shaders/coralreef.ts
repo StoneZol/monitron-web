@@ -7,6 +7,7 @@
  *  1 paletteTwinkle — same palette, phase walks (twinkle on default palette)
  *  2 twinkle        — solid HSL fill; density from palette luminance
  *  3 palette        — solid idle→peak; density from palette luminance
+ *  4 duo            — stock cos wave, lerp uColor→uHighlight (reef green↔coral)
  *
  * Tunnel sun (uLightMode):
  *  0 original — stock bloom from the reef accumulation (1:1)
@@ -45,7 +46,7 @@ uniform float uSaturation;
 uniform float uPeakFlicker;
 /** Radians — shifts the stock cos palette (paletteTwinkle) */
 uniform float uPalettePhase;
-/** 0 original, 1 paletteTwinkle, 2 twinkle, 3 palette */
+/** 0 original, 1 paletteTwinkle, 2 twinkle, 3 palette, 4 duo */
 uniform float uColorMode;
 /** 0 = stock tunnel sun, 1 = custom light tint on bright core */
 uniform float uLightMode;
@@ -118,6 +119,14 @@ vec4 traceReef(
 
     if (mode < 1.5) {
       o += pal * punch;
+    } else if (mode > 3.5) {
+      // Duo: same spatial cos as stock R-channel, lerp A→B (green↔coral)
+      float wave =
+        0.5 + 0.5 * cos(d * 40.0 + P.z * 2.0 + 1.0 + phase);
+      float w = 1.0 / (glowBase + ad * glowK);
+      vec3 duo = mix(uColor, uHighlight, wave);
+      o.rgb += duo * w * punch;
+      o.a += w * punch;
     } else {
       float dens = dot(pal.rgb, LUMA);
       o.rgb += tint * dens;
@@ -138,21 +147,28 @@ void main() {
   float pitch = uPitch;
 
   if (uCamMode > 0.5) {
-    float yRaw =
-      sin(t * 0.11) * 0.42 +
-      sin(t * 0.27 + 1.7) * 0.28 +
-      sin(t * 0.053 + 4.1) * 0.22 +
-      sin(t * 0.41 + 2.3) * 0.12;
-    float pRaw =
-      cos(t * 0.14) * 0.28 +
-      sin(t * 0.19 + 0.9) * 0.22 +
-      cos(t * 0.07 + 3.4) * 0.18 +
-      sin(t * 0.33 + 5.2) * 0.10;
-    float yCub = yRaw * yRaw * yRaw;
-    float pCub = pRaw * pRaw * pRaw;
-    float glance = 0.20 + 0.80 * abs(sin(t * 0.041) * sin(t * 0.067 + 1.3));
-    yaw = yCub * 1.35 * bank * glance;
-    pitch = pCub * 1.15 * bank * glance;
+    // Flex look: isotropic wander inside a unit disk; bank scales the cone radius.
+    // (No cubic remap — that crushed bank < 1 and snapped hard on the +yaw side.)
+    float ax =
+      sin(t * 0.097) * 0.50 +
+      sin(t * 0.173 + 2.15) * 0.32 +
+      sin(t * 0.281 + 5.10) * 0.22 +
+      sin(t * 0.041 + 1.30) * 0.18;
+    float ay =
+      cos(t * 0.113) * 0.50 +
+      sin(t * 0.197 + 0.90) * 0.32 +
+      cos(t * 0.251 + 3.70) * 0.22 +
+      cos(t * 0.053 + 4.40) * 0.18;
+    vec2 look = vec2(ax, ay);
+    float r = max(length(look), 1e-5);
+    // Soft unit disk: linear near center, asymptote to rim
+    float diskR = r / sqrt(1.0 + r * r);
+    look *= diskR / r;
+    // Gentle radius breath — no directional bias
+    float breath = 0.78 + 0.22 * (0.5 + 0.5 * sin(t * 0.037));
+    float cone = 0.62 * bank * breath;
+    yaw = look.x * cone;
+    pitch = look.y * cone;
   }
   pitch = clamp(pitch, -1.45, 1.45);
 

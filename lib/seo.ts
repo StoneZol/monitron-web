@@ -32,6 +32,8 @@ const SCREEN_BLURBS: Record<string, string> = {
     "Kali Star Nest free flight for idle monitors — reactive stars, fog, and speed.",
   coralreef:
     "Volumetric coral reef tunnel for idle monitors — reactive tint and speed.",
+  spectrum:
+    "Plain audio-bus spectrum bars for idle monitors — 32 bands, peak caps, mirror.",
 };
 
 function absoluteOg(path: string): string {

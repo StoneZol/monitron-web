@@ -3,7 +3,8 @@
  * “kali star nest, free 360° flight” — aladiN (fork of Kali Star Nest)
  *
  * Changes from original:
- * - No mouse — freelook X/Y (manual) or center + bank flex; flight stays on +Z
+ * - Mouse → freelook X/Y (manual) or center + bank flex; flight on aladiN’s
+ *   angled rail (yaw 0.35 / pitch 0.15) so axis-aligned tile punches don’t flash
  * - Accumulated flight clock (uFlyT) instead of iTime+33
  * - uColorMode: 0 = fractal fixedTint + dust (1:1), 1 = CPU star tint + stock dust
  * - uPeakFlicker / uSaturation for audio + look chroma
@@ -70,7 +71,10 @@ vec3 kaliAt(vec3 p) {
   float aT = 0.0;
   for (int i = 0; i < 17; i++) {
     if (i >= iterations) break;
-    p = abs(p) / dot(p, p) - formuparam;
+    // Tiny epsilon stops Inf at singularities without flattening the fold
+    // (a hard max(m2, 1e-6) killed the nest → black screen).
+    float m2 = dot(p, p);
+    p = abs(p) / (m2 + 1e-12) - formuparam;
     a += abs(length(p) - pa);
     pa = length(p);
     if (i == TEMP_ITER - 1) aT = a;
@@ -137,6 +141,7 @@ vec3 family(
     if (j >= n) break;
     float t = ((k0 + kStep * float(j)) * dAx - oe) / re;
     float s = 2.0 * t * rz;
+    if (t < 0.0 || s < 0.0) continue;
     if (s > sMax) break;
 
     vec3 q = kaliAt(ro + rd * t);
@@ -150,12 +155,13 @@ vec3 family(
     float fd = pow(distfading, s / stepsize - 1.0);
 
     // Stock yellow dust always (no separate fog controls)
-    v += w * lessRed(vec3(dm, dm * 0.5, 0.0));
+    vec3 dustCol = w * lessRed(vec3(dm, dm * 0.5, 0.0));
     float depthLum = dot(vec3(s, s * s, s * s * s * s), LUMA);
     float core = a * brightness * fade * fd * (1.0 + flicker * 0.55);
 
+    vec3 starCol;
     if (colorMode < 0.5) {
-      v += w * fixedTint(q.z) * depthLum * core;
+      starCol = w * fixedTint(q.z) * depthLum * core;
     } else {
       float tau = clamp(
         log(max(q.z, 1e-3) / COLOR_LO) / log(COLOR_HI / COLOR_LO),
@@ -167,8 +173,13 @@ vec3 family(
         uStarHighlight,
         clamp(tau * 0.65 + flicker * 0.5, 0.0, 1.0)
       );
-      v += w * starTint * depthLum * core;
+      starCol = w * starTint * depthLum * core;
     }
+    // Drop non-finite hits (plane-crossing singularities → white flash).
+    // Portable: NaN/Inf comparisons fail, so this also rejects them.
+    vec3 add = dustCol + starCol;
+    if (!(add.x < 1e20 && add.y < 1e20 && add.z < 1e20)) continue;
+    v += add;
   }
   return v;
 }
@@ -182,39 +193,58 @@ void main() {
   float t = uFlyT;
   float bank = clamp(uCamBank, 0.0, 2.0);
 
-  // Flight along +Z — look 0/0 = down the barrel; X/Y freelook is independent
-  vec3 flyDir = dirFrom(0.0, 0.0);
-  vec3 ro = pathPos(0.0) + flyDir * (4.0 * FLY_SPEED * t);
+  // aladiN CAM_MODE 0 rail — angled so we don’t ride a tiled singularity.
+  // Freelook is applied in the *rail local frame* (not world Euler add):
+  // adding RAIL_PITCH into world pitch made X-look feel like it was yanking
+  // the nose up whenever you turned.
+  const float RAIL_YAW = 0.35;
+  const float RAIL_PITCH = 0.15;
+  vec3 flyFwd = dirFrom(RAIL_YAW, RAIL_PITCH);
+  vec3 ro = pathPos(0.0) + flyFwd * (4.0 * FLY_SPEED * t);
 
-  float yaw = uYaw;
-  float pitch = uPitch;
-  if (uCamMode > 0.5) {
-    // Flex: multi-rate wander (incommensurate) + center bias.
-    // Raw sum alone sits off-axis at high bank; cubic + glance pull it home often.
-    float yRaw =
-      sin(t * 0.11) * 0.42 +
-      sin(t * 0.27 + 1.7) * 0.28 +
-      sin(t * 0.053 + 4.1) * 0.22 +
-      sin(t * 0.41 + 2.3) * 0.12;
-    float pRaw =
-      cos(t * 0.14) * 0.28 +
-      sin(t * 0.19 + 0.9) * 0.22 +
-      cos(t * 0.07 + 3.4) * 0.18 +
-      sin(t * 0.33 + 5.2) * 0.10;
-    // Odd power → most time near 0; peaks still scale with bank
-    float yCub = yRaw * yRaw * yRaw;
-    float pCub = pRaw * pRaw * pRaw;
-    // Slow envelope: wide glances, then collapse toward center
-    float glance = 0.20 + 0.80 * abs(sin(t * 0.041) * sin(t * 0.067 + 1.3));
-    yaw = yCub * 1.35 * bank * glance;
-    pitch = pCub * 1.15 * bank * glance;
+  vec3 flyRt = cross(vec3(0.0, 1.0, 0.0), flyFwd);
+  if (dot(flyRt, flyRt) < 1e-8) {
+    flyRt = vec3(1.0, 0.0, 0.0);
+  } else {
+    flyRt = normalize(flyRt);
   }
-  pitch = clamp(pitch, -1.45, 1.45);
+  vec3 flyUp = cross(flyFwd, flyRt);
 
-  // Horizontal right from yaw only — avoids worldUp flip near steep pitch
-  vec3 fwd = dirFrom(yaw, pitch);
-  vec3 rt = vec3(cos(yaw), 0.0, -sin(yaw));
-  vec3 up = cross(rt, fwd);
+  // Local look: 0/0 = along flight. X = pitch about rail right, Y = yaw about rail up.
+  float lookYaw = uYaw;
+  float lookPitch = uPitch;
+  if (uCamMode > 0.5) {
+    // Flex look: isotropic wander inside a unit disk; bank scales the cone radius.
+    float ax =
+      sin(t * 0.097) * 0.50 +
+      sin(t * 0.173 + 2.15) * 0.32 +
+      sin(t * 0.281 + 5.10) * 0.22 +
+      sin(t * 0.041 + 1.30) * 0.18;
+    float ay =
+      cos(t * 0.113) * 0.50 +
+      sin(t * 0.197 + 0.90) * 0.32 +
+      cos(t * 0.251 + 3.70) * 0.22 +
+      cos(t * 0.053 + 4.40) * 0.18;
+    vec2 look = vec2(ax, ay);
+    float r = max(length(look), 1e-5);
+    float diskR = r / sqrt(1.0 + r * r);
+    look *= diskR / r;
+    float breath = 0.78 + 0.22 * (0.5 + 0.5 * sin(t * 0.037));
+    float cone = 0.62 * bank * breath;
+    lookYaw = look.x * cone;
+    lookPitch = look.y * cone;
+  }
+  lookPitch = clamp(lookPitch, -1.45, 1.45);
+
+  vec3 local = dirFrom(lookYaw, lookPitch);
+  vec3 fwd = normalize(local.x * flyRt + local.y * flyUp + local.z * flyFwd);
+  vec3 rt = cross(flyUp, fwd);
+  if (dot(rt, rt) < 1e-8) {
+    rt = flyRt;
+  } else {
+    rt = normalize(rt);
+  }
+  vec3 up = cross(fwd, rt);
 
   vec3 e0 = vec3(1.0, 0.0, 0.0);
   vec3 e1 = vec3(0.0, 1.0, 0.0);

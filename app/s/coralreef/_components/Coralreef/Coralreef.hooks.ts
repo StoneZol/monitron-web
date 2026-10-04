@@ -41,6 +41,7 @@ const COLOR_MODES = new Set<CoralreefColorMode>([
   "paletteTwinkle",
   "twinkle",
   "palette",
+  "duo",
 ]);
 const LIGHT_MODES = new Set<CoralreefLightMode>(["original", "custom"]);
 

@@ -144,7 +144,7 @@ export class MicCapture {
 
       const sourceNode = ctx.createMediaStreamSource(stream);
       const analyser = ctx.createAnalyser();
-      analyser.fftSize = 2048;
+      analyser.fftSize = 4096;
       analyser.smoothingTimeConstant = 0.35;
       analyser.minDecibels = -85;
       analyser.maxDecibels = -25;

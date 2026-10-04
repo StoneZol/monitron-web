@@ -50,11 +50,11 @@ const INFO = {
   look: "Kali Star Nest free flight (aladiN) — world-fixed planes, no mouse look.",
   flightSpeed: "Base flight clock (1 ≈ Shadertoy FLY_SPEED along +Z).",
   cameraMode:
-    "manual = freelook X/Y (0/0 = along flight). flex = center + bank scatter. Flight path stays fixed.",
-  yaw: "Look X in degrees — 0 = along flight. Turns the view, not the path.",
-  pitch: "Look Y in degrees — 0 = along flight. Turns the view, not the path.",
+    "manual = freelook X/Y relative to the flight rail (0/0 = along path). flex = center + bank scatter. Path stays fixed.",
+  yaw: "Look yaw relative to flight (deg). 0 = along the path.",
+  pitch: "Look pitch relative to flight (deg). 0 = along the path — not world-horizon, so X no longer fights the climb rail.",
   cameraBank:
-    "Flex look wander around the flight heading. Multi-freq + center bias — high bank = wider glances, still returns to center.",
+    "Flex look cone radius. Wander stays inside a circle; bank scales how wide that circle gets.",
   colorMode:
     "original = aladiN fixedTint + stock dust. custom = star palette / twinkle; dust stays stock.",
   starPalette: "Stars idle→peak. Hidden while star twinkle is on.",
