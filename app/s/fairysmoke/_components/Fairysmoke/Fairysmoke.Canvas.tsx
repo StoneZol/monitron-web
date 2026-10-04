@@ -30,6 +30,11 @@ const COLOR_EDGE_MIN = 0.05;
 const FLICKER_DECAY = 9;
 const FLICKER_EDGE = 0.04;
 const FLICKER_EDGE_MIN = 0.05;
+/** Speed punches — higher edge so busy tracks don't just flex the clock */
+const SPEED_DECAY = 13;
+const SPEED_EDGE = 0.08;
+const SPEED_EDGE_MIN = 0.1;
+const SPEED_MUL = 0.7;
 
 /** Mode → shader uColorMode */
 const MODE_CODE = { original: 0, twinkle: 1, palette: 2 } as const;
@@ -54,6 +59,8 @@ function FairysmokeQuad({
     const colorPrev = useRef(0);
     const flickerEnv = useRef(0);
     const flickerPrev = useRef(0);
+    const speedEnv = useRef(0);
+    const speedPrev = useRef(0);
     const twinkleHue = useRef(0);
     const twinklePulse = useRef(createTwinklePulseEnv());
 
@@ -100,13 +107,28 @@ function FairysmokeQuad({
         const colorRaw = reactive ? channelLevel(viz!, live.colorChannel) : 0;
         const speedRaw = reactive ? channelLevel(viz!, live.speedChannel) : 0;
         const colorPunch = drivenLevel(colorRaw, live.colorDrive);
-        const speedPunch = drivenLevel(speedRaw, live.speedDrive);
+        const speedPunch = drivenLevel(speedRaw, live.speedDrive, 1);
 
         const colorArmed = reactive && live.colorChannel !== "off";
         const speedArmed = reactive && live.speedChannel !== "off";
         const mode = live.colorMode;
 
-        const speedMul = speedArmed ? 1 + speedPunch * 1.4 : 1;
+        const speedHit = speedArmed ? Math.min(1, speedPunch) : 0;
+        if (
+            risingEdge(
+                speedHit,
+                speedPrev.current,
+                SPEED_EDGE,
+                SPEED_EDGE_MIN,
+            )
+        ) {
+            speedEnv.current = Math.max(speedEnv.current, speedHit);
+        }
+        speedEnv.current *= Math.exp(-SPEED_DECAY * dt);
+        if (speedEnv.current < 0.004) speedEnv.current = 0;
+        speedPrev.current = speedHit;
+
+        const speedMul = speedArmed ? 1 + speedEnv.current * SPEED_MUL : 1;
         smokeT.current += dt * Math.max(0.05, live.smokeSpeed) * speedMul;
 
         const colorHit = colorArmed ? Math.min(1, colorPunch) : 0;

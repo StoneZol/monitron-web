@@ -3,7 +3,7 @@ import type { ReactiveChannel } from "@/lib/visualAudio";
 export type { ReactiveChannel };
 
 export type FairysmokeProps = {
-  showOverlay?: boolean;
+    showOverlay?: boolean;
 };
 
 /**
@@ -38,7 +38,7 @@ export type FairysmokeLive = {
     speedDrive: number;
 };
 
-/** Speed punch drive */
+/** Speed punch drive — short rising-edge hits */
 export const FAIRYSMOKE_DRIVE_MAX = 8;
 /** Color / twinkle punch — short 0…2 boost */
 export const FAIRYSMOKE_COLOR_DRIVE_MAX = 2;
@@ -57,7 +57,7 @@ export const FAIRYSMOKE_DEFAULTS: FairysmokeLive = {
     colorChannel: "bass",
     colorDrive: 1.2,
     speedChannel: "bass",
-    speedDrive: 2,
+    speedDrive: 1,
 };
 
 export const FAIRYSMOKE_RANGES = {

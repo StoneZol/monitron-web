@@ -56,7 +56,7 @@ const INFO = {
     "Band that punches color / brightness (mode-dependent).",
   speedChannel: "Band that punches smoke speed.",
   colorDrive: "Color / twinkle pulse boost (0…2).",
-  speedDrive: "Smoke speed punch strength (0…8).",
+  speedDrive: "Smoke speed punch strength (0…4). Rising-edge hits, not a continuous flex.",
   visualizer: {
     section: "Audio in → bus meters → peak gain for reactive screens.",
     source:
