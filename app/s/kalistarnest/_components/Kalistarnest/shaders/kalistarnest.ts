@@ -214,21 +214,25 @@ void main() {
   float lookYaw = uYaw;
   float lookPitch = uPitch;
   if (uCamMode > 0.5) {
-    float yRaw =
-      sin(t * 0.11) * 0.42 +
-      sin(t * 0.27 + 1.7) * 0.28 +
-      sin(t * 0.053 + 4.1) * 0.22 +
-      sin(t * 0.41 + 2.3) * 0.12;
-    float pRaw =
-      cos(t * 0.14) * 0.28 +
-      sin(t * 0.19 + 0.9) * 0.22 +
-      cos(t * 0.07 + 3.4) * 0.18 +
-      sin(t * 0.33 + 5.2) * 0.10;
-    float yCub = yRaw * yRaw * yRaw;
-    float pCub = pRaw * pRaw * pRaw;
-    float glance = 0.20 + 0.80 * abs(sin(t * 0.041) * sin(t * 0.067 + 1.3));
-    lookYaw = yCub * 1.35 * bank * glance;
-    lookPitch = pCub * 1.15 * bank * glance;
+    // Flex look: isotropic wander inside a unit disk; bank scales the cone radius.
+    float ax =
+      sin(t * 0.097) * 0.50 +
+      sin(t * 0.173 + 2.15) * 0.32 +
+      sin(t * 0.281 + 5.10) * 0.22 +
+      sin(t * 0.041 + 1.30) * 0.18;
+    float ay =
+      cos(t * 0.113) * 0.50 +
+      sin(t * 0.197 + 0.90) * 0.32 +
+      cos(t * 0.251 + 3.70) * 0.22 +
+      cos(t * 0.053 + 4.40) * 0.18;
+    vec2 look = vec2(ax, ay);
+    float r = max(length(look), 1e-5);
+    float diskR = r / sqrt(1.0 + r * r);
+    look *= diskR / r;
+    float breath = 0.78 + 0.22 * (0.5 + 0.5 * sin(t * 0.037));
+    float cone = 0.62 * bank * breath;
+    lookYaw = look.x * cone;
+    lookPitch = look.y * cone;
   }
   lookPitch = clamp(lookPitch, -1.45, 1.45);
 

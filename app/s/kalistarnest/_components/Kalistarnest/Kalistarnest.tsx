@@ -54,7 +54,7 @@ const INFO = {
   yaw: "Look yaw relative to flight (deg). 0 = along the path.",
   pitch: "Look pitch relative to flight (deg). 0 = along the path — not world-horizon, so X no longer fights the climb rail.",
   cameraBank:
-    "Flex look wander around the flight heading. Multi-freq + center bias — high bank = wider glances, still returns to center.",
+    "Flex look cone radius. Wander stays inside a circle; bank scales how wide that circle gets.",
   colorMode:
     "original = aladiN fixedTint + stock dust. custom = star palette / twinkle; dust stays stock.",
   starPalette: "Stars idle→peak. Hidden while star twinkle is on.",
