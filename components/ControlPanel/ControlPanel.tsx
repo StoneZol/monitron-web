@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { useScreensOverlay } from "@/components/ScreensOverlay/ScreensOverlay.context";
 import { NavBackButton } from "@/components/NavBackButton";
 import { VisualPipButton } from "@/components/VisualPipButton";
+import { PlaceholderCredit } from "@/components/SourceCredit";
 import { placeholders } from "@/lib/placeholders";
 import {
     readPanelSections,
@@ -124,8 +125,8 @@ export function ControlPanel({
         }
     };
 
-    const sources = overlay
-        ? placeholders.find((p) => p.id === overlay.screenId)?.sources
+    const placeholder = overlay
+        ? placeholders.find((p) => p.id === overlay.screenId)
         : undefined;
 
     return (
@@ -186,7 +187,7 @@ export function ControlPanel({
                     </div>
                 ) : null}
             </div>
-            {actions || sources?.length || overlay ? (
+            {actions || placeholder || overlay ? (
                 <div className="shrink-0 border-b border-line p-2">
                     {actions || overlay ? (
                         <div
@@ -199,27 +200,15 @@ export function ControlPanel({
                             {overlay ? <VisualPipButton /> : null}
                         </div>
                     ) : null}
-                    {sources?.length ? (
-                        <div
+                    {placeholder ? (
+                        <PlaceholderCredit
+                            meta={placeholder}
+                            variant="plain"
                             className={cn(
-                                "flex flex-wrap gap-x-2 gap-y-1",
+                                "max-w-full",
                                 actions || overlay ? "mt-2" : null,
                             )}
-                        >
-                            {sources.map((src) => (
-                                <a
-                                    key={src.href}
-                                    href={src.href}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="truncate font-mono text-[9px] uppercase tracking-[0.14em] text-cyan/70 transition-colors hover:text-signal"
-                                    title={src.title}
-                                >
-                                    original — {src.author}
-                                    <span className="ml-1 text-muted/60">↗</span>
-                                </a>
-                            ))}
-                        </div>
+                        />
                     ) : null}
                 </div>
             ) : null}

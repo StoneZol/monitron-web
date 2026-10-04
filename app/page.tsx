@@ -1,4 +1,4 @@
-import { PlaceholderCard } from "@/components/PlaceholderCard";
+import { PlaceholderGrid } from "@/components/PlaceholderGrid";
 import { SiteFooter } from "@/components/SiteFooter";
 import { panelButtonClassName } from "@/components/ControlPanel/PanelButton";
 import { PLUGIN_URL } from "@/lib/audioBus";
@@ -89,16 +89,7 @@ export default function Home() {
                         </h2>
                     </div>
 
-                    <ul className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 lg:gap-5">
-                        {placeholders.map((placeholder, index) => (
-                            <li key={placeholder.id}>
-                                <PlaceholderCard
-                                    placeholder={placeholder}
-                                    index={index}
-                                />
-                            </li>
-                        ))}
-                    </ul>
+                    <PlaceholderGrid placeholders={placeholders} />
                 </section>
             </main>
 
