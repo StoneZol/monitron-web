@@ -8,6 +8,7 @@ import {
   hueDegFromHex,
   resolveTwinkleColor,
 } from "@/lib/twinkleHsl";
+import { VISUAL_PIP_CHANGE } from "@/lib/visualPip";
 import type { SpectrumLive } from "./Spectrum.types";
 
 /**
@@ -35,13 +36,14 @@ function lerpByte(a: number, b: number, t: number) {
 }
 
 /**
- * Full-screen bus bars — same idea as components/AudioSpectrum, deck-sized.
- * Twinkle: shared hue phase walks both seed hues (low / high).
+ * DOM matches R3F PiP adopt: outer shell > measure > canvas.
+ * Only the shell moves into Document PiP; Controls stay on the page.
  */
 export default function SpectrumCanvas({
   liveRef,
   vizRef,
 }: SpectrumCanvasProps) {
+  const shellRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const peaksRef = useRef(new Float32Array(AUDIO_BAND_COUNT));
   const ceilRef = useRef(new Float32Array(AUDIO_BAND_COUNT));
@@ -51,23 +53,65 @@ export default function SpectrumCanvas({
   const highTint = useRef(new THREE.Color());
 
   useEffect(() => {
+    const shell = shellRef.current;
     const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
+    if (!shell || !canvas) return;
+    const ctx = canvas.getContext("2d", { alpha: false });
     if (!ctx) return;
 
     let raf = 0;
     let cssW = 0;
     let cssH = 0;
+    let rafView: Window = window;
+
+    const viewOf = () => canvas.ownerDocument.defaultView ?? window;
+
+    const cancelRaf = () => {
+      rafView.cancelAnimationFrame(raf);
+      if (rafView !== window) window.cancelAnimationFrame(raf);
+      raf = 0;
+    };
+
+    const measureHost = () => {
+      const parent = shell.parentElement;
+      const view = viewOf();
+      const width =
+        shell.clientWidth ||
+        parent?.clientWidth ||
+        view.innerWidth ||
+        window.innerWidth;
+      const height =
+        shell.clientHeight ||
+        parent?.clientHeight ||
+        view.innerHeight ||
+        window.innerHeight;
+      return {
+        width: Math.max(1, width),
+        height: Math.max(1, height),
+      };
+    };
 
     const resize = () => {
-      const dpr = Math.min(2, window.devicePixelRatio || 1);
-      const rect = canvas.getBoundingClientRect();
-      cssW = Math.max(1, rect.width);
-      cssH = Math.max(1, rect.height);
-      canvas.width = Math.floor(cssW * dpr);
-      canvas.height = Math.floor(cssH * dpr);
+      const { width, height } = measureHost();
+      const view = viewOf();
+      const dpr = Math.min(2, view.devicePixelRatio || 1);
+      const nextW = Math.floor(width * dpr);
+      const nextH = Math.floor(height * dpr);
+      if (
+        Math.abs(width - cssW) < 0.5 &&
+        Math.abs(height - cssH) < 0.5 &&
+        canvas.width === nextW &&
+        canvas.height === nextH
+      ) {
+        return;
+      }
+      cssW = width;
+      cssH = height;
+      canvas.width = nextW;
+      canvas.height = nextH;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.fillStyle = "#030405";
+      ctx.fillRect(0, 0, cssW, cssH);
     };
 
     const drawBar = (
@@ -105,6 +149,8 @@ export default function SpectrumCanvas({
     };
 
     const draw = (nowMs: number) => {
+      resize();
+
       const t = nowMs / 1000;
       const dt =
         lastTRef.current > 0
@@ -184,7 +230,7 @@ export default function SpectrumCanvas({
         ? Math.max(36, cssH * 0.1)
         : Math.max(24, cssH * 0.06);
       const plotW = cssW - padX * 2;
-      const plotH = cssH - padTop - padBot;
+      const plotH = Math.max(1, cssH - padTop - padBot);
       const n = AUDIO_BAND_COUNT;
       const gap = Math.max(1, (plotW / n) * 0.12);
       const barW = Math.max(2, (plotW - gap * (n - 1)) / n);
@@ -192,7 +238,6 @@ export default function SpectrumCanvas({
       const ceils = ceilRef.current;
       const ceilFall = Math.exp(-CEIL_DECAY_PER_SEC * dt);
 
-      // Shared motif peak — soft couple so one dead band doesn't scream ×∞
       let sharedCeil = CEIL_FLOOR;
       for (let i = 0; i < n; i++) {
         const x = armed ? Math.max(0, Math.min(1, bands[i] ?? 0)) : 0;
@@ -203,7 +248,6 @@ export default function SpectrumCanvas({
 
       for (let i = 0; i < n; i++) {
         const x = armed ? Math.max(0, Math.min(1, bands[i] ?? 0)) : 0;
-        // Personal coef from band ceiling, referenced to shared peak motif
         const personal = Math.max(ceils[i]!, CEIL_FLOOR);
         const coef = sharedCeil / personal;
         const raw = Math.min(1, x * coef);
@@ -224,8 +268,8 @@ export default function SpectrumCanvas({
           drawBar(xl, slim, raw, peaks[i]!, padTop, plotH, r, g, b, armed);
           drawBar(xr, slim, raw, peaks[i]!, padTop, plotH, r, g, b, armed);
         } else {
-          const x = padX + i * (barW + gap);
-          drawBar(x, barW, raw, peaks[i]!, padTop, plotH, r, g, b, armed);
+          const bx = padX + i * (barW + gap);
+          drawBar(bx, barW, raw, peaks[i]!, padTop, plotH, r, g, b, armed);
         }
       }
 
@@ -240,25 +284,53 @@ export default function SpectrumCanvas({
         ctx.fillRect(padX + plotW * peak - 2, railY - 3, 4, railH + 6);
       }
 
-      raf = requestAnimationFrame(draw);
+      rafView = viewOf();
+      raf = rafView.requestAnimationFrame(draw);
     };
 
-    resize();
-    raf = requestAnimationFrame(draw);
-    const ro = new ResizeObserver(resize);
-    ro.observe(canvas);
+    const ro = new ResizeObserver(() => resize());
+    const syncObservers = () => {
+      ro.disconnect();
+      ro.observe(shell);
+      const host = shell.parentElement;
+      if (host) ro.observe(host);
+      resize();
+    };
+
+    const onPipChange = () => {
+      cancelRaf();
+      syncObservers();
+      rafView = viewOf();
+      raf = rafView.requestAnimationFrame(draw);
+    };
+
+    syncObservers();
+    rafView = viewOf();
+    raf = rafView.requestAnimationFrame(draw);
+
+    window.addEventListener("resize", resize);
+    window.addEventListener(VISUAL_PIP_CHANGE, onPipChange);
 
     return () => {
-      cancelAnimationFrame(raf);
+      cancelRaf();
       ro.disconnect();
+      window.removeEventListener("resize", resize);
+      window.removeEventListener(VISUAL_PIP_CHANGE, onPipChange);
     };
   }, [liveRef, vizRef]);
 
   return (
-    <canvas
-      ref={canvasRef}
-      className="absolute inset-0 h-full w-full"
-      aria-hidden
-    />
+    <div
+      ref={shellRef}
+      className="absolute inset-0 h-full w-full overflow-hidden bg-black"
+    >
+      <div className="relative h-full w-full">
+        <canvas
+          ref={canvasRef}
+          className="absolute inset-0 block h-full w-full bg-[#030405]"
+          aria-hidden
+        />
+      </div>
+    </div>
   );
 }

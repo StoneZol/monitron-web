@@ -18,6 +18,7 @@ import {
 import { resetFxOverlay } from "@/components/FxOverlay";
 import { toggleFullscreen } from "@/lib/fullscreen";
 import { loadScreenPrefs, saveScreenPrefs } from "@/lib/screenPrefs";
+import { VISUAL_PIP_CHANGE } from "@/lib/visualPip";
 import {
   advanceTwinkleHue,
   createTwinklePulseEnv,
@@ -364,22 +365,31 @@ const useMatrixHook = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const context = canvas.getContext("2d");
+    const context = canvas.getContext("2d", { alpha: false });
     if (!context) return;
 
     const chars = CHARSET.split("");
-    let width = window.innerWidth;
-    let height = window.innerHeight;
-    let columns = Math.floor(width / FONT_SIZE);
+    let width = 1;
+    let height = 1;
+    let columns = 1;
     let drops: number[] = [];
     let speeds: number[] = [];
     let dropAcc: number[] = [];
     let raf = 0;
+    let rafView: Window = window;
     let last = performance.now();
     let lowImpulse = 0;
     let peakHold = 0;
     let prevLow = 0;
     const vizRef = visualizer.vizRef;
+
+    const viewOf = () => canvas.ownerDocument.defaultView ?? window;
+
+    const cancelRaf = () => {
+      rafView.cancelAnimationFrame(raf);
+      if (rafView !== window) window.cancelAnimationFrame(raf);
+      raf = 0;
+    };
 
     const randSpeed = () =>
       COL_SPEED_MIN + Math.random() * (COL_SPEED_MAX - COL_SPEED_MIN);
@@ -396,12 +406,38 @@ const useMatrixHook = () => {
       dropAcc = new Array(columns).fill(0);
     };
 
+    const measureHost = () => {
+      const shell = canvas.parentElement?.parentElement ?? canvas.parentElement;
+      const parent = shell?.parentElement;
+      const view = viewOf();
+      const w =
+        shell?.clientWidth ||
+        parent?.clientWidth ||
+        view.innerWidth ||
+        window.innerWidth;
+      const h =
+        shell?.clientHeight ||
+        parent?.clientHeight ||
+        view.innerHeight ||
+        window.innerHeight;
+      return { width: Math.max(1, w), height: Math.max(1, h) };
+    };
+
     const resize = () => {
-      width = window.innerWidth;
-      height = window.innerHeight;
+      const next = measureHost();
+      if (
+        next.width === width &&
+        next.height === height &&
+        canvas.width === next.width &&
+        canvas.height === next.height
+      ) {
+        return;
+      }
+      width = next.width;
+      height = next.height;
       canvas.width = width;
       canvas.height = height;
-      columns = Math.floor(width / FONT_SIZE);
+      columns = Math.max(1, Math.floor(width / FONT_SIZE));
       seedDrops();
       context.fillStyle = "#000";
       context.fillRect(0, 0, width, height);
@@ -419,6 +455,8 @@ const useMatrixHook = () => {
     };
 
     const tick = (now: number) => {
+      resize();
+
       const dt = Math.min((now - last) / 1000, 0.1);
       last = now;
 
@@ -540,16 +578,27 @@ const useMatrixHook = () => {
         }
       }
 
-      raf = requestAnimationFrame(tick);
+      rafView = viewOf();
+      raf = rafView.requestAnimationFrame(tick);
+    };
+
+    const onPipChange = () => {
+      cancelRaf();
+      resize();
+      rafView = viewOf();
+      raf = rafView.requestAnimationFrame(tick);
     };
 
     resize();
-    raf = requestAnimationFrame(tick);
+    rafView = viewOf();
+    raf = rafView.requestAnimationFrame(tick);
     window.addEventListener("resize", resize);
+    window.addEventListener(VISUAL_PIP_CHANGE, onPipChange);
 
     return () => {
-      cancelAnimationFrame(raf);
+      cancelRaf();
       window.removeEventListener("resize", resize);
+      window.removeEventListener(VISUAL_PIP_CHANGE, onPipChange);
     };
   }, [visualizer.vizRef]);
 

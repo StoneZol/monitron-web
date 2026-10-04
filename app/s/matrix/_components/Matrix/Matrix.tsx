@@ -40,7 +40,15 @@ const Matrix = ({ showOverlay = true }: { showOverlay?: boolean }) => {
 
     return (
         <div className="relative h-screen w-screen overflow-hidden bg-black select-none">
-            <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" />
+            {/* shell > measure > canvas — PiP adopts shell only; overlay stays home */}
+            <div className="absolute inset-0 h-full w-full overflow-hidden bg-black">
+                <div className="relative h-full w-full">
+                    <canvas
+                        ref={canvasRef}
+                        className="absolute inset-0 block h-full w-full bg-black"
+                    />
+                </div>
+            </div>
 
             {showOverlay && (
                 <ScreensOverlay screenId="matrix">

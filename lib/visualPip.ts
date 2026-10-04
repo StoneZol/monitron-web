@@ -97,6 +97,7 @@ function syncR3fSize(root: HTMLElement) {
 function kickResize(root?: HTMLElement | null) {
   const target = root ?? movedRoot;
   if (target) syncR3fSize(target);
+  // 2D canvases size off CSS host — nudge both windows.
   window.dispatchEvent(new Event("resize"));
   pipWindowRef?.dispatchEvent(new Event("resize"));
 }
@@ -142,7 +143,7 @@ function stylePipBody(doc: Document) {
 
 function styleRootFill(root: HTMLElement) {
   root.style.cssText =
-    "position:absolute;inset:0;width:100%;height:100%;margin:0;padding:0;overflow:hidden;";
+    "position:absolute;inset:0;width:100%;height:100%;margin:0;padding:0;overflow:hidden;background:#000;";
 }
 
 function clearPipResizeObs() {
@@ -177,7 +178,7 @@ function restoreMovedRoot() {
     root.setAttribute("style", savedRootStyle);
   } else {
     root.style.cssText =
-      "position:relative;width:100%;height:100%;overflow:hidden;";
+      "position:absolute;inset:0;width:100%;height:100%;overflow:hidden;background:#000;";
   }
   savedRootStyle = null;
 
