@@ -3,9 +3,9 @@
  * “kali star nest, free 360° flight” — aladiN (fork of Kali Star Nest)
  *
  * Changes from original:
- * - No mouse look — yaw/pitch uniforms (manual) or center + bank flex
+ * - No mouse — freelook X/Y (manual) or center + bank flex; flight stays on +Z
  * - Accumulated flight clock (uFlyT) instead of iTime+33
- * - uColorMode: 0 = fractal fixedTint + dust (1:1), 1 = CPU star/fog tints
+ * - uColorMode: 0 = fractal fixedTint + dust (1:1), 1 = CPU star tint + stock dust
  * - uPeakFlicker / uSaturation for audio + look chroma
  * - AA = 1 (web); planes world-fixed; COLOR_MODE / DEPTH_MODE as aladiN defaults
  */
@@ -29,14 +29,12 @@ uniform float uFlyT;
 uniform float uYaw;
 uniform float uPitch;
 uniform float uCamBank;
-/** 0 = manual yaw/pitch, 1 = center + flex scatter */
+/** 0 = manual X/Y look, 1 = center + flex scatter */
 uniform float uCamMode;
-/** 0 = original fractal palette + dust, 1 = CPU star/fog tints */
+/** 0 = original fractal palette + dust, 1 = CPU star tint + stock dust */
 uniform float uColorMode;
 uniform vec3 uStarColor;
 uniform vec3 uStarHighlight;
-uniform vec3 uFogColor;
-uniform vec3 uFogHighlight;
 uniform float uSaturation;
 uniform float uPeakFlicker;
 
@@ -151,21 +149,25 @@ vec3 family(
     fade *= max(1.0 - dm * w * smoothstep(0.7, 0.8, s), 0.0);
     float fd = pow(distfading, s / stepsize - 1.0);
 
+    // Stock yellow dust always (no separate fog controls)
+    v += w * lessRed(vec3(dm, dm * 0.5, 0.0));
+    float depthLum = dot(vec3(s, s * s, s * s * s * s), LUMA);
+    float core = a * brightness * fade * fd * (1.0 + flicker * 0.55);
+
     if (colorMode < 0.5) {
-      v += w * lessRed(vec3(dm, dm * 0.5, 0.0));
-      vec3 sc = fixedTint(q.z) * dot(vec3(s, s * s, s * s * s * s), LUMA);
-      v += w * sc * a * brightness * fade * fd * (1.0 + flicker * 0.55);
+      v += w * fixedTint(q.z) * depthLum * core;
     } else {
       float tau = clamp(
         log(max(q.z, 1e-3) / COLOR_LO) / log(COLOR_HI / COLOR_LO),
         0.0,
         1.0
       );
-      vec3 fogTint = mix(uFogColor, uFogHighlight, flicker);
-      v += w * fogTint * dm;
-      vec3 starTint = mix(uStarColor, uStarHighlight, clamp(tau * 0.65 + flicker * 0.5, 0.0, 1.0));
-      float lum = dot(vec3(s, s * s, s * s * s * s), LUMA);
-      v += w * starTint * lum * a * brightness * fade * fd * (1.0 + flicker * 0.55);
+      vec3 starTint = mix(
+        uStarColor,
+        uStarHighlight,
+        clamp(tau * 0.65 + flicker * 0.5, 0.0, 1.0)
+      );
+      v += w * starTint * depthLum * core;
     }
   }
   return v;
@@ -179,22 +181,24 @@ vec3 satMix(vec3 c) {
 void main() {
   float t = uFlyT;
   float bank = clamp(uCamBank, 0.0, 2.0);
+
+  // Flight along +Z — look 0/0 = down the barrel; X/Y freelook is independent
+  vec3 flyDir = dirFrom(0.0, 0.0);
+  vec3 ro = pathPos(0.0) + flyDir * (4.0 * FLY_SPEED * t);
+
   float yaw = uYaw;
   float pitch = uPitch;
-
   if (uCamMode > 0.5) {
-    // Center look + warpburst-style scatter (no mouse)
-    yaw = sin(t * 0.10) * 0.35 * bank;
-    pitch = cos(t * 0.15) * 0.22 * bank;
+    // Flex: scatter around flight heading
+    yaw = sin(t * 0.10) * 0.55 * bank;
+    pitch = cos(t * 0.15) * 0.35 * bank;
   }
   pitch = clamp(pitch, -1.45, 1.45);
 
   vec3 fwd = dirFrom(yaw, pitch);
-  vec3 rt = normalize(cross(vec3(0.0, 1.0, 0.0), fwd));
+  vec3 worldUp = abs(fwd.y) > 0.95 ? vec3(0.0, 0.0, 1.0) : vec3(0.0, 1.0, 0.0);
+  vec3 rt = normalize(cross(worldUp, fwd));
   vec3 up = cross(fwd, rt);
-
-  // CAM_MODE 0 — straight flight along look
-  vec3 ro = pathPos(0.0) + fwd * (4.0 * FLY_SPEED * t);
 
   vec3 e0 = vec3(1.0, 0.0, 0.0);
   vec3 e1 = vec3(0.0, 1.0, 0.0);

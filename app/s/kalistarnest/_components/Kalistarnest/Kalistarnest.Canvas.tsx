@@ -54,8 +54,6 @@ function KalistarnestQuad({
 }) {
   const starTint = useMemo(() => new THREE.Color("#ff8a5c"), []);
   const starHighlight = useMemo(() => new THREE.Color("#9ec8ff"), []);
-  const fogTint = useMemo(() => new THREE.Color("#665200"), []);
-  const fogHighlight = useMemo(() => new THREE.Color("#b89620"), []);
   const flyT = useRef(FLY_T_SEED);
   const lastT = useRef(0);
   const colorEnv = useRef(0);
@@ -65,9 +63,7 @@ function KalistarnestQuad({
   const speedEnv = useRef(0);
   const speedPrev = useRef(0);
   const starHue = useRef(0);
-  const fogHue = useRef(180);
   const starPulse = useRef(createTwinklePulseEnv());
-  const fogPulse = useRef(createTwinklePulseEnv());
 
   const mat = useMemo(
     () =>
@@ -80,15 +76,13 @@ function KalistarnestQuad({
           iResolution: { value: new THREE.Vector3(1, 1, 1) },
           iTime: { value: 0 },
           uFlyT: { value: FLY_T_SEED },
-          uYaw: { value: 0.35 },
-          uPitch: { value: 0.15 },
+          uYaw: { value: 0 },
+          uPitch: { value: 0 },
           uCamBank: { value: 0.5 },
           uCamMode: { value: 0 },
           uColorMode: { value: 0 },
           uStarColor: { value: new THREE.Color("#ff8a5c") },
           uStarHighlight: { value: new THREE.Color("#9ec8ff") },
-          uFogColor: { value: new THREE.Color("#665200") },
-          uFogHighlight: { value: new THREE.Color("#b89620") },
           uSaturation: { value: 1 },
           uPeakFlicker: { value: 0 },
         },
@@ -199,49 +193,9 @@ function KalistarnestQuad({
         hexToVec3(live.starColor, starTint);
         hexToVec3(live.starColorPeak, starHighlight);
       }
-
-      if (live.fogTwinkle) {
-        fogHue.current = advanceTwinkleHue(
-          fogHue.current,
-          dt,
-          live.fogTwinkleSpeed,
-        );
-        resolveTwinkleColor(
-          fogHue.current,
-          live.fogTwinkleS,
-          live.fogTwinkleL,
-          fogTint,
-        );
-        if (colorArmed) {
-          const pulseAmt = updateTwinklePulseEnv(
-            fogPulse.current,
-            colorRaw,
-            live.colorDrive,
-            dt,
-          );
-          pulseTwinkleLight(fogTint, pulseAmt, live.colorDrive);
-          fogHighlight.copy(fogTint);
-          pulseTwinkleLight(
-            fogHighlight,
-            Math.min(1, pulseAmt * 1.1),
-            live.colorDrive,
-          );
-          peakFlicker = Math.max(peakFlicker, pulseAmt);
-        } else {
-          fogHighlight.copy(fogTint);
-        }
-      } else if (colorArmed && colorAmt > 0.001) {
-        lerpHex(live.fogColor, live.fogColorPeak, colorAmt, fogTint);
-        hexToVec3(live.fogColorPeak, fogHighlight);
-      } else {
-        hexToVec3(live.fogColor, fogTint);
-        hexToVec3(live.fogColorPeak, fogHighlight);
-      }
     } else {
       hexToVec3(live.starColor, starTint);
       hexToVec3(live.starColorPeak, starHighlight);
-      hexToVec3(live.fogColor, fogTint);
-      hexToVec3(live.fogColorPeak, fogHighlight);
     }
 
     m.uniforms.iTime!.value = t;
@@ -255,8 +209,6 @@ function KalistarnestQuad({
     m.uniforms.uPeakFlicker!.value = peakFlicker;
     m.uniforms.uStarColor!.value.copy(starTint);
     m.uniforms.uStarHighlight!.value.copy(starHighlight);
-    m.uniforms.uFogColor!.value.copy(fogTint);
-    m.uniforms.uFogHighlight!.value.copy(fogHighlight);
   });
 
   return (

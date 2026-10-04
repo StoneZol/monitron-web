@@ -6,13 +6,13 @@ export type KalistarnestProps = {
   showOverlay?: boolean;
 };
 
-/** manual = yaw/pitch sliders; flex = center look + bank scatter */
+/** manual = X/Y sliders; flex = center look + bank scatter */
 export type KalistarnestCameraMode = "manual" | "flex";
 
 /**
  * Color look:
- * - original — aladiN fixedTint stars + yellow dust (1:1 shader)
- * - custom — CPU star/fog palettes or per-layer twinkle
+ * - original — aladiN fixedTint + stock dust
+ * - custom — CPU star palette / twinkle + stock dust
  */
 export type KalistarnestColorMode = "original" | "custom";
 
@@ -20,9 +20,9 @@ export type KalistarnestLive = {
   /** Flight clock (1 ≈ Shadertoy FLY_SPEED path) */
   flightSpeed: number;
   cameraMode: KalistarnestCameraMode;
-  /** Look yaw in degrees (manual mode) */
+  /** Look X in degrees — 0 = along flight (manual) */
   yaw: number;
-  /** Look pitch in degrees (manual mode) */
+  /** Look Y in degrees — 0 = along flight (manual) */
   pitch: number;
   /** Flex scatter amount (0 = locked center, 1 = default, 2 = 2×) */
   cameraBank: number;
@@ -34,13 +34,6 @@ export type KalistarnestLive = {
   starTwinkleSpeed: number;
   starTwinkleS: number;
   starTwinkleL: number;
-  /** Fog / dust — idle / peak */
-  fogColor: string;
-  fogColorPeak: string;
-  fogTwinkle: boolean;
-  fogTwinkleSpeed: number;
-  fogTwinkleS: number;
-  fogTwinkleL: number;
   saturation: number;
   colorChannel: ReactiveChannel;
   colorDrive: number;
@@ -51,12 +44,12 @@ export type KalistarnestLive = {
 export const KALISTARNEST_DRIVE_MAX = 4;
 export const KALISTARNEST_COLOR_DRIVE_MAX = 2;
 
-/** Shader look defaults — yaw/pitch from aladiN; tints approximate warm/cool + dust. */
+/** Look 0/0 = along flight. */
 export const KALISTARNEST_DEFAULTS: KalistarnestLive = {
   flightSpeed: 1,
   cameraMode: "manual",
-  yaw: 20,
-  pitch: 8.6,
+  yaw: 0,
+  pitch: 0,
   cameraBank: 0.5,
   colorMode: "original",
   starColor: "#ff8a5c",
@@ -65,12 +58,6 @@ export const KALISTARNEST_DEFAULTS: KalistarnestLive = {
   starTwinkleSpeed: 1,
   starTwinkleS: 100,
   starTwinkleL: 55,
-  fogColor: "#665200",
-  fogColorPeak: "#b89620",
-  fogTwinkle: false,
-  fogTwinkleSpeed: 1,
-  fogTwinkleS: 90,
-  fogTwinkleL: 40,
   saturation: 1,
   colorChannel: "bass",
   colorDrive: 1.2,

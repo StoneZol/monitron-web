@@ -82,9 +82,8 @@ function colorMode(v: unknown): KalistarnestColorMode {
 }
 
 function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
-  return {
+  const next: Stored = {
     ...STORED_DEFAULTS,
-    ...raw,
     audioSource: migrateAudioSource(raw),
     micGate: normalizeMicGate(raw.micGate),
     peakGain: normalizePeakGain(raw.peakGain),
@@ -128,30 +127,6 @@ function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
       100,
       STORED_DEFAULTS.starTwinkleL ?? TWINKLE_DEFAULT_L,
     ),
-    fogColor: asHex(raw.fogColor, STORED_DEFAULTS.fogColor),
-    fogColorPeak: asHex(raw.fogColorPeak, STORED_DEFAULTS.fogColorPeak),
-    fogTwinkle:
-      raw.fogTwinkle === undefined
-        ? STORED_DEFAULTS.fogTwinkle
-        : Boolean(raw.fogTwinkle),
-    fogTwinkleSpeed: clamp(
-      Number(raw.fogTwinkleSpeed),
-      0,
-      4,
-      STORED_DEFAULTS.fogTwinkleSpeed ?? TWINKLE_DEFAULT_SPEED,
-    ),
-    fogTwinkleS: clamp(
-      Number(raw.fogTwinkleS),
-      0,
-      100,
-      STORED_DEFAULTS.fogTwinkleS ?? TWINKLE_DEFAULT_S,
-    ),
-    fogTwinkleL: clamp(
-      Number(raw.fogTwinkleL),
-      0,
-      100,
-      STORED_DEFAULTS.fogTwinkleL ?? TWINKLE_DEFAULT_L,
-    ),
     saturation: clamp(
       Number(raw.saturation),
       0,
@@ -173,6 +148,7 @@ function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
       STORED_DEFAULTS.speedDrive,
     ),
   };
+  return next;
 }
 
 const listeners = new Set<() => void>();
@@ -245,12 +221,6 @@ export default function useKalistarnestHook() {
       starTwinkleSpeed: live.starTwinkleSpeed,
       starTwinkleS: live.starTwinkleS,
       starTwinkleL: live.starTwinkleL,
-      fogColor: live.fogColor,
-      fogColorPeak: live.fogColorPeak,
-      fogTwinkle: live.fogTwinkle,
-      fogTwinkleSpeed: live.fogTwinkleSpeed,
-      fogTwinkleS: live.fogTwinkleS,
-      fogTwinkleL: live.fogTwinkleL,
       saturation: live.saturation,
       colorChannel: live.colorChannel,
       colorDrive: live.colorDrive,
@@ -273,13 +243,6 @@ export default function useKalistarnestHook() {
         commit({ starTwinkleSpeed }),
       setStarTwinkleS: (starTwinkleS: number) => commit({ starTwinkleS }),
       setStarTwinkleL: (starTwinkleL: number) => commit({ starTwinkleL }),
-      setFogColor: (fogColor: string) => commit({ fogColor }),
-      setFogColorPeak: (fogColorPeak: string) => commit({ fogColorPeak }),
-      setFogTwinkle: (fogTwinkle: boolean) => commit({ fogTwinkle }),
-      setFogTwinkleSpeed: (fogTwinkleSpeed: number) =>
-        commit({ fogTwinkleSpeed }),
-      setFogTwinkleS: (fogTwinkleS: number) => commit({ fogTwinkleS }),
-      setFogTwinkleL: (fogTwinkleL: number) => commit({ fogTwinkleL }),
       setSaturation: (saturation: number) => commit({ saturation }),
       setColorChannel: (colorChannel: ReactiveChannel) =>
         commit({ colorChannel }),

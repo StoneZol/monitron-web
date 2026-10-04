@@ -34,7 +34,7 @@ const CAMERA_MODE_OPTIONS: {
   value: KalistarnestCameraMode;
   label: string;
 }[] = [
-  { value: "manual", label: "manual (yaw / pitch)" },
+  { value: "manual", label: "manual (X / Y)" },
   { value: "flex", label: "flex (center + scatter)" },
 ];
 
@@ -43,24 +43,22 @@ const COLOR_MODE_OPTIONS: {
   label: string;
 }[] = [
   { value: "original", label: "original (aladiN palette)" },
-  { value: "custom", label: "custom (stars + fog)" },
+  { value: "custom", label: "custom (stars)" },
 ];
 
 const INFO = {
   look: "Kali Star Nest free flight (aladiN) — world-fixed planes, no mouse look.",
-  flightSpeed: "Base flight clock (1 ≈ Shadertoy FLY_SPEED along the look).",
+  flightSpeed: "Base flight clock (1 ≈ Shadertoy FLY_SPEED along +Z).",
   cameraMode:
-    "manual = set yaw/pitch. flex = look stays centered with bank scatter (warpburst-style).",
-  yaw: "Look yaw in degrees (manual). Shader default ≈ 20°.",
-  pitch: "Look pitch in degrees (manual). Shader default ≈ 8.6°.",
+    "manual = freelook X/Y (0/0 = along flight). flex = center + bank scatter. Flight path stays fixed.",
+  yaw: "Look X in degrees — 0 = along flight. Turns the view, not the path.",
+  pitch: "Look Y in degrees — 0 = along flight. Turns the view, not the path.",
   cameraBank:
-    "Flex scatter — 0 = locked center, 1 = default sway, 2 = double.",
+    "Flex look scatter around the flight heading — 0 = locked, 1 = default, 2 = double.",
   colorMode:
-    "original = fractal fixedTint stars + yellow dust. custom = separate star/fog palettes or twinkle.",
+    "original = aladiN fixedTint + stock dust. custom = star palette / twinkle; dust stays stock.",
   starPalette: "Stars idle→peak. Hidden while star twinkle is on.",
-  fogPalette: "Fog / dust idle→peak. Hidden while fog twinkle is on.",
   starTwinkle: "HSL hue walk for stars (custom mode).",
-  fogTwinkle: "HSL hue walk for fog / dust (custom mode).",
   twinkleSpeed: "How fast hue runs a full lap (1 ≈ 6s).",
   twinkleS: "Saturation % for the twinkle hsl().",
   twinkleL: "Lightness % for the twinkle hsl().",
@@ -140,7 +138,7 @@ const Kalistarnest = ({ showOverlay = true }: KalistarnestProps) => {
               ) : (
                 <>
                   <Slider
-                    label="Yaw"
+                    label="X"
                     value={controls.yaw}
                     min={KALISTARNEST_RANGES.yaw.min}
                     max={KALISTARNEST_RANGES.yaw.max}
@@ -150,7 +148,7 @@ const Kalistarnest = ({ showOverlay = true }: KalistarnestProps) => {
                     info={INFO.yaw}
                   />
                   <Slider
-                    label="Pitch"
+                    label="Y"
                     value={controls.pitch}
                     min={KALISTARNEST_RANGES.pitch.min}
                     max={KALISTARNEST_RANGES.pitch.max}
@@ -203,45 +201,6 @@ const Kalistarnest = ({ showOverlay = true }: KalistarnestProps) => {
                             {
                               value: controls.starColorPeak,
                               onChange: controls.setStarColorPeak,
-                            },
-                          ],
-                        },
-                      ]}
-                    />
-                  ) : null}
-                  <TwinkleControls
-                    title="fog twinkle"
-                    checked={controls.fogTwinkle}
-                    onCheckedChange={controls.setFogTwinkle}
-                    speed={controls.fogTwinkleSpeed}
-                    onSpeedChange={controls.setFogTwinkleSpeed}
-                    s={controls.fogTwinkleS}
-                    onSChange={controls.setFogTwinkleS}
-                    l={controls.fogTwinkleL}
-                    onLChange={controls.setFogTwinkleL}
-                    info={INFO.fogTwinkle}
-                    speedInfo={INFO.twinkleSpeed}
-                    sInfo={INFO.twinkleS}
-                    lInfo={INFO.twinkleL}
-                  />
-                  {!controls.fogTwinkle ? (
-                    <ColorTable
-                      label="fog palette"
-                      info={INFO.fogPalette}
-                      columns={["idle", "peak"]}
-                      lockedColumns={audioLocked ? ["peak"] : []}
-                      columnStamps={audioStamp}
-                      rows={[
-                        {
-                          label: "fog",
-                          cells: [
-                            {
-                              value: controls.fogColor,
-                              onChange: controls.setFogColor,
-                            },
-                            {
-                              value: controls.fogColorPeak,
-                              onChange: controls.setFogColorPeak,
                             },
                           ],
                         },
