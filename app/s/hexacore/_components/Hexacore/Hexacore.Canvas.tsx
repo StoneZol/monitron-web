@@ -17,7 +17,7 @@ import {
   drivenLevel,
   hexToVec3,
   lerpHex,
-} from "./Hexacore.audio";
+} from "@/lib/visualAudio";
 import type { HexacoreLive } from "./Hexacore.types";
 import {
   hexacoreFragmentShader,

@@ -1,10 +1,8 @@
+import {
+  applyCanvasFilter,
+  clearCanvasFilters,
+} from "./canvasFilter";
 import type { FxModeMod, FxModePaintContext } from "./types";
-
-function clearCanvasFilters(root: HTMLElement) {
-  for (const c of root.querySelectorAll<HTMLCanvasElement>("canvas")) {
-    c.style.filter = "";
-  }
-}
 
 /** Phone-editor style grayscale + contrast on scene canvases. */
 function applyBw({ root, intensity, contrast }: FxModePaintContext) {
@@ -13,18 +11,18 @@ function applyBw({ root, intensity, contrast }: FxModePaintContext) {
   const parts: string[] = [];
   if (g > 0.001) parts.push(`grayscale(${g})`);
   if (Math.abs(c - 1) > 0.001) parts.push(`contrast(${c})`);
-  const filter = parts.join(" ");
-  for (const el of root.querySelectorAll<HTMLCanvasElement>("canvas")) {
-    el.style.filter = filter;
-  }
+  applyCanvasFilter(root, parts.join(" "));
 }
 
 export const bwMod: FxModeMod = {
   id: "bw",
   label: "B&W",
+  knobs: ["intensity", "contrast"],
   defaults: {
     intensity: 1,
     contrast: 1,
+    speed: 1,
+    particles: 1,
     blend: "normal",
   },
   apply: applyBw,

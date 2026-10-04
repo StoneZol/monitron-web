@@ -16,7 +16,7 @@ import {
     resolveTwinkleColor,
     updateTwinklePulseEnv,
 } from "@/lib/twinkleHsl";
-import { channelLevel, hexToVec3, lerpHex, drivenLevel } from "./Synthwave.audio";
+import { channelLevel, hexToVec3, lerpHex, drivenLevel } from "@/lib/visualAudio";
 import {
     CELL,
     CELL_SQUASH,
@@ -140,7 +140,8 @@ export function NeonGrid({
     /** Peak-hold so bass kicks flash like Hexagons band flicker */
     const glowHold = useRef(0);
     const roadHold = useRef(0);
-    /** Smoothed stretch 0…1 so mesh rebuilds aren't every kick sample */
+    const stretchHold = useRef(0);
+    /** Smoothed stretch 0…1 — channel×drive shaped */
     const stretchSmooth = useRef(0);
 
     useEffect(
@@ -160,13 +161,22 @@ export function NeonGrid({
 
         const reactive = Boolean(viz?.enabled);
         const roadRaw = reactive ? channelLevel(viz!, knobs.roadChannel) : 0;
+        const stretchRaw = reactive
+            ? channelLevel(viz!, knobs.stretchChannel)
+            : 0;
         const glowRaw = reactive ? channelLevel(viz!, knobs.glowChannel) : 0;
-        // Road: short sharp kicks. Glow can linger a bit longer for color flash.
+        // Road / stretch: short sharp kicks. Glow can linger a bit longer.
         const roadDecay = Math.exp(-Math.max(0, dt) * 12);
+        const stretchDecay = Math.exp(-Math.max(0, dt) * 10);
         const glowDecay = Math.exp(-Math.max(0, dt) * 7);
         roadHold.current = Math.max(roadRaw, roadHold.current * roadDecay);
+        stretchHold.current = Math.max(
+            stretchRaw,
+            stretchHold.current * stretchDecay,
+        );
         glowHold.current = Math.max(glowRaw, glowHold.current * glowDecay);
         const roadPunch = Math.min(1, roadHold.current);
+        const stretchPunch = Math.min(1, stretchHold.current);
         const flash = Math.min(1, glowHold.current);
         // Emphasize peaks so mid mush disappears — idle floor stays 0.7
         const roadKick = roadPunch * roadPunch;
@@ -190,11 +200,16 @@ export function NeonGrid({
         const rate = 2 * knobs.roadSpeed * speedMul;
         scrollRef.current += Math.max(0, dt) * rate;
 
-        // Soft stretch envelope (linear punch, not squared) + slow ease in/out.
+        // Own channel + drive: 0 drive = no growth; higher = longer kick step.
         // Geometry stays at base depth; group.scale.z does the rubber-band.
-        const stretchTarget =
-            knobs.roadStretch && roadArmed ? roadPunch : 0;
-        const stretchRate = stretchTarget > stretchSmooth.current ? 2.2 : 1.4;
+        const stretchArmed =
+            reactive &&
+            knobs.stretchChannel !== "off" &&
+            knobs.stretchDrive > 0;
+        const stretchTarget = stretchArmed
+            ? Math.min(1, drivenLevel(stretchPunch, knobs.stretchDrive, 1))
+            : 0;
+        const stretchRate = stretchTarget > stretchSmooth.current ? 3.2 : 1.6;
         const stretchEase = Math.exp(-Math.max(0, dt) * stretchRate);
         stretchSmooth.current =
             stretchTarget +
@@ -203,8 +218,6 @@ export function NeonGrid({
         const baseDepth = roadDepth(knobs.roadLength);
         const depth = roadDepthStretched(
             knobs.roadLength,
-            knobs.roadStretch,
-            roadArmed,
             stretchSmooth.current,
         );
         liveRoadDepthRef.current = depth;
@@ -221,7 +234,7 @@ export function NeonGrid({
 
         // Idle dim when glow channel is armed so peaks read as a flash
         const glowArmed = reactive && knobs.glowChannel !== "off";
-        const glowFlash = drivenLevel(flash, knobs.glowDrive);
+        const glowFlash = drivenLevel(flash, knobs.glowDrive, 1);
         const glowUi = Math.min(
             40,
             knobs.roadGlow * (glowArmed ? 0.7 + glowFlash * 0.3 : 1) +

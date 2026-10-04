@@ -1,9 +1,10 @@
+import type { ReactiveChannel } from "@/lib/visualAudio";
+
+export type { ReactiveChannel };
+
 export type WarpburstProps = {
   showOverlay?: boolean;
 };
-
-/** Audio band that drives a motion/look slot. */
-export type ReactiveChannel = "off" | "bass" | "mid" | "high" | "beat";
 
 export type WarpburstLive = {
   /** Tunnel flight (1 ≈ Shadertoy BASE_SPEED feel) */

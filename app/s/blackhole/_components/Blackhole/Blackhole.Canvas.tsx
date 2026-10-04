@@ -16,7 +16,7 @@ import {
   drivenLevel,
   hexToVec3,
   lerpHex,
-} from "./Blackhole.audio";
+} from "@/lib/visualAudio";
 import { SCALE_DRIVE_UNIT, type BlackholeLive } from "./Blackhole.types";
 import {
   blackholeFragmentShader,

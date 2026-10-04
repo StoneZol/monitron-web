@@ -9,6 +9,7 @@ import {
     PEAK_GAIN_DEFAULT,
     useAudioReactive,
 } from "@/hooks/useAudioReactive";
+import { resetFxOverlay } from "@/components/FxOverlay";
 import { toggleFullscreen } from "@/lib/fullscreen";
 import { loadScreenPrefs, saveScreenPrefs } from "@/lib/screenPrefs";
 import {
@@ -411,7 +412,10 @@ export default function useHexagonsPlaceHook() {
             setBandFlicker: (bandFlicker: boolean) => commit({ bandFlicker }),
             bassBoost: live.bassBoost,
             setBassBoost: (bassBoost: number) => commit({ bassBoost }),
-            reset: () => writePrefs({ ...HEXAGONS_DEFAULTS }),
+            reset: () => {
+                writePrefs({ ...HEXAGONS_DEFAULTS });
+                resetFxOverlay(SCREEN_ID);
+            },
             fullscreen: () => void toggleFullscreen(),
         },
     };

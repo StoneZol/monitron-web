@@ -3,7 +3,7 @@
 import { useSyncExternalStore } from "react";
 import { PanelButton } from "@/components/ControlPanel/PanelButton";
 
-const STORAGE_KEY = "monitron:photosensitive-alert:v1";
+const STORAGE_KEY = "monitron:photosensitive-alert:v2";
 
 const listeners = new Set<() => void>();
 const subscribeNoop = () => () => {};
@@ -46,8 +46,8 @@ function forceQuit() {
 }
 
 /**
- * First-visit photosensitive / epilepsy gate — blocks the whole app until
- * the visitor accepts or leaves. Mounted from the root layout.
+ * First-visit hazard gate (photosensitive + heavy GPU load) — blocks the whole
+ * app until the visitor accepts or leaves. Mounted from the root layout.
  *
  * Never paint until the client has read localStorage (avoids reload / HMR flash).
  */
@@ -81,14 +81,14 @@ export function PhotosensitiveAlert() {
         />
 
         <p className="font-mono text-[10px] tracking-[0.28em] text-warn/70 uppercase">
-          !SYSTEM FAILURE // PHOTOSENSITIVE_ALERT!
+          !SYSTEM FAILURE // HAZARD_ALERT!
         </p>
 
         <h1
           id="photosensitive-alert-title"
           className="mt-4 font-mono text-xl font-semibold tracking-[0.12em] text-warn uppercase sm:text-2xl"
         >
-          Epilepsy warning
+          Health & hardware warning
         </h1>
         <div className="mt-2 font-mono text-[10px] tracking-[0.4em] text-warn/50">
           ---------------
@@ -109,6 +109,13 @@ export function PhotosensitiveAlert() {
           <p>
             Patterns on this site may also trigger anxiety, sensory overload,
             or visual after-images. Proceed only if you know your limits.
+          </p>
+          <p>
+            Some screen configs can push GPU / CPU extremely hard. If you ignore
+            that, leave heavy presets running, and your machine overheats,
+            throttles, or dies because the hardware is weak — that is on you.
+            The site creator is not responsible for fried PCs, lost work, or
+            hardware damage from load you chose to run.
           </p>
           <p className="text-warn">You have been warned.</p>
         </div>

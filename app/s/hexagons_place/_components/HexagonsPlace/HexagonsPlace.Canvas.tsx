@@ -10,12 +10,10 @@ import {
     createTwinklePulseEnv,
     updateTwinklePulseEnv,
 } from "@/lib/twinkleHsl";
+import { beatRaw, channelLevel } from "@/lib/visualAudio";
 import { injectGroundFogShader, FOG_NEUTRAL } from "./HexagonsPlace.fog";
 import { applyGlow } from "./HexagonsPlace.glow";
-import type {
-    HexagonsPlaceLive,
-    ReactiveChannel,
-} from "./HexagonsPlace.types";
+import type { HexagonsPlaceLive } from "./HexagonsPlace.types";
 
 const ROTATION_SPEED = 0.00005;
 const SPIN_IMPULSE_DECAY = 3.2;
@@ -64,31 +62,6 @@ function spectrumTrio(viz: VizBands): Record<CapBand, number> {
         mid: sliceBands(bands, 200, 2000),
         high: sliceBands(bands, 2000, 10000),
     };
-}
-
-/** Base scale — quieter after Peak gain so ×1…×3 stay in the linear-ish tanh zone */
-const BEAT_GAIN = 5;
-/**
- * Unclipped beat for onset detection — hard 0..1 clip made Peak gain=×3
- * look slower (flat line → no rising edges → no spin punches).
- */
-function beatRaw(viz: VizBands) {
-    const crest = Math.max(0, viz.peak - viz.rms * 1.2);
-    return Math.max(viz.peak, crest * 1.35) * BEAT_GAIN;
-}
-
-/** Soft clip — Peak gain lifts beat without hard-ceiling (was killing rising edges at ×3) */
-function softPeak01(x: number) {
-    return Math.tanh(Math.max(0, x));
-}
-
-/** Fog / grid / spin channel level from spectrum + peak (beat ≈ crest). */
-function channelLevel(viz: VizBands, ch: ReactiveChannel): number {
-    if (ch === "off") return 0;
-    if (ch === "beat") {
-        return softPeak01(beatRaw(viz));
-    }
-    return spectrumTrio(viz)[ch];
 }
 
 const BEAT_EDGE = 0.06;

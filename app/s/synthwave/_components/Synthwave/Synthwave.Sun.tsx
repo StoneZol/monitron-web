@@ -17,7 +17,7 @@ import {
     resolveTwinkleColor,
     updateTwinklePulseEnv,
 } from "@/lib/twinkleHsl";
-import { channelLevel, lerpHex, drivenLevel } from "./Synthwave.audio";
+import { channelLevel, lerpHex, drivenLevel } from "@/lib/visualAudio";
 import { DEPTH_MIN, liveRoadDepthRef, roadDepth, Z_PAD } from "./Synthwave.constants";
 import type { SynthwaveLive } from "./Synthwave.types";
 
@@ -98,7 +98,7 @@ export function NeonSun({
         const sunRaw = reactive ? channelLevel(viz!, knobs.sunChannel) : 0;
         const decay = Math.exp(-Math.max(0, dt) * 5.5);
         sunHold.current = Math.max(sunRaw, sunHold.current * decay);
-        const punch = drivenLevel(sunHold.current, knobs.sunDrive);
+        const punch = drivenLevel(sunHold.current, knobs.sunDrive, 1);
 
         const sunArmed = reactive && knobs.sunChannel !== "off";
         const idle = sunArmed && !knobs.sunTwinkle ? 0.58 : 1;
