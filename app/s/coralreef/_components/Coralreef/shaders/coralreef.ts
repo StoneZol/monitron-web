@@ -173,12 +173,15 @@ void main() {
     }
     vec2 uva = uv + offs / R.y;
     vec3 rd = uva.x * rt + uva.y * up + fwd;
-    o += traceReef(rd, uFlyT, mode, phase, punch, tint, s);
+    vec4 sampleCol = traceReef(rd, uFlyT, mode, phase, punch, tint, s);
+    // Stock used screen-center bloom (length(uv)) — that sticks the “sun” to the camera.
+    // Use angle off the tunnel axis (+Z) so the light lives down the tunnel instead.
+    float offAxis = length(normalize(rd).xy);
+    sampleCol = tanh(sampleCol / (2e4 * max(offAxis, 1e-3)));
+    o += sampleCol;
   }
   o /= aaN;
 
-  float vignette = length(uv);
-  o = tanh(o / (2e4 * max(vignette, 1e-3)));
   o.rgb = satMix(o.rgb);
   gl_FragColor = vec4(o.rgb, 1.0);
 }
