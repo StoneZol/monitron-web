@@ -26,6 +26,8 @@ const SCREEN_BLURBS: Record<string, string> = {
     "Hexagonal hive tunnel for idle monitors — garland, tint, and flight.",
   warpburst:
     "Goo tunnel fog for idle monitors — speed, color, and peak flicker.",
+  fairysmoke:
+    "Volumetric fairy smoke shell for idle monitors — reactive tint and speed.",
 };
 
 function absoluteOg(path: string): string {

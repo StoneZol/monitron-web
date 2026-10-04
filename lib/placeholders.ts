@@ -82,4 +82,18 @@ export const placeholders: PlaceholderMeta[] = [
             },
         ],
     },
+    {
+        id: "fairysmoke",
+        title: "Fairy Smoke",
+        href: "/s/fairysmoke",
+        previewSrc: "/s/fairysmoke.webp",
+        reactive: true,
+        sources: [
+            {
+                author: "Himred",
+                title: "Fairy smoke",
+                href: "https://www.shadertoy.com/view/fXG3Ww",
+            },
+        ],
+    },
 ];
