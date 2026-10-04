@@ -79,3 +79,22 @@ export function useRenderScale() {
     step: RENDER_SCALE_STEP,
   };
 }
+
+/** R3F Canvas: `dpr={useRenderDpr(1, 1.25)}` */
+export function useRenderDpr(min = 1, max = 1.25): [number, number] {
+  const { scale } = useRenderScale();
+  return scaledDpr(min, max, scale);
+}
+
+/**
+ * 2D canvas buffer multiplier (devicePixelRatio × scale, capped).
+ * Pass explicit `scale` from the store when outside a React render.
+ */
+export function scaledPixelRatio(cap = 2, scale = read().scale): number {
+  const viewDpr =
+    typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
+  return Math.max(
+    RENDER_SCALE_MIN,
+    Math.min(cap, viewDpr) * clampScale(scale),
+  );
+}

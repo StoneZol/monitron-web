@@ -25,6 +25,8 @@ import {
 } from "@/lib/screenShare";
 import { FieldInfo } from "./FieldInfo";
 import { PanelButton } from "./PanelButton";
+import { Slider } from "./Slider";
+import { useRenderScale } from "@/lib/renderScale";
 
 type ControlPanelProps = {
     title: string;
@@ -221,9 +223,29 @@ export function ControlPanel({
                     ) : null}
                 </div>
             ) : null}
+            {overlay ? <RenderScaleChrome /> : null}
             <div className="control-panel-scroll min-h-0 flex-1 flex flex-col gap-1.5 overflow-x-hidden overflow-y-auto overscroll-contain p-2">
                 {children}
             </div>
+        </div>
+    );
+}
+
+/** Fixed above the scroll body — first place to cut GPU on every screen. */
+function RenderScaleChrome() {
+    const renderScale = useRenderScale();
+    return (
+        <div className="shrink-0 border-b border-line px-2 py-1.5">
+            <Slider
+                label="Render scale"
+                value={renderScale.scale}
+                min={renderScale.min}
+                max={renderScale.max}
+                step={renderScale.step}
+                onChange={renderScale.setScale}
+                format={(v) => `${Math.round(v * 100)}%`}
+                info="Internal buffer resolution. Default 50% ≈ half the pixels / GPU load. 100% = full native look. Lives here so you find it before anything else."
+            />
         </div>
     );
 }

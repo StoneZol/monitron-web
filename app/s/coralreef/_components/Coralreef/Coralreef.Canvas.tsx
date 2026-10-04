@@ -18,7 +18,7 @@ import {
   hexToVec3,
   lerpHex,
 } from "@/lib/visualAudio";
-import { scaledDpr, useRenderScale } from "@/lib/renderScale";
+import { useRenderDpr } from "@/lib/renderScale";
 import type { CoralreefLive } from "./Coralreef.types";
 import {
   coralreefFragmentShader,
@@ -313,11 +313,11 @@ export default function CoralreefCanvas({
   liveRef,
   vizRef,
 }: CoralreefCanvasProps) {
-  const { scale } = useRenderScale();
+  const dpr = useRenderDpr(1, 1.25);
   return (
     <Canvas
       className="absolute inset-0 h-full w-full"
-      dpr={scaledDpr(1, 1.25, scale)}
+      dpr={dpr}
       orthographic
       camera={{ position: [0, 0, 1], near: 0.1, far: 10 }}
       gl={{

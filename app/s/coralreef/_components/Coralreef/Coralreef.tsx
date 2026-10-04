@@ -14,7 +14,6 @@ import {
 } from "@/components/ControlPanel";
 import CoralreefCanvas from "./Coralreef.Canvas";
 import useCoralreefHook from "./Coralreef.hooks";
-import { useRenderScale } from "@/lib/renderScale";
 import {
   CORALREEF_RANGES,
   type CoralreefCameraMode,
@@ -91,9 +90,6 @@ const INFO = {
   lightTwinkleL: "Lightness % for sun twinkle hsl().",
   shadowSmooth:
     "Shadow / edge smooth. 0 = stock Yusef28, ×1 = default soft, ×2 = softer + finer march + 4× AA (heavier GPU).",
-  display: "GPU / buffer cost — turn this down first if the machine is cooking.",
-  renderScale:
-    "Internal buffer resolution. Default 50% ≈ half the pixels / GPU load. 100% = full native look.",
   saturation: "Look chroma (0 = gray, 1 = default).",
   colorChannel: "Band that punches light / color.",
   speedChannel: "Band that punches flight speed (rising-edge hits).",
@@ -111,7 +107,6 @@ const INFO = {
 
 const Coralreef = ({ showOverlay = true }: CoralreefProps) => {
   const { liveRef, vizRef, visualizer, controls } = useCoralreefHook();
-  const renderScale = useRenderScale();
   const audioLocked = !visualizer.reactive;
   const audioStamp = audioLocked ? ({ peak: "audio" } as const) : undefined;
   const mode = controls.colorMode;
@@ -140,19 +135,6 @@ const Coralreef = ({ showOverlay = true }: CoralreefProps) => {
               </div>
             }
           >
-            <ControlSection label="display" info={INFO.display}>
-              <Slider
-                label="Render scale"
-                value={renderScale.scale}
-                min={renderScale.min}
-                max={renderScale.max}
-                step={renderScale.step}
-                onChange={renderScale.setScale}
-                format={(v) => `${Math.round(v * 100)}%`}
-                info={INFO.renderScale}
-              />
-            </ControlSection>
-
             <ControlSection label="look" info={INFO.look}>
               <Slider
                 label="Flight speed"

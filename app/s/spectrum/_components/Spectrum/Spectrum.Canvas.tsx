@@ -8,6 +8,7 @@ import {
   hueDegFromHex,
   resolveTwinkleColor,
 } from "@/lib/twinkleHsl";
+import { scaledPixelRatio } from "@/lib/renderScale";
 import { VISUAL_PIP_CHANGE } from "@/lib/visualPip";
 import type { SpectrumLive } from "./Spectrum.types";
 
@@ -93,8 +94,7 @@ export default function SpectrumCanvas({
 
     const resize = () => {
       const { width, height } = measureHost();
-      const view = viewOf();
-      const dpr = Math.min(2, view.devicePixelRatio || 1);
+      const dpr = scaledPixelRatio(2);
       const nextW = Math.floor(width * dpr);
       const nextH = Math.floor(height * dpr);
       if (
