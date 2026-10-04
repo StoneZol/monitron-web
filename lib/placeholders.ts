@@ -110,4 +110,18 @@ export const placeholders: PlaceholderMeta[] = [
             },
         ],
     },
+    {
+        id: "coralreef",
+        title: "Coral Reef",
+        href: "/s/coralreef",
+        previewSrc: "/s/coralreef.webp",
+        reactive: true,
+        sources: [
+            {
+                author: "Yusef28",
+                title: "Coral Reef Y28",
+                href: "https://www.shadertoy.com/view/7X3GRS",
+            },
+        ],
+    },
 ];

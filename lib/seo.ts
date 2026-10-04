@@ -30,6 +30,8 @@ const SCREEN_BLURBS: Record<string, string> = {
     "Volumetric fairy smoke shell for idle monitors — reactive tint and speed.",
   kalistarnest:
     "Kali Star Nest free flight for idle monitors — reactive stars, fog, and speed.",
+  coralreef:
+    "Volumetric coral reef tunnel for idle monitors — reactive tint and speed.",
 };
 
 function absoluteOg(path: string): string {
