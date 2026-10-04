@@ -40,6 +40,7 @@ const MODE_CODE = {
   paletteTwinkle: 1,
   twinkle: 2,
   palette: 3,
+  duo: 4,
 } as const;
 
 const DEG = Math.PI / 180;
@@ -223,6 +224,10 @@ function CoralreefQuad({
         hexToVec3(live.color, tint);
         hexToVec3(live.colorPeak, highlight);
       }
+    } else if (mode === "duo") {
+      // A/B ends stay fixed; audio only punches density via peakFlicker
+      hexToVec3(live.color, tint);
+      hexToVec3(live.colorPeak, highlight);
     } else {
       hexToVec3(live.color, tint);
       hexToVec3(live.colorPeak, highlight);

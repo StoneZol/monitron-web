@@ -12,12 +12,14 @@ export type CoralreefProps = {
  * - paletteTwinkle — same palette, phase walks over time
  * - twinkle — solid HSL fill + light pulse
  * - palette — solid idle→peak
+ * - duo — stock cos wave, linear A→B (classic green↔coral)
  */
 export type CoralreefColorMode =
   | "original"
   | "paletteTwinkle"
   | "twinkle"
-  | "palette";
+  | "palette"
+  | "duo";
 
 /**
  * Tunnel-end sun:
@@ -40,7 +42,7 @@ export type CoralreefLive = {
   /** Flex scatter (0 = locked center, 1 = default, 2 = 2×) */
   cameraBank: number;
   colorMode: CoralreefColorMode;
-  /** Idle / peak (palette mode) */
+  /** Idle / peak (palette) or A / B ends (duo) */
   color: string;
   colorPeak: string;
   /** HSL walk (twinkle + paletteTwinkle speed) */
@@ -81,8 +83,10 @@ export const CORALREEF_DEFAULTS: CoralreefLive = {
   pitch: 0,
   cameraBank: 0.5,
   colorMode: "original",
-  color: "#ff8e4a",
-  colorPeak: "#ffd100",
+  /** Duo A (also palette idle) */
+  color: "#4a4eff",
+  /** Duo B (also palette peak) */
+  colorPeak: "#e5004f",
   twinkleSpeed: 1,
   twinkleS: 100,
   twinkleL: 55,

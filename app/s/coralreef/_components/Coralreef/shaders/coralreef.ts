@@ -7,6 +7,7 @@
  *  1 paletteTwinkle — same palette, phase walks (twinkle on default palette)
  *  2 twinkle        — solid HSL fill; density from palette luminance
  *  3 palette        — solid idle→peak; density from palette luminance
+ *  4 duo            — stock cos wave, lerp uColor→uHighlight (reef green↔coral)
  *
  * Tunnel sun (uLightMode):
  *  0 original — stock bloom from the reef accumulation (1:1)
@@ -45,7 +46,7 @@ uniform float uSaturation;
 uniform float uPeakFlicker;
 /** Radians — shifts the stock cos palette (paletteTwinkle) */
 uniform float uPalettePhase;
-/** 0 original, 1 paletteTwinkle, 2 twinkle, 3 palette */
+/** 0 original, 1 paletteTwinkle, 2 twinkle, 3 palette, 4 duo */
 uniform float uColorMode;
 /** 0 = stock tunnel sun, 1 = custom light tint on bright core */
 uniform float uLightMode;
@@ -118,6 +119,14 @@ vec4 traceReef(
 
     if (mode < 1.5) {
       o += pal * punch;
+    } else if (mode > 3.5) {
+      // Duo: same spatial cos as stock R-channel, lerp A→B (green↔coral)
+      float wave =
+        0.5 + 0.5 * cos(d * 40.0 + P.z * 2.0 + 1.0 + phase);
+      float w = 1.0 / (glowBase + ad * glowK);
+      vec3 duo = mix(uColor, uHighlight, wave);
+      o.rgb += duo * w * punch;
+      o.a += w * punch;
     } else {
       float dens = dot(pal.rgb, LUMA);
       o.rgb += tint * dens;
