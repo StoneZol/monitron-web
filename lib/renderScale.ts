@@ -1,21 +1,20 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { loadLocal, saveLocal } from "@/lib/localStore";
+import {
+  readScreenPrefsRaw,
+  saveScreenPrefs,
+} from "@/lib/screenPrefs";
 
-/** Global — shared across screens when we roll this out past Coral. */
-export const RENDER_SCALE_KEY = "monitron:renderScale";
+/** Per-screen chrome key inside `monitron:<screenId>:controls`. */
+export const RENDER_SCALE_PREF_KEY = "_renderScale" as const;
 
 export const RENDER_SCALE_DEFAULT = 0.5;
 export const RENDER_SCALE_MIN = 0.3;
 export const RENDER_SCALE_MAX = 1;
 export const RENDER_SCALE_STEP = 0.05;
 
-type Stored = { scale: number };
-
-const DEFAULTS: Stored = { scale: RENDER_SCALE_DEFAULT };
-
-let cached: Stored | null = null;
+const cache = new Map<string, number>();
 const listeners = new Set<() => void>();
 
 function emit() {
@@ -32,16 +31,26 @@ function clampScale(n: number): number {
   );
 }
 
-function read(): Stored {
-  if (cached) return cached;
-  const raw = loadLocal(RENDER_SCALE_KEY, DEFAULTS);
-  cached = { scale: clampScale(Number(raw.scale)) };
-  return cached;
+export function getRenderScale(screenId: string): number {
+  const hit = cache.get(screenId);
+  if (hit != null) return hit;
+
+  const raw = readScreenPrefsRaw(screenId)[RENDER_SCALE_PREF_KEY];
+  const v =
+    raw != null && Number.isFinite(Number(raw))
+      ? clampScale(Number(raw))
+      : RENDER_SCALE_DEFAULT;
+  cache.set(screenId, v);
+  return v;
 }
 
-function write(scale: number) {
-  cached = { scale: clampScale(scale) };
-  saveLocal(RENDER_SCALE_KEY, cached);
+export function setRenderScale(screenId: string, scale: number) {
+  const v = clampScale(scale);
+  cache.set(screenId, v);
+  saveScreenPrefs(screenId, {
+    ...readScreenPrefsRaw(screenId),
+    [RENDER_SCALE_PREF_KEY]: v,
+  });
   emit();
   if (typeof window !== "undefined") {
     window.dispatchEvent(new Event("resize"));
@@ -69,32 +78,43 @@ export function scaledDpr(
   ];
 }
 
-export function useRenderScale() {
-  const stored = useSyncExternalStore(subscribe, read, () => DEFAULTS);
+export function useRenderScale(screenId: string | null | undefined) {
+  const id = screenId ?? "";
+  const scale = useSyncExternalStore(
+    subscribe,
+    () => (id ? getRenderScale(id) : RENDER_SCALE_DEFAULT),
+    () => RENDER_SCALE_DEFAULT,
+  );
   return {
-    scale: stored.scale,
-    setScale: write,
+    scale,
+    setScale: (next: number) => {
+      if (!id) return;
+      setRenderScale(id, next);
+    },
     min: RENDER_SCALE_MIN,
     max: RENDER_SCALE_MAX,
     step: RENDER_SCALE_STEP,
   };
 }
 
-/** R3F Canvas: `dpr={useRenderDpr(1, 1.25)}` */
-export function useRenderDpr(min = 1, max = 1.25): [number, number] {
-  const { scale } = useRenderScale();
+/** R3F Canvas: `dpr={useRenderDpr("coralreef", 1, 1.25)}` */
+export function useRenderDpr(
+  screenId: string,
+  min = 1,
+  max = 1.25,
+): [number, number] {
+  const { scale } = useRenderScale(screenId);
   return scaledDpr(min, max, scale);
 }
 
 /**
- * 2D canvas buffer multiplier (devicePixelRatio × scale, capped).
- * Pass explicit `scale` from the store when outside a React render.
+ * 2D canvas buffer multiplier (devicePixelRatio × this screen's scale, capped).
  */
-export function scaledPixelRatio(cap = 2, scale = read().scale): number {
+export function scaledPixelRatio(cap: number, screenId: string): number {
   const viewDpr =
     typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
   return Math.max(
     RENDER_SCALE_MIN,
-    Math.min(cap, viewDpr) * clampScale(scale),
+    Math.min(cap, viewDpr) * getRenderScale(screenId),
   );
 }

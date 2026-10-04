@@ -43,7 +43,7 @@ export default function SynthwaveCanvas({
     liveRef,
     vizRef,
 }: SynthwaveCanvasProps) {
-    const dpr = useRenderDpr(1, 2);
+    const dpr = useRenderDpr("synthwave", 1, 2);
     return (
         <Canvas
             className="absolute inset-0 h-full w-full"

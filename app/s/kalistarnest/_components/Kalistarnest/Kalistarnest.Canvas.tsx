@@ -226,7 +226,7 @@ export default function KalistarnestCanvas({
   liveRef,
   vizRef,
 }: KalistarnestCanvasProps) {
-  const dpr = useRenderDpr(1, 1.25);
+  const dpr = useRenderDpr("kalistarnest", 1, 1.25);
   return (
     <Canvas
       className="absolute inset-0 h-full w-full"

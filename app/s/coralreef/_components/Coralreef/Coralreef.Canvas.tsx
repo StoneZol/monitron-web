@@ -313,7 +313,7 @@ export default function CoralreefCanvas({
   liveRef,
   vizRef,
 }: CoralreefCanvasProps) {
-  const dpr = useRenderDpr(1, 1.25);
+  const dpr = useRenderDpr("coralreef", 1, 1.25);
   return (
     <Canvas
       className="absolute inset-0 h-full w-full"

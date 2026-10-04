@@ -823,7 +823,7 @@ export type HexagonsCanvasProps = {
 };
 
 export default function HexagonsCanvas({ live, vizRef }: HexagonsCanvasProps) {
-    const dpr = useRenderDpr(1, 2);
+    const dpr = useRenderDpr("hexagons_place", 1, 2);
     return (
         <Canvas
             className="absolute inset-0 h-full w-full"

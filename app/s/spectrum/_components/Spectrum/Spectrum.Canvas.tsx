@@ -94,7 +94,7 @@ export default function SpectrumCanvas({
 
     const resize = () => {
       const { width, height } = measureHost();
-      const dpr = scaledPixelRatio(2);
+      const dpr = scaledPixelRatio(2, "spectrum");
       const nextW = Math.floor(width * dpr);
       const nextH = Math.floor(height * dpr);
       if (

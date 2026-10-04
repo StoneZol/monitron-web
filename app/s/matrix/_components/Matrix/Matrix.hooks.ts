@@ -426,7 +426,7 @@ const useMatrixHook = () => {
 
     const resize = () => {
       const next = measureHost();
-      const dpr = scaledPixelRatio(2);
+      const dpr = scaledPixelRatio(2, "matrix");
       const nextW = Math.floor(next.width * dpr);
       const nextH = Math.floor(next.height * dpr);
       if (

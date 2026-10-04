@@ -233,7 +233,8 @@ export function ControlPanel({
 
 /** Fixed above the scroll body — first place to cut GPU on every screen. */
 function RenderScaleChrome() {
-    const renderScale = useRenderScale();
+    const overlay = useScreensOverlay();
+    const renderScale = useRenderScale(overlay?.screenId);
     return (
         <div className="shrink-0 border-b border-line px-2 py-1.5">
             <Slider
@@ -244,7 +245,7 @@ function RenderScaleChrome() {
                 step={renderScale.step}
                 onChange={renderScale.setScale}
                 format={(v) => `${Math.round(v * 100)}%`}
-                info="Internal buffer resolution. Default 50% ≈ half the pixels / GPU load. 100% = full native look. Lives here so you find it before anything else."
+                info="Internal buffer resolution for this screen. Default 50% ≈ half the pixels / GPU load. 100% = full native look. Slider is shared chrome; the value is saved per screen."
             />
         </div>
     );

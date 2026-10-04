@@ -156,7 +156,7 @@ export default function HexacoreCanvas({
   liveRef,
   vizRef,
 }: HexacoreCanvasProps) {
-  const dpr = useRenderDpr(1, 1.25);
+  const dpr = useRenderDpr("hexacore", 1, 1.25);
   return (
     <Canvas
       className="absolute inset-0 h-full w-full"

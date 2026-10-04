@@ -207,7 +207,7 @@ export default function BlackholeCanvas({
   liveRef,
   vizRef,
 }: BlackholeCanvasProps) {
-  const dpr = useRenderDpr(1, 1.5);
+  const dpr = useRenderDpr("blackhole", 1, 1.5);
   return (
     <Canvas
       className="absolute inset-0 h-full w-full"

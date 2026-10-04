@@ -203,7 +203,7 @@ export default function WarpburstCanvas({
   liveRef,
   vizRef,
 }: WarpburstCanvasProps) {
-  const dpr = useRenderDpr(1, 1.25);
+  const dpr = useRenderDpr("warpburst", 1, 1.25);
   return (
     <Canvas
       className="absolute inset-0 h-full w-full"
