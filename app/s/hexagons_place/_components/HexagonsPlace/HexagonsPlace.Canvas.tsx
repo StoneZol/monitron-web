@@ -11,6 +11,7 @@ import {
     updateTwinklePulseEnv,
 } from "@/lib/twinkleHsl";
 import { beatRaw, channelLevel } from "@/lib/visualAudio";
+import { useRenderDpr } from "@/lib/renderScale";
 import { injectGroundFogShader, FOG_NEUTRAL } from "./HexagonsPlace.fog";
 import { applyGlow } from "./HexagonsPlace.glow";
 import type { HexagonsPlaceLive } from "./HexagonsPlace.types";
@@ -822,6 +823,7 @@ export type HexagonsCanvasProps = {
 };
 
 export default function HexagonsCanvas({ live, vizRef }: HexagonsCanvasProps) {
+    const dpr = useRenderDpr("hexagons_place", 1, 2);
     return (
         <Canvas
             className="absolute inset-0 h-full w-full"
@@ -831,7 +833,7 @@ export default function HexagonsCanvas({ live, vizRef }: HexagonsCanvasProps) {
                 near: 0.1,
                 far: 2000,
             }}
-            dpr={[1, 2]}
+            dpr={dpr}
             gl={{ antialias: true }}
             onCreated={({ gl, camera, scene }) => {
                 injectGroundFogShader();

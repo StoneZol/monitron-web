@@ -18,6 +18,7 @@ import {
   hexToVec3,
   lerpHex,
 } from "@/lib/visualAudio";
+import { useRenderDpr } from "@/lib/renderScale";
 import type { KalistarnestLive } from "./Kalistarnest.types";
 import {
   kalistarnestFragmentShader,
@@ -225,10 +226,11 @@ export default function KalistarnestCanvas({
   liveRef,
   vizRef,
 }: KalistarnestCanvasProps) {
+  const dpr = useRenderDpr("kalistarnest", 1, 1.25);
   return (
     <Canvas
       className="absolute inset-0 h-full w-full"
-      dpr={[1, 1.25]}
+      dpr={dpr}
       orthographic
       camera={{ position: [0, 0, 1], near: 0.1, far: 10 }}
       gl={{

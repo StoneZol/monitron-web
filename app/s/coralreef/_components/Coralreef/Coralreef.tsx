@@ -48,6 +48,7 @@ const COLOR_MODE_OPTIONS: {
   { value: "twinkle", label: "twinkle (solid HSL)" },
   { value: "palette", label: "palette (idle / peak)" },
   { value: "duo", label: "duo (linear A → B)" },
+  { value: "duoTwinkle", label: "duo twinkle (A → B walk)" },
 ];
 
 const LIGHT_MODE_OPTIONS: {
@@ -68,13 +69,15 @@ const INFO = {
   cameraBank:
     "Flex look cone radius. Wander stays inside a circle; bank scales how wide that circle gets.",
   colorMode:
-    "original = stock cos palette. palette twinkle = phase-walk. twinkle = solid HSL. palette = idle→peak. duo = stock wave, linear A→B.",
+    "original = stock cos. palette twinkle = phase-walk. twinkle = solid HSL. palette = idle→peak. duo = A→B wave. duo twinkle = same wave, phase walks.",
   colorPalette:
-    "Idle / peak in palette mode, or A / B ends in duo.",
+    "Idle / peak in palette mode, or A / B ends in duo / duo twinkle.",
   twinkle: "Solid HSL hue walk for the whole reef fill.",
   paletteTwinkle:
     "Walks the stock Yusef28 cos palette phase — keeps the reef look, shifts hues.",
-  twinkleSpeed: "How fast hue / palette phase runs a full lap (1 ≈ 6s).",
+  duoTwinkle:
+    "Same A→B cos wave as duo, but the mix phase walks over time (twin of duo).",
+  twinkleSpeed: "How fast hue / palette / duo phase runs a full lap (1 ≈ 6s).",
   twinkleS: "Saturation % for solid twinkle hsl().",
   twinkleL: "Lightness % for solid twinkle hsl().",
   lightMode:
@@ -192,16 +195,22 @@ const Coralreef = ({ showOverlay = true }: CoralreefProps) => {
                 onChange={controls.setColorMode}
                 info={INFO.colorMode}
               />
-              {mode === "paletteTwinkle" ? (
+              {mode === "paletteTwinkle" || mode === "duoTwinkle" ? (
                 <Slider
-                  label="Palette speed"
+                  label={
+                    mode === "duoTwinkle" ? "Duo phase speed" : "Palette speed"
+                  }
                   value={controls.twinkleSpeed}
                   min={0}
                   max={4}
                   step={0.05}
                   onChange={controls.setTwinkleSpeed}
                   format={(v) => `×${v.toFixed(2)}`}
-                  info={INFO.paletteTwinkle}
+                  info={
+                    mode === "duoTwinkle"
+                      ? INFO.duoTwinkle
+                      : INFO.paletteTwinkle
+                  }
                 />
               ) : null}
               {mode === "twinkle" ? (
@@ -223,18 +232,24 @@ const Coralreef = ({ showOverlay = true }: CoralreefProps) => {
                   lInfo={INFO.twinkleL}
                 />
               ) : null}
-              {mode === "palette" || mode === "duo" ? (
+              {mode === "palette" ||
+              mode === "duo" ||
+              mode === "duoTwinkle" ? (
                 <ColorTable
-                  label={mode === "duo" ? "duo ends" : "reef palette"}
+                  label={
+                    mode === "palette" ? "reef palette" : "duo ends"
+                  }
                   info={INFO.colorPalette}
-                  columns={mode === "duo" ? ["A", "B"] : ["idle", "peak"]}
+                  columns={
+                    mode === "palette" ? ["idle", "peak"] : ["A", "B"]
+                  }
                   lockedColumns={
                     mode === "palette" && audioLocked ? ["peak"] : []
                   }
                   columnStamps={mode === "palette" ? audioStamp : undefined}
                   rows={[
                     {
-                      label: mode === "duo" ? "mix" : "tint",
+                      label: mode === "palette" ? "tint" : "mix",
                       cells: [
                         {
                           value: controls.color,

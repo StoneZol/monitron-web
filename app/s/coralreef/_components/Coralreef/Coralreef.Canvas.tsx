@@ -18,6 +18,7 @@ import {
   hexToVec3,
   lerpHex,
 } from "@/lib/visualAudio";
+import { useRenderDpr } from "@/lib/renderScale";
 import type { CoralreefLive } from "./Coralreef.types";
 import {
   coralreefFragmentShader,
@@ -41,6 +42,7 @@ const MODE_CODE = {
   twinkle: 2,
   palette: 3,
   duo: 4,
+  duoTwinkle: 5,
 } as const;
 
 const DEG = Math.PI / 180;
@@ -172,11 +174,15 @@ function CoralreefQuad({
     let peakFlicker = flickerEnv.current;
     let phase = 0;
 
-    if (mode === "paletteTwinkle") {
-      // Walk the stock cos palette phase (full lap ≈ same as HSL twinkle speed)
+    if (mode === "paletteTwinkle" || mode === "duoTwinkle") {
+      // Walk cos phase (full lap ≈ same as HSL twinkle speed)
       palettePhase.current +=
         dt * (Math.PI * 2) * (60 / 360) * Math.max(0, live.twinkleSpeed);
       phase = palettePhase.current;
+      if (mode === "duoTwinkle") {
+        hexToVec3(live.color, tint);
+        hexToVec3(live.colorPeak, highlight);
+      }
       if (colorArmed) {
         const pulseAmt = updateTwinklePulseEnv(
           twinklePulse.current,
@@ -307,10 +313,11 @@ export default function CoralreefCanvas({
   liveRef,
   vizRef,
 }: CoralreefCanvasProps) {
+  const dpr = useRenderDpr("coralreef", 1, 1.25);
   return (
     <Canvas
       className="absolute inset-0 h-full w-full"
-      dpr={[1, 1.25]}
+      dpr={dpr}
       orthographic
       camera={{ position: [0, 0, 1], near: 0.1, far: 10 }}
       gl={{

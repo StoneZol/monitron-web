@@ -18,6 +18,7 @@ import {
   hexToVec3,
   lerpHex,
 } from "@/lib/visualAudio";
+import { useRenderDpr } from "@/lib/renderScale";
 import type { FairysmokeLive } from "./Fairysmoke.types";
 import {
     fairysmokeFragmentShader,
@@ -224,10 +225,11 @@ export default function FairysmokeCanvas({
     liveRef,
     vizRef,
 }: FairysmokeCanvasProps) {
+    const dpr = useRenderDpr("fairysmoke", 1, 1.25);
     return (
         <Canvas
             className="absolute inset-0 h-full w-full"
-            dpr={[1, 1.25]}
+            dpr={dpr}
             orthographic
             camera={{ position: [0, 0, 1], near: 0.1, far: 10 }}
             gl={{

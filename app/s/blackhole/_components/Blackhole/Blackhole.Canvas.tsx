@@ -17,6 +17,7 @@ import {
   hexToVec3,
   lerpHex,
 } from "@/lib/visualAudio";
+import { useRenderDpr } from "@/lib/renderScale";
 import { SCALE_DRIVE_UNIT, type BlackholeLive } from "./Blackhole.types";
 import {
   blackholeFragmentShader,
@@ -206,10 +207,11 @@ export default function BlackholeCanvas({
   liveRef,
   vizRef,
 }: BlackholeCanvasProps) {
+  const dpr = useRenderDpr("blackhole", 1, 1.5);
   return (
     <Canvas
       className="absolute inset-0 h-full w-full"
-      dpr={[1, 1.5]}
+      dpr={dpr}
       orthographic
       camera={{ position: [0, 0, 1], near: 0.1, far: 10 }}
       gl={{

@@ -1,9 +1,11 @@
-import { PlaceholderCard } from "@/components/PlaceholderCard";
+import { PlaceholderGrid } from "@/components/PlaceholderGrid";
 import { SiteFooter } from "@/components/SiteFooter";
 import { panelButtonClassName } from "@/components/ControlPanel/PanelButton";
 import { PLUGIN_URL } from "@/lib/audioBus";
 import { placeholders } from "@/lib/placeholders";
+import { PLUGIN_VERSION, SITE_VERSION } from "@/lib/versions";
 import { cn } from "@/lib/utils";
+import Link from "next/link";
 
 export default function Home() {
     return (
@@ -30,6 +32,16 @@ export default function Home() {
                         <span>ch.00</span>
                         <span className="text-muted">/</span>
                         <span className="text-cyan">illegal_idle</span>
+                        <span className="text-muted">/</span>
+                        <span>
+                            <span className="text-signal/80">web</span>{" "}
+                            {SITE_VERSION}
+                        </span>
+                        <span className="text-muted">/</span>
+                        <span>
+                            <span className="text-cyan/80">plugin</span>{" "}
+                            {PLUGIN_VERSION}
+                        </span>
                     </div>
 
                     <h1
@@ -69,6 +81,21 @@ export default function Home() {
                                     →
                                 </span>
                             </a>
+                            <Link
+                                href="/guide"
+                                className={cn(
+                                    panelButtonClassName,
+                                    "group gap-2",
+                                )}
+                            >
+                                <span className="text-muted group-hover:text-magenta">
+                                    src://
+                                </span>
+                                guide
+                                <span aria-hidden className="text-cyan">
+                                    →
+                                </span>
+                            </Link>
                             <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-magenta/80">
                                 [ dump /{" "}
                                 {String(placeholders.length).padStart(2, "0")} ]
@@ -89,16 +116,7 @@ export default function Home() {
                         </h2>
                     </div>
 
-                    <ul className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 lg:gap-5">
-                        {placeholders.map((placeholder, index) => (
-                            <li key={placeholder.id}>
-                                <PlaceholderCard
-                                    placeholder={placeholder}
-                                    index={index}
-                                />
-                            </li>
-                        ))}
-                    </ul>
+                    <PlaceholderGrid placeholders={placeholders} />
                 </section>
             </main>
 

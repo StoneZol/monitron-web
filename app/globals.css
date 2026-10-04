@@ -336,6 +336,12 @@ body {
     );
 }
 
+/* Credit rail — signal tick matches content height (orig / port / helper) */
+.credit-rail {
+    border-left: 2px solid var(--signal);
+    padding-left: 0.5rem;
+}
+
 /* Native-feel scroll — document + control palette */
 html,
 .control-panel-scroll {

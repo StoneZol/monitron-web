@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { useScreensOverlay } from "@/components/ScreensOverlay/ScreensOverlay.context";
 import { NavBackButton } from "@/components/NavBackButton";
 import { VisualPipButton } from "@/components/VisualPipButton";
+import { PlaceholderCredit } from "@/components/SourceCredit";
 import { placeholders } from "@/lib/placeholders";
 import {
     readPanelSections,
@@ -25,6 +26,8 @@ import {
 } from "@/lib/screenShare";
 import { FieldInfo } from "./FieldInfo";
 import { PanelButton } from "./PanelButton";
+import { Slider } from "./Slider";
+import { useRenderScale } from "@/lib/renderScale";
 
 type ControlPanelProps = {
     title: string;
@@ -122,8 +125,8 @@ export function ControlPanel({
         }
     };
 
-    const sources = overlay
-        ? placeholders.find((p) => p.id === overlay.screenId)?.sources
+    const placeholder = overlay
+        ? placeholders.find((p) => p.id === overlay.screenId)
         : undefined;
 
     return (
@@ -184,7 +187,7 @@ export function ControlPanel({
                     </div>
                 ) : null}
             </div>
-            {actions || sources?.length || overlay ? (
+            {actions || placeholder || overlay ? (
                 <div className="shrink-0 border-b border-line p-2">
                     {actions || overlay ? (
                         <div
@@ -197,33 +200,42 @@ export function ControlPanel({
                             {overlay ? <VisualPipButton /> : null}
                         </div>
                     ) : null}
-                    {sources?.length ? (
-                        <div
+                    {placeholder ? (
+                        <PlaceholderCredit
+                            meta={placeholder}
+                            variant="plain"
                             className={cn(
-                                "flex flex-wrap gap-x-2 gap-y-1",
+                                "max-w-full",
                                 actions || overlay ? "mt-2" : null,
                             )}
-                        >
-                            {sources.map((src) => (
-                                <a
-                                    key={src.href}
-                                    href={src.href}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="truncate font-mono text-[9px] uppercase tracking-[0.14em] text-cyan/70 transition-colors hover:text-signal"
-                                    title={src.title}
-                                >
-                                    original — {src.author}
-                                    <span className="ml-1 text-muted/60">↗</span>
-                                </a>
-                            ))}
-                        </div>
+                        />
                     ) : null}
                 </div>
             ) : null}
+            {overlay ? <RenderScaleChrome /> : null}
             <div className="control-panel-scroll min-h-0 flex-1 flex flex-col gap-1.5 overflow-x-hidden overflow-y-auto overscroll-contain p-2">
                 {children}
             </div>
+        </div>
+    );
+}
+
+/** Fixed above the scroll body — first place to cut GPU on every screen. */
+function RenderScaleChrome() {
+    const overlay = useScreensOverlay();
+    const renderScale = useRenderScale(overlay?.screenId);
+    return (
+        <div className="shrink-0 border-b border-line px-2 py-1.5">
+            <Slider
+                label="Render scale"
+                value={renderScale.scale}
+                min={renderScale.min}
+                max={renderScale.max}
+                step={renderScale.step}
+                onChange={renderScale.setScale}
+                format={(v) => `${Math.round(v * 100)}%`}
+                info="Internal buffer resolution for this screen. Default 50% ≈ half the pixels / GPU load. 100% = full native look. Slider is shared chrome; the value is saved per screen."
+            />
         </div>
     );
 }

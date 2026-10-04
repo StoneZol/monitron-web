@@ -7,7 +7,8 @@
  *  1 paletteTwinkle — same palette, phase walks (twinkle on default palette)
  *  2 twinkle        — solid HSL fill; density from palette luminance
  *  3 palette        — solid idle→peak; density from palette luminance
- *  4 duo            — stock cos wave, lerp uColor→uHighlight (reef green↔coral)
+ *  4 duo            — stock cos wave, lerp uColor→uHighlight
+ *  5 duoTwinkle     — same duo, phase walks (twinkle twin of duo)
  *
  * Tunnel sun (uLightMode):
  *  0 original — stock bloom from the reef accumulation (1:1)
@@ -44,9 +45,9 @@ uniform vec3 uColor;
 uniform vec3 uHighlight;
 uniform float uSaturation;
 uniform float uPeakFlicker;
-/** Radians — shifts the stock cos palette (paletteTwinkle) */
+/** Radians — shifts stock cos / duo wave (paletteTwinkle + duoTwinkle) */
 uniform float uPalettePhase;
-/** 0 original, 1 paletteTwinkle, 2 twinkle, 3 palette, 4 duo */
+/** 0 original, 1 paletteTwinkle, 2 twinkle, 3 palette, 4 duo, 5 duoTwinkle */
 uniform float uColorMode;
 /** 0 = stock tunnel sun, 1 = custom light tint on bright core */
 uniform float uLightMode;
@@ -120,7 +121,7 @@ vec4 traceReef(
     if (mode < 1.5) {
       o += pal * punch;
     } else if (mode > 3.5) {
-      // Duo: same spatial cos as stock R-channel, lerp A→B (green↔coral)
+      // Duo / duoTwinkle: stock cos wave, lerp A→B (phase walks in duoTwinkle)
       float wave =
         0.5 + 0.5 * cos(d * 40.0 + P.z * 2.0 + 1.0 + phase);
       float w = 1.0 / (glowBase + ad * glowK);
@@ -180,7 +181,9 @@ void main() {
   float flicker = clamp(uPeakFlicker, 0.0, 1.0);
   float punch = 1.0 + flicker * 0.55;
   vec3 tint = mix(uColor, uHighlight, flicker);
-  float phase = (mode > 0.5 && mode < 1.5) ? uPalettePhase : 0.0;
+  // Phase walk: paletteTwinkle (1) or duoTwinkle (5)
+  float phase =
+    (mode > 0.5 && mode < 1.5) || mode > 4.5 ? uPalettePhase : 0.0;
 
   // AA: 0 → 1 tap (stock), 1 → 2, 2 → 4
   float s = clamp(uShadowSmooth, 0.0, 2.0);

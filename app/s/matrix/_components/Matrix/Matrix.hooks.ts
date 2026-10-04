@@ -18,6 +18,7 @@ import {
 import { resetFxOverlay } from "@/components/FxOverlay";
 import { toggleFullscreen } from "@/lib/fullscreen";
 import { loadScreenPrefs, saveScreenPrefs } from "@/lib/screenPrefs";
+import { scaledPixelRatio } from "@/lib/renderScale";
 import { VISUAL_PIP_CHANGE } from "@/lib/visualPip";
 import {
   advanceTwinkleHue,
@@ -425,18 +426,22 @@ const useMatrixHook = () => {
 
     const resize = () => {
       const next = measureHost();
+      const dpr = scaledPixelRatio(2, "matrix");
+      const nextW = Math.floor(next.width * dpr);
+      const nextH = Math.floor(next.height * dpr);
       if (
         next.width === width &&
         next.height === height &&
-        canvas.width === next.width &&
-        canvas.height === next.height
+        canvas.width === nextW &&
+        canvas.height === nextH
       ) {
         return;
       }
       width = next.width;
       height = next.height;
-      canvas.width = width;
-      canvas.height = height;
+      canvas.width = nextW;
+      canvas.height = nextH;
+      context.setTransform(dpr, 0, 0, dpr, 0, 0);
       columns = Math.max(1, Math.floor(width / FONT_SIZE));
       seedDrops();
       context.fillStyle = "#000";

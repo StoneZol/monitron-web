@@ -119,7 +119,14 @@ export default function GuidePage() {
                 </a>
                 .
               </li>
-              <li>Play audio in a Chrome tab you want to react to.</li>
+              <li>
+                Open the site that plays your audio track (YouTube, Bandcamp,
+                local player tab — whatever Chrome can hear).
+              </li>
+              <li>
+                Open the Monitron plugin popup on that tab and press{" "}
+                <span className="text-ink">connect</span>.
+              </li>
               <li>
                 On a Monitron screen, set source to{" "}
                 <span className="text-ink">plugin</span>. Status should read{" "}
@@ -184,7 +191,45 @@ export default function GuidePage() {
 
           <section className="space-y-4">
             <h2 className="font-mono text-[11px] uppercase tracking-[0.28em] text-signal">
-              ::5 share presets
+              ::5 render scale
+            </h2>
+            <p className="text-muted">
+              Heavy screens (raymarch / dense shaders) chew GPU even when the
+              look is idle.{" "}
+              <span className="text-ink">Render scale</span> sits in the fixed
+              HUD chrome above the scroll — first knob before look or
+              visualizer — and shrinks the internal buffer so the card draws
+              fewer pixels.
+            </p>
+            <ul className="space-y-2 font-mono text-[12px] uppercase tracking-[0.14em] text-muted">
+              <li>
+                <span className="text-signal">50%</span>
+                <span className="mx-2 text-muted/40">—</span>
+                default · roughly half the GPU load
+              </li>
+              <li>
+                <span className="text-cyan">30%</span>
+                <span className="mx-2 text-muted/40">—</span>
+                floor · rescue for integrated GPUs
+              </li>
+              <li>
+                <span className="text-magenta">100%</span>
+                <span className="mx-2 text-muted/40">—</span>
+                full native resolution
+              </li>
+            </ul>
+            <p className="text-muted">
+              The slider is shared chrome on every screen; the value is saved{" "}
+              <span className="text-ink">per screen</span>. Drop it when fans
+              spin up — raise it when you want the sharpest frame. Cards also
+              stamp a subjective <span className="text-ink">load</span> tag
+              (low / mid / high) so you know which channels start hungry.
+            </p>
+          </section>
+
+          <section className="space-y-4">
+            <h2 className="font-mono text-[11px] uppercase tracking-[0.28em] text-signal">
+              ::6 share presets
             </h2>
             <p className="text-muted">
               Dial a look you like, then pass it around. In the HUD{" "}

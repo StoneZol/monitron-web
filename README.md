@@ -167,6 +167,7 @@ if (viz.enabled) {
 | [`hooks/useAudioReactive.ts`](hooks/useAudioReactive.ts)   | Extension handshake + `vizRef` + bus panel state      |
 | [`lib/audioDerive.ts`](lib/audioDerive.ts)                 | `sliceBands` / `bandAtColumn` / `risingEdge` helpers  |
 | [`lib/visualAudio.ts`](lib/visualAudio.ts)                 | Default reactive channel + tint helpers (use these)   |
+| [`lib/renderScale.ts`](lib/renderScale.ts)                 | Per-screen GPU buffer scale (R3F `dpr` / 2D canvas)   |
 | [`lib/twinkleHsl.ts`](lib/twinkleHsl.ts)                   | Shared HSL twinkle: hue advance, resolve, audio pulse |
 | [`lib/fullscreen.ts`](lib/fullscreen.ts)                   | `toggleFullscreen()`                                  |
 | [`lib/visualPip.ts`](lib/visualPip.ts)                     | Document PiP (+ video fallback) for the live canvas   |
@@ -208,6 +209,43 @@ lerpHex(live.color, live.colorPeak, punch, tint);
 | `pulseBrightness` | Idle-dim → peak brightness scale |
 
 Low-level spectrum math stays in [`lib/audioDerive.ts`](lib/audioDerive.ts) (`sliceBands`, `risingEdge`, …). HSL twinkle runtime stays in [`lib/twinkleHsl.ts`](lib/twinkleHsl.ts) — see `TwinkleControls` in [`docs/ui.md`](docs/ui.md).
+
+#### Render scale (`lib/renderScale.ts`)
+
+Heavy screens burn GPU on full native buffers. **Render scale** shrinks the internal pixel budget. The slider is shared HUD chrome in [`ControlPanel`](components/ControlPanel) (fixed above the scroll); the value is saved **per screen** under `_renderScale` in `monitron:<screenId>:controls` (default `0.5`, floor `0.3`, max `1`).
+
+Wire every canvas — do **not** hardcode `dpr={[1, 1.25]}` or raw `devicePixelRatio`.
+
+**R3F** — pass the screen id (same as `ScreensOverlay screenId`) and keep the per-screen max:
+
+```ts
+import { useRenderDpr } from "@/lib/renderScale";
+
+export default function WavesCanvas() {
+  const dpr = useRenderDpr("waves", 1, 1.25);
+  return <Canvas dpr={dpr} /* … */ />;
+}
+```
+
+**2D canvas** — size the buffer from `scaledPixelRatio` on resize (scale changes dispatch `window` `resize`):
+
+```ts
+import { scaledPixelRatio } from "@/lib/renderScale";
+
+const dpr = scaledPixelRatio(2, "waves");
+canvas.width = Math.floor(cssW * dpr);
+canvas.height = Math.floor(cssH * dpr);
+ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+```
+
+| Export | Role |
+| ------ | ---- |
+| `useRenderDpr(screenId, min?, max?)` | Scaled R3F `dpr` tuple for this screen |
+| `scaledPixelRatio(cap, screenId)` | `min(cap, devicePixelRatio) × scale` for 2D buffers |
+| `useRenderScale(screenId)` | `{ scale, setScale, min, max, step }` (chrome / rare custom UI) |
+| `getRenderScale` / `setRenderScale` | Imperative read/write + persist |
+
+Also stamp a subjective `cost: "low" \| "mid" \| "high"` on the home catalog entry in [`lib/placeholders.ts`](lib/placeholders.ts) so users know which channels start hungry.
 
 ---
 

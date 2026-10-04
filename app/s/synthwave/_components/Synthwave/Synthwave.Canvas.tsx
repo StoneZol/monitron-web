@@ -10,6 +10,7 @@ import { NeonGrid } from "./Synthwave.Grid";
 import { Sky } from "./Synthwave.Sky";
 import { NeonSun } from "./Synthwave.Sun";
 import type { SynthwaveLive } from "./Synthwave.types";
+import { useRenderDpr } from "@/lib/renderScale";
 
 type SynthwaveCanvasProps = {
     liveRef: RefObject<SynthwaveLive>;
@@ -42,10 +43,11 @@ export default function SynthwaveCanvas({
     liveRef,
     vizRef,
 }: SynthwaveCanvasProps) {
+    const dpr = useRenderDpr("synthwave", 1, 2);
     return (
         <Canvas
             className="absolute inset-0 h-full w-full"
-            dpr={[1, 2]}
+            dpr={dpr}
             camera={{
                 position: [0, 0.4, 1.4],
                 fov: 75,
