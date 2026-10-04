@@ -1,11 +1,19 @@
-import { findMoveRoot } from "@/lib/visualPip";
+import {
+  findMoveRoot,
+  getVisualPipMoveRoot,
+  getVisualPipWindow,
+} from "@/lib/visualPip";
 
-/** Scene canvas under a root (skips fx pass canvases). */
-export function findSceneCanvas(root: HTMLElement): HTMLCanvasElement | null {
+/** Largest scene canvas under a root (skips fx pass canvases). */
+export function findSceneCanvasIn(
+  root: ParentNode,
+): HTMLCanvasElement | null {
   let best: HTMLCanvasElement | null = null;
   let bestArea = 0;
+  let fallback: HTMLCanvasElement | null = null;
   for (const c of root.querySelectorAll<HTMLCanvasElement>("canvas")) {
     if (c.dataset.fxPass != null) continue;
+    if (!fallback) fallback = c;
     const area =
       (c.clientWidth || c.offsetWidth || c.width) *
       (c.clientHeight || c.offsetHeight || c.height);
@@ -14,24 +22,27 @@ export function findSceneCanvas(root: HTMLElement): HTMLCanvasElement | null {
       bestArea = area;
     }
   }
-  return best;
+  // After Document PiP adopt, layout can briefly report 0×0 — still use the canvas.
+  return best ?? fallback;
 }
 
 /**
- * Host where transparent fx canvases must live: the R3F shell that Document PiP
- * moves. Falls back to any live scene canvas (e.g. already in the PiP window).
+ * Host where transparent fx canvases must live: the R3F shell Document PiP moves.
+ * Prefer the known moved root, then PiP document, then opener screen root.
  */
 export function findFxHost(screenRoot: HTMLElement): HTMLElement | null {
-  const local = findSceneCanvas(screenRoot);
+  const moved = getVisualPipMoveRoot();
+  if (moved) return moved;
+
+  const pip = getVisualPipWindow();
+  if (pip && !pip.closed) {
+    const inPip = findSceneCanvasIn(pip.document);
+    if (inPip) return findMoveRoot(inPip);
+  }
+
+  const local = findSceneCanvasIn(screenRoot);
   if (local) return findMoveRoot(local);
 
-  // Canvas may already sit in the PiP document
-  for (const c of document.querySelectorAll<HTMLCanvasElement>("canvas")) {
-    if (c.dataset.fxPass != null) continue;
-    const area =
-      (c.clientWidth || c.offsetWidth || c.width) *
-      (c.clientHeight || c.offsetHeight || c.height);
-    if (area > 4) return findMoveRoot(c);
-  }
-  return null;
+  const fallback = findSceneCanvasIn(document);
+  return fallback ? findMoveRoot(fallback) : null;
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { getVisualPipWindow, VISUAL_PIP_CHANGE } from "@/lib/visualPip";
 import { applyFxMode, clearAllFxModes } from "./overlaysMods";
 import { useFxOverlay } from "./FxOverlay.store";
 
@@ -8,9 +9,19 @@ type FxOverlayLayerProps = {
   screenId: string;
 };
 
+function isSceneCanvasNode(node: Node): boolean {
+  if (node instanceof HTMLCanvasElement) {
+    return node.dataset.fxPass == null;
+  }
+  if (node instanceof HTMLElement) {
+    return Boolean(node.querySelector("canvas:not([data-fx-pass])"));
+  }
+  return false;
+}
+
 /**
- * Orchestrates overlay mods — one apply/clear path for every mode (B&W, Cartoony, …).
- * Shader overlays mount inside the R3F shell so Document PiP takes them with the scene.
+ * Orchestrates overlay mods — one apply/clear path for every mode (B&W, Grain, …).
+ * Shader overlays mount inside the R3F shell so Document PiP takes them too.
  */
 export function FxOverlayLayer({ screenId }: FxOverlayLayerProps) {
   const fx = useFxOverlay(screenId);
@@ -33,19 +44,42 @@ export function FxOverlayLayer({ screenId }: FxOverlayLayerProps) {
       });
     };
 
+    /**
+     * Document PiP adopts the R3F shell (overlay child included). Do NOT clear
+     * first — that deletes the layer and a failed re-apply leaves PiP bare.
+     */
+    const timers: number[] = [];
+    const syncAfterPip = () => {
+      const run = () => sync();
+      requestAnimationFrame(() => {
+        run();
+        timers.push(window.setTimeout(run, 50));
+        timers.push(window.setTimeout(run, 200));
+      });
+      const pip = getVisualPipWindow();
+      pip?.addEventListener("resize", run, { once: true });
+    };
+
     sync();
-    const mo = new MutationObserver(sync);
+
+    // Only react when a *scene* canvas appears — ignore fx overlay mounts.
+    const mo = new MutationObserver((mutations) => {
+      for (const m of mutations) {
+        for (const n of m.addedNodes) {
+          if (isSceneCanvasNode(n)) {
+            sync();
+            return;
+          }
+        }
+      }
+    });
     mo.observe(root, { childList: true, subtree: true });
-    const ro = new ResizeObserver(sync);
-    ro.observe(root);
-    const t0 = window.setTimeout(sync, 0);
-    const t1 = window.setTimeout(sync, 100);
+    window.addEventListener(VISUAL_PIP_CHANGE, syncAfterPip);
 
     return () => {
-      window.clearTimeout(t0);
-      window.clearTimeout(t1);
+      for (const t of timers) window.clearTimeout(t);
+      window.removeEventListener(VISUAL_PIP_CHANGE, syncAfterPip);
       mo.disconnect();
-      ro.disconnect();
       clearAllFxModes(root);
     };
   }, [fx.mode, screenId]);

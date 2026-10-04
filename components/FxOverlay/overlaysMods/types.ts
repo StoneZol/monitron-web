@@ -38,7 +38,7 @@ export type FxModePaintContext = {
 };
 
 /**
- * One overlay algorithm — same contract for every mode (B&W, Cartoony, …).
+ * One overlay algorithm — same contract for every mode (B&W, Grain, …).
  *
  * - Does NOT rewrite the scene. CSS filters mutate canvas style; shader overlays
  *   paint a transparent layer inside the R3F shell (so Document PiP takes them).

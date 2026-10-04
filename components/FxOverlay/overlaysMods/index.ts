@@ -1,5 +1,5 @@
 import { bwMod } from "./bw";
-import { cartoonyMod } from "./cartoony";
+import { grainMod } from "./grain";
 import type { FxModeMod, FxModePaintContext } from "./types";
 
 export type {
@@ -9,7 +9,7 @@ export type {
   FxModeSource,
 } from "./types";
 export { bwMod } from "./bw";
-export { cartoonyMod } from "./cartoony";
+export { grainMod } from "./grain";
 
 /**
  * Registry — add a new overlay:
@@ -18,7 +18,7 @@ export { cartoonyMod } from "./cartoony";
  */
 export const FX_MODE_MODS: Record<string, FxModeMod> = {
   [bwMod.id]: bwMod,
-  [cartoonyMod.id]: cartoonyMod,
+  [grainMod.id]: grainMod,
 };
 
 export function getFxModeMod(modeId: string): FxModeMod | null {

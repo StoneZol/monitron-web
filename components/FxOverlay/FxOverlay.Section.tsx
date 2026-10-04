@@ -18,14 +18,14 @@ import {
 const INFO = {
   section:
     "Looks on top of the scene — never rewrite the frame. B&W = canvas CSS filter; shader modes = transparent layer inside the R3F shell (PiP takes both).",
-  mode: "Base look. B&W = grayscale on the scene canvas. Cartoony = transparent grain / vignette stack (jonnycat).",
+  mode: "Base look. B&W = grayscale on the scene canvas. Grain = drifting film grain / vignette stack.",
   intensity: {
     bw: "B&W amount: 0 = full color, 1 = full grayscale.",
-    cartoony: "Overall overlay strength (grain + vignette).",
+    grain: "Overall overlay strength (grain + vignette).",
     default: "Overlay strength for the active look.",
   },
   contrast: "Contrast boost on the scene (1 = unchanged).",
-  speed: "Grain clock speed (1 ≈ Shadertoy iTime).",
+  speed: "Reserved — Grain uses a fixed drift.",
   particles:
     "Film-grain density & strength (0 = clean, 1 = stock, 2 = heavy speckle).",
   blend:
@@ -35,7 +35,7 @@ const INFO = {
 
 function intensityInfo(mode: string): string {
   if (mode === "bw") return INFO.intensity.bw;
-  if (mode === "cartoony") return INFO.intensity.cartoony;
+  if (mode === "grain") return INFO.intensity.grain;
   return INFO.intensity.default;
 }
 

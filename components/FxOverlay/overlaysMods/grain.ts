@@ -1,117 +1,375 @@
-import { FxOverlayPass } from "../FxOverlay.GlPass";
+import { findFxHost } from "../FxOverlay.host";
 import type { FxModeMod, FxModePaintContext } from "./types";
 
 /**
- * Transparent film stack derived from Shadertoy NXt3W4 (jonnycat “Cartoony filter”).
+ * Overlay-only grain + vignette as a DOM layer inside the R3F shell.
+ * SVG/CSS survives Document PiP adopt (no WebGL context to lose).
  *
- * Overlay-only: grain + vignette on a clear layer. Does not sample or replace
- * the scene — mounts inside the R3F shell so Document PiP takes it too.
- *
- * Knobs: intensity (overall), speed (grain clock), particles (grain amount).
+ * Fixed noise fields drift + flicker — no per-tick reseed.
+ * Knobs: intensity, particles.
  */
 
-export const cartoonyFragmentShader = /* glsl */ `
-precision highp float;
+type GrainLayer = {
+  el: HTMLDivElement;
+  turbulence: SVGFETurbulenceElement;
+  baseOpacity: number;
+  anims: Animation[];
+};
 
-varying vec2 vUv;
+type Runner = {
+  host: HTMLElement;
+  root: HTMLElement;
+  layers: GrainLayer[];
+  vig: HTMLDivElement;
+  baseIntensity: number;
+};
 
-uniform vec3 iResolution;
-uniform float iTime;
-uniform float uIntensity;
-uniform float uSpeed;
-uniform float uParticles;
+const runners = new WeakMap<HTMLElement, Runner>();
 
-float hash21(vec2 p) {
-  p = fract(p * vec2(123.34, 456.21));
-  p += dot(p, p + 45.32);
-  return fract(p.x * p.y);
+function ensureHostPosition(host: HTMLElement) {
+  const view = host.ownerDocument.defaultView;
+  const pos = (view ?? window).getComputedStyle(host).position;
+  if (pos === "static") host.style.position = "relative";
 }
 
-vec3 filmGrain(vec2 fragCoord, float time, float particles) {
-  vec2 seed = fragCoord + fract(time) * 1000.0;
-  float gR = hash21(seed);
-  float gG = hash21(seed + 17.13);
-  float gB = hash21(seed + 91.7);
-
-  float cell = mix(0.35, 1.6, clamp(particles, 0.0, 2.0) * 0.5);
-  vec2 seedCoarse = floor(fragCoord * cell) + fract(time) * 1000.0;
-  float coarse = hash21(seedCoarse + 5.5);
-
-  vec3 fine = vec3(gR, gG, gB) - 0.5;
-  float coarseCentered = coarse - 0.5;
-  return fine * 0.7 + coarseCentered * 0.3;
-}
-
-void main() {
-  vec2 res = iResolution.xy;
-  vec2 uv = vUv;
-  vec2 fragCoord = uv * res;
-
-  vec2 centered = uv * 2.0 - 1.0;
-  centered.x *= res.x / max(res.y, 1.0);
-
-  float intensity = clamp(uIntensity, 0.0, 1.0);
-  float particles = max(0.0, uParticles);
-  float t = iTime * max(0.0, uSpeed);
-
-  // Dense film grain (additive speckles)
-  float GRAIN_STRENGTH = 0.11 * particles;
-  vec3 grain = filmGrain(fragCoord, t, particles);
-  float grainA = length(grain) * GRAIN_STRENGTH * 1.4 * intensity;
-
-  // Light vignette (darken edges)
-  float vig = 1.0 - smoothstep(0.3, 1.3, length(centered));
-  float vigA = (1.0 - mix(0.85, 1.0, vig)) * intensity;
-
-  // Premultiplied-ish: grain tint + black vignette in rgb, combined alpha
-  vec3 rgb = grain * GRAIN_STRENGTH * intensity;
-  float a = clamp(max(grainA, vigA), 0.0, 1.0);
-  gl_FragColor = vec4(rgb, a);
-}
-`;
-
-const runners = new WeakMap<HTMLElement, FxOverlayPass>();
-
-function applyCartoony(ctx: FxModePaintContext) {
-  let pass = runners.get(ctx.root);
-  if (!pass) {
-    try {
-      pass = new FxOverlayPass(cartoonyFragmentShader);
-    } catch {
-      return;
-    }
-    runners.set(ctx.root, pass);
+function cancelAnims(runner: Runner) {
+  for (const layer of runner.layers) {
+    for (const a of layer.anims) a.cancel();
+    layer.anims = [];
   }
-  pass.apply(ctx.root, {
-    intensity: ctx.intensity,
-    speed: ctx.speed,
-    particles: ctx.particles,
-  });
 }
 
-function clearCartoony(root: HTMLElement) {
-  const pass = runners.get(root);
-  if (!pass) return;
-  pass.dispose();
+function makeFilter(
+  doc: Document,
+  uid: string,
+  seed: number,
+  freq: number,
+  octaves: number,
+): { svg: SVGSVGElement; turbulence: SVGFETurbulenceElement } {
+  const svgNS = "http://www.w3.org/2000/svg";
+  const svg = doc.createElementNS(svgNS, "svg");
+  svg.setAttribute("width", "0");
+  svg.setAttribute("height", "0");
+  svg.style.cssText = "position:absolute;width:0;height:0;";
+
+  const filter = doc.createElementNS(svgNS, "filter");
+  filter.setAttribute("id", uid);
+  filter.setAttribute("x", "0");
+  filter.setAttribute("y", "0");
+  filter.setAttribute("width", "100%");
+  filter.setAttribute("height", "100%");
+
+  const turbulence = doc.createElementNS(svgNS, "feTurbulence");
+  turbulence.setAttribute("type", "fractalNoise");
+  turbulence.setAttribute("baseFrequency", String(freq));
+  turbulence.setAttribute("numOctaves", String(octaves));
+  turbulence.setAttribute("seed", String(seed));
+  turbulence.setAttribute("stitchTiles", "stitch");
+
+  const color = doc.createElementNS(svgNS, "feColorMatrix");
+  color.setAttribute("type", "matrix");
+  color.setAttribute(
+    "values",
+    [
+      "0.33 0.33 0.33 0 0",
+      "0.33 0.33 0.33 0 0",
+      "0.33 0.33 0.33 0 0",
+      "0 0 0 0.75 0",
+    ].join(" "),
+  );
+
+  filter.appendChild(turbulence);
+  filter.appendChild(color);
+  svg.appendChild(filter);
+  return { svg, turbulence };
+}
+
+function startLayerLife(
+  el: HTMLDivElement,
+  drift: {
+    toX: string;
+    toY: string;
+    durationMs: number;
+    direction?: PlaybackDirection;
+  },
+  flicker: { min: number; max: number; durationMs: number },
+): Animation[] {
+  if (typeof el.animate !== "function") return [];
+
+  const driftAnim = el.animate(
+    [
+      { transform: "translate3d(0%, 0%, 0)" },
+      { transform: `translate3d(${drift.toX}, ${drift.toY}, 0)` },
+    ],
+    {
+      duration: drift.durationMs,
+      iterations: Infinity,
+      easing: "linear",
+      direction: drift.direction ?? "alternate",
+    },
+  );
+
+  // Opacity on a child wrapper would be cleaner; flicker the layer itself.
+  const flickerAnim = el.animate(
+    [
+      { opacity: String(flicker.min) },
+      { opacity: String(flicker.max) },
+      { opacity: String(flicker.min * 0.92 + flicker.max * 0.08) },
+      { opacity: String(flicker.max) },
+      { opacity: String(flicker.min) },
+    ],
+    {
+      duration: flicker.durationMs,
+      iterations: Infinity,
+      easing: "ease-in-out",
+    },
+  );
+
+  return [driftAnim, flickerAnim];
+}
+
+function paint(runner: Runner, intensity: number, particles: number) {
+  const i = Math.min(1, Math.max(0, intensity));
+  const p = Math.min(2, Math.max(0, particles));
+  runner.baseIntensity = i;
+
+  // Coarse plate
+  const coarse = runner.layers[0];
+  if (coarse) {
+    const freq = 0.35 + p * 0.25;
+    coarse.turbulence.setAttribute("baseFrequency", `${freq}`);
+    coarse.turbulence.setAttribute("numOctaves", p > 1.2 ? "3" : "2");
+    coarse.baseOpacity = Math.min(0.7, 0.2 + 0.28 * p) * i;
+  }
+
+  // Fine speckles
+  const fine = runner.layers[1];
+  if (fine) {
+    const freq = 0.9 + p * 0.55;
+    fine.turbulence.setAttribute("baseFrequency", `${freq}`);
+    fine.turbulence.setAttribute("numOctaves", "2");
+    fine.baseOpacity = Math.min(0.65, 0.14 + 0.3 * p) * i;
+  }
+
+  // Restart flicker with updated opacity band (drift keeps running).
+  for (const layer of runner.layers) {
+    const drift = layer.anims[0] ?? null;
+    for (let n = 1; n < layer.anims.length; n++) layer.anims[n]?.cancel();
+
+    const base = layer.baseOpacity;
+    if (typeof layer.el.animate === "function" && base > 0.001) {
+      const flickerAnim = layer.el.animate(
+        [
+          { opacity: String(base * 0.72) },
+          { opacity: String(base * 1.05) },
+          { opacity: String(base * 0.85) },
+          { opacity: String(base) },
+          { opacity: String(base * 0.72) },
+        ],
+        {
+          duration: layer === fine ? 180 : 320,
+          iterations: Infinity,
+          easing: "ease-in-out",
+        },
+      );
+      layer.anims = drift ? [drift, flickerAnim] : [flickerAnim];
+    } else {
+      layer.el.style.opacity = String(base);
+      layer.anims = drift ? [drift] : [];
+    }
+  }
+
+  runner.vig.style.opacity = String(0.35 * i);
+}
+
+function mount(host: HTMLElement): Runner {
+  const doc = host.ownerDocument;
+  ensureHostPosition(host);
+
+  const id = Math.random().toString(36).slice(2, 9);
+  const wrap = doc.createElement("div");
+  wrap.dataset.fxPass = "grain";
+  wrap.setAttribute("aria-hidden", "true");
+  wrap.style.cssText =
+    "position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:5;overflow:hidden;";
+
+  const layers: GrainLayer[] = [];
+
+  const specs: Array<{
+    seed: number;
+    freq: number;
+    octaves: number;
+    blend: string;
+    drift: {
+      toX: string;
+      toY: string;
+      durationMs: number;
+      direction?: PlaybackDirection;
+    };
+    baseOpacity: number;
+    flickerMs: number;
+  }> = [
+    {
+      // Slow coarse plate — diagonal crawl
+      seed: 7,
+      freq: 0.45,
+      octaves: 2,
+      blend: "overlay",
+      drift: { toX: "-22%", toY: "-10%", durationMs: 9000 },
+      baseOpacity: 0.4,
+      flickerMs: 320,
+    },
+    {
+      // Faster fine grain — counter axis
+      seed: 19,
+      freq: 1.15,
+      octaves: 2,
+      blend: "soft-light",
+      drift: {
+        toX: "18%",
+        toY: "-14%",
+        durationMs: 5500,
+        direction: "alternate",
+      },
+      baseOpacity: 0.32,
+      flickerMs: 180,
+    },
+  ];
+
+  for (let i = 0; i < specs.length; i++) {
+    const spec = specs[i]!;
+    const uid = `fx-grain-${id}-${i}`;
+    const { svg, turbulence } = makeFilter(
+      doc,
+      uid,
+      spec.seed,
+      spec.freq,
+      spec.octaves,
+    );
+
+    const el = doc.createElement("div");
+    el.style.cssText = [
+      "position:absolute",
+      "left:-45%",
+      "top:-45%",
+      "width:190%",
+      "height:190%",
+      `filter:url(#${uid})`,
+      `mix-blend-mode:${spec.blend}`,
+      "background:#808080",
+      `opacity:${spec.baseOpacity}`,
+      "will-change:transform,opacity",
+    ].join(";");
+
+    wrap.appendChild(svg);
+    wrap.appendChild(el);
+
+    const anims = startLayerLife(
+      el,
+      spec.drift,
+      {
+        min: spec.baseOpacity * 0.72,
+        max: spec.baseOpacity * 1.05,
+        durationMs: spec.flickerMs,
+      },
+    );
+
+    layers.push({
+      el,
+      turbulence,
+      baseOpacity: spec.baseOpacity,
+      anims,
+    });
+  }
+
+  const vig = doc.createElement("div");
+  vig.style.cssText = [
+    "position:absolute",
+    "inset:0",
+    "width:100%",
+    "height:100%",
+    "opacity:0.28",
+    "background:radial-gradient(ellipse at center, transparent 35%, rgba(0,0,0,0.65) 100%)",
+  ].join(";");
+  wrap.appendChild(vig);
+  host.appendChild(wrap);
+
+  return { host, root: wrap, layers, vig, baseIntensity: 1 };
+}
+
+function applyGrain(ctx: FxModePaintContext) {
+  const host = findFxHost(ctx.root);
+  if (!host) return;
+
+  let runner = runners.get(ctx.root);
+  const wrongHost = runner != null && runner.host !== host;
+  const wrongDoc =
+    runner != null && runner.root.ownerDocument !== host.ownerDocument;
+  const detached = runner != null && !runner.root.isConnected;
+
+  if (runner && (wrongHost || wrongDoc || detached)) {
+    cancelAnims(runner);
+    runner.root.remove();
+    runners.delete(ctx.root);
+    runner = undefined;
+  }
+
+  if (!runner) {
+    runner = mount(host);
+    runners.set(ctx.root, runner);
+  } else if (runner.root.parentElement !== host) {
+    host.appendChild(runner.root);
+    runner.host = host;
+    cancelAnims(runner);
+    // Restart life after Document PiP adopt.
+    const coarse = runner.layers[0];
+    const fine = runner.layers[1];
+    if (coarse) {
+      coarse.anims = startLayerLife(
+        coarse.el,
+        { toX: "-22%", toY: "-10%", durationMs: 9000 },
+        {
+          min: coarse.baseOpacity * 0.72,
+          max: coarse.baseOpacity * 1.05,
+          durationMs: 320,
+        },
+      );
+    }
+    if (fine) {
+      fine.anims = startLayerLife(
+        fine.el,
+        { toX: "18%", toY: "-14%", durationMs: 5500 },
+        {
+          min: fine.baseOpacity * 0.72,
+          max: fine.baseOpacity * 1.05,
+          durationMs: 180,
+        },
+      );
+    }
+  }
+
+  paint(runner, ctx.intensity, ctx.particles);
+}
+
+function clearGrain(root: HTMLElement) {
+  const runner = runners.get(root);
+  if (!runner) return;
+  cancelAnims(runner);
+  runner.root.remove();
   runners.delete(root);
 }
 
-export const cartoonyMod: FxModeMod = {
-  id: "cartoony",
-  label: "Cartoony",
-  knobs: ["intensity", "speed", "particles"],
+export const grainMod: FxModeMod = {
+  id: "grain",
+  label: "Grain",
+  knobs: ["intensity", "particles"],
   defaults: {
     intensity: 1,
     contrast: 1,
-    speed: 1,
-    particles: 2,
+    speed: 0.05,
+    particles: 1,
     blend: "normal",
   },
-  source: {
-    href: "https://www.shadertoy.com/view/NXt3W4",
-    author: "jonnycat",
-    title: "Cartoony filter",
-  },
-  apply: applyCartoony,
-  clear: clearCartoony,
+  apply: applyGrain,
+  clear: clearGrain,
 };

@@ -1,8 +1,8 @@
-import { bwMod, cartoonyMod } from "./overlaysMods";
+import { bwMod, grainMod } from "./overlaysMods";
 import type { FxBlendMode, FxModeKnob } from "./overlaysMods/types";
 
 export type { FxBlendMode, FxModeKnob };
-export type FxOverlayMode = "off" | "bw" | "cartoony";
+export type FxOverlayMode = "off" | "bw" | "grain";
 
 export type FxOverlayPrefs = {
   mode: FxOverlayMode;
@@ -10,9 +10,9 @@ export type FxOverlayPrefs = {
   intensity: number;
   /** CSS contrast multiplier (1 = unchanged) — B&W */
   contrast: number;
-  /** Animation clock multiplier — shader grain / time */
+  /** Animation clock multiplier — reserved for timed overlays */
   speed: number;
-  /** Grain density / strength — Cartoony particles */
+  /** Grain density / strength */
   particles: number;
   blend: FxBlendMode;
   /** 0…1 — optional black wash when blend ≠ normal */
@@ -37,7 +37,7 @@ export const FX_OVERLAY_DEFAULTS: FxOverlayPrefs = {
 export const FX_MODE_OPTIONS: { value: FxOverlayMode; label: string }[] = [
   { value: "off", label: "off" },
   { value: bwMod.id as FxOverlayMode, label: bwMod.label },
-  { value: cartoonyMod.id as FxOverlayMode, label: cartoonyMod.label },
+  { value: grainMod.id as FxOverlayMode, label: grainMod.label },
 ];
 
 export const FX_BLEND_OPTIONS: { value: FxBlendMode; label: string }[] = [

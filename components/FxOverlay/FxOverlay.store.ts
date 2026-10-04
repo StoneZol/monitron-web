@@ -30,7 +30,7 @@ const BLENDS = new Set<FxBlendMode>([
   "luminosity",
 ]);
 
-const MODES = new Set<FxOverlayMode>(["off", "bw", "cartoony"]);
+const MODES = new Set<FxOverlayMode>(["off", "bw", "grain"]);
 
 const listeners = new Map<string, Set<() => void>>();
 const cache = new Map<string, FxOverlayPrefs>();
@@ -64,9 +64,11 @@ export function migrateFxPrefs(raw: unknown): FxOverlayPrefs {
     return { ...FX_OVERLAY_DEFAULTS };
   }
   const o = raw as Record<string, unknown>;
+  // Legacy id from the old Shadertoy-named mode.
+  const rawMode = o.mode === "cartoony" ? "grain" : o.mode;
   const mode =
-    typeof o.mode === "string" && MODES.has(o.mode as FxOverlayMode)
-      ? (o.mode as FxOverlayMode)
+    typeof rawMode === "string" && MODES.has(rawMode as FxOverlayMode)
+      ? (rawMode as FxOverlayMode)
       : FX_OVERLAY_DEFAULTS.mode;
   const blend =
     typeof o.blend === "string" && BLENDS.has(o.blend as FxBlendMode)

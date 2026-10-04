@@ -16,7 +16,7 @@ export {
 } from "./FxOverlay.types";
 export {
   bwMod,
-  cartoonyMod,
+  grainMod,
   FX_MODE_MODS,
   applyFxMode,
   clearAllFxModes,

@@ -43,6 +43,24 @@ let videoFallback: HTMLVideoElement | null = null;
 let pipResizeObs: ResizeObserver | null = null;
 let homeResizeObs: ResizeObserver | null = null;
 
+/** Active Document PiP window, if any (opener-side handle). */
+export function getVisualPipWindow(): Window | null {
+  if (pipWindowRef && !pipWindowRef.closed) return pipWindowRef;
+  const api = getDocumentPip();
+  if (api?.window && !api.window.closed) return api.window;
+  return null;
+}
+
+/**
+ * R3F shell currently living in Document PiP (same node fx overlays mount into).
+ * Prefer this over re-querying canvases right after the adopt.
+ */
+export function getVisualPipMoveRoot(): HTMLElement | null {
+  if (!movedRoot) return null;
+  if (!getVisualPipWindow()) return null;
+  return movedRoot.isConnected ? movedRoot : null;
+}
+
 function emitPipChange() {
   window.dispatchEvent(new Event(VISUAL_PIP_CHANGE));
 }
@@ -95,10 +113,12 @@ function kickResizeAfterLayout(root: HTMLElement) {
 
 function findScreenCanvas(): HTMLCanvasElement | null {
   if (pipWindowRef && !pipWindowRef.closed) {
-    const inPip = pipWindowRef.document.querySelector("canvas");
-    if (inPip) return inPip;
+    const inPip = pipWindowRef.document.querySelector(
+      "canvas:not([data-fx-pass])",
+    );
+    if (inPip) return inPip as HTMLCanvasElement;
   }
-  return document.querySelector("canvas");
+  return document.querySelector("canvas:not([data-fx-pass])");
 }
 
 /**
