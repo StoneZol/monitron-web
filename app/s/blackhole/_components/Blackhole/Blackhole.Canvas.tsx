@@ -13,9 +13,11 @@ import {
 } from "@/lib/twinkleHsl";
 import {
   channelLevel,
+  createMotionKickState,
   drivenLevel,
   hexToVec3,
   lerpHex,
+  motionSpeedMul,
 } from "@/lib/visualAudio";
 import { useRenderDpr } from "@/lib/renderScale";
 import { registerRuntimeReset } from "@/lib/runtimeReset";
@@ -38,6 +40,7 @@ function BlackholeQuad({
   vizRef: RefObject<VizBands>;
 }) {
   const yawAcc = useRef(0);
+  const motionKick = useRef(createMotionKickState());
   const holeHue = useRef(0);
   const nebulaHue = useRef(0);
   const holePulse = useRef(createTwinklePulseEnv());
@@ -87,6 +90,7 @@ function BlackholeQuad({
   useEffect(() => {
     return registerRuntimeReset("blackhole", () => {
       yawAcc.current = 0;
+      motionKick.current = createMotionKickState();
       holeHue.current = 0;
       nebulaHue.current = 0;
       holePulse.current = createTwinklePulseEnv();
@@ -109,9 +113,11 @@ function BlackholeQuad({
     const reactive = Boolean(viz?.enabled);
     const holeRaw = reactive ? channelLevel(viz!, live.holeChannel) : 0;
     const yawRaw = reactive ? channelLevel(viz!, live.yawChannel) : 0;
+    const yawAccelRaw = reactive
+      ? channelLevel(viz!, live.yawAccelChannel)
+      : 0;
     const nebulaRaw = reactive ? channelLevel(viz!, live.nebulaChannel) : 0;
     const holePunch = drivenLevel(holeRaw, live.holeDrive);
-    const yawPunch = drivenLevel(yawRaw, live.yawDrive);
     const nebulaPunch = drivenLevel(nebulaRaw, live.nebulaDrive);
 
     sceneT.current += dt * Math.max(0.05, live.flightSpeed);
@@ -136,8 +142,16 @@ function BlackholeQuad({
     m.uniforms.uBeltAngle!.value = (live.beltAngle * Math.PI) / 180;
     m.uniforms.uSpeed!.value = Math.max(0.05, live.diskRotationSpeed);
 
-    const yawArmed = reactive && live.yawChannel !== "off";
-    const yawMul = yawArmed ? 1 + yawPunch * 1.2 : 1;
+    const { speedMul: yawMul } = motionSpeedMul({
+      cruiseRaw: yawRaw,
+      cruiseDrive: live.yawDrive,
+      cruiseArmed: reactive && live.yawChannel !== "off",
+      kickRaw: yawAccelRaw,
+      kickDrive: live.yawAccelDrive,
+      kickArmed: reactive && live.yawAccelChannel !== "off",
+      kick: motionKick.current,
+      dt,
+    });
     yawAcc.current +=
       dt * live.yawSpeed * yawMul +
       (scalePunchOn ? Math.sin(shakeT * 37) * shake * 0.015 * dt * 60 : 0);

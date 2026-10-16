@@ -1,4 +1,7 @@
 import type { AudioSource } from "@/hooks/useAudioReactive";
+import type { ReactiveChannel } from "@/lib/visualAudio";
+
+export type { ReactiveChannel };
 
 export type MatrixControls = {
   twinkle: boolean;
@@ -7,7 +10,12 @@ export type MatrixControls = {
   twinkleL: number;
   color: string;
   fallSpeed: number;
-  /** Multiplies low-slice punches + global fall on reactive */
+  /** Smooth cruise lift on fall speed */
+  speedChannel: ReactiveChannel;
+  speedDrive: number;
+  /** Rising-edge kick channel for fall accel + column dumps */
+  accelChannel: ReactiveChannel;
+  /** Multiplies kick punches + global fall accel on reactive */
   drive: number;
   /** Color / twinkle pulse boost 0…2 */
   colorDrive: number;

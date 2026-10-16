@@ -28,11 +28,15 @@ export type WarpburstLive = {
   fogDetail: number;
   colorChannel: ReactiveChannel;
   colorDrive: number;
+  /** Smooth cruise — lifts base flight continuously */
   speedChannel: ReactiveChannel;
   speedDrive: number;
+  /** Transient kick — rising-edge accel punches */
+  accelChannel: ReactiveChannel;
+  accelDrive: number;
 };
 
-/** Speed punch drive */
+/** Cruise / kick drive */
 export const WARPBURST_DRIVE_MAX = 8;
 /** Color / twinkle punch — short 0…2 boost, no need to haul to ×8 */
 export const WARPBURST_COLOR_DRIVE_MAX = 2;
@@ -51,8 +55,10 @@ export const WARPBURST_DEFAULTS: WarpburstLive = {
   fogDetail: 4,
   colorChannel: "bass",
   colorDrive: 1.2,
-  speedChannel: "bass",
+  speedChannel: "mid",
   speedDrive: 2,
+  accelChannel: "bass",
+  accelDrive: 1.2,
 };
 
 export const WARPBURST_RANGES = {
@@ -62,4 +68,5 @@ export const WARPBURST_RANGES = {
   fogDetail: { min: 0, max: 4, step: 0.1 },
   colorDrive: { min: 0, max: WARPBURST_COLOR_DRIVE_MAX, step: 0.05 },
   speedDrive: { min: 0, max: WARPBURST_DRIVE_MAX, step: 0.1 },
+  accelDrive: { min: 0, max: WARPBURST_DRIVE_MAX, step: 0.1 },
 } as const;

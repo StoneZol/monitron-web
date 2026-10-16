@@ -122,6 +122,16 @@ function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
     BLACKHOLE_DRIVE_MAX,
     STORED_DEFAULTS.yawDrive,
   );
+  const yawAccelChannel = channel(
+    rest.yawAccelChannel,
+    STORED_DEFAULTS.yawAccelChannel,
+  );
+  const yawAccelDrive = clamp(
+    Number(rest.yawAccelDrive),
+    0,
+    BLACKHOLE_DRIVE_MAX,
+    STORED_DEFAULTS.yawAccelDrive,
+  );
 
   return {
     ...STORED_DEFAULTS,
@@ -222,6 +232,8 @@ function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
     ),
     yawChannel,
     yawDrive,
+    yawAccelChannel,
+    yawAccelDrive,
     nebulaChannel: channel(rest.nebulaChannel, STORED_DEFAULTS.nebulaChannel),
     nebulaDrive: clamp(
       Number(rest.nebulaDrive),
@@ -333,6 +345,9 @@ export default function useBlackholeHook() {
       holeDrive: live.holeDrive,
       yawChannel: live.yawChannel,
       yawDrive: live.yawDrive,
+      yawAccelChannel: live.yawAccelChannel,
+      yawAccelDrive: live.yawAccelDrive,
+      yawAccelDriveMax: BLACKHOLE_DRIVE_MAX,
       nebulaChannel: live.nebulaChannel,
       nebulaDrive: live.nebulaDrive,
       scalePunch: live.scalePunch,
@@ -367,6 +382,9 @@ export default function useBlackholeHook() {
       setHoleDrive: (holeDrive: number) => commit({ holeDrive }),
       setYawChannel: (yawChannel: ReactiveChannel) => commit({ yawChannel }),
       setYawDrive: (yawDrive: number) => commit({ yawDrive }),
+      setYawAccelChannel: (yawAccelChannel: ReactiveChannel) =>
+        commit({ yawAccelChannel }),
+      setYawAccelDrive: (yawAccelDrive: number) => commit({ yawAccelDrive }),
       setNebulaChannel: (nebulaChannel: ReactiveChannel) =>
         commit({ nebulaChannel }),
       setNebulaDrive: (nebulaDrive: number) => commit({ nebulaDrive }),

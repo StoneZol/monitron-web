@@ -61,8 +61,10 @@ export const SYNTHWAVE_DEFAULTS: SynthwaveLive = {
     skyHorizonPeak: "#5f006b",
     skySpeed: 2,
     skyDirection: 0,
-    roadChannel: "bass",
-    roadDrive: 2,
+    roadChannel: "mid",
+    roadDrive: 1.2,
+    roadAccelChannel: "bass",
+    roadAccelDrive: 2,
     stretchChannel: "bass",
     stretchDrive: 2,
     glowChannel: "bass",
@@ -156,6 +158,11 @@ function migratePrefs(
                     ? raw.drive
                     : SYNTHWAVE_DEFAULTS.roadDrive,
         ),
+        roadAccelDrive: clampRoadDrive(
+            typeof raw.roadAccelDrive === "number"
+                ? raw.roadAccelDrive
+                : SYNTHWAVE_DEFAULTS.roadAccelDrive,
+        ),
         stretchDrive: clampRoadDrive(
             typeof raw.stretchDrive === "number"
                 ? raw.stretchDrive
@@ -181,6 +188,8 @@ function migratePrefs(
     delete (next as { roadStretch?: boolean }).roadStretch;
     if (!CHANNELS.has(next.roadChannel))
         next.roadChannel = SYNTHWAVE_DEFAULTS.roadChannel;
+    if (!CHANNELS.has(next.roadAccelChannel))
+        next.roadAccelChannel = SYNTHWAVE_DEFAULTS.roadAccelChannel;
     if (!CHANNELS.has(next.stretchChannel))
         next.stretchChannel = SYNTHWAVE_DEFAULTS.stretchChannel;
     if (!CHANNELS.has(next.glowChannel))
@@ -495,6 +504,11 @@ export default function useSynthwaveHook() {
             commit({ roadChannel }),
         setRoadDrive: (roadDrive: number) =>
             commit({ roadDrive: clampRoadDrive(roadDrive) }),
+        setRoadAccelChannel: (
+            roadAccelChannel: SynthwaveLive["roadAccelChannel"],
+        ) => commit({ roadAccelChannel }),
+        setRoadAccelDrive: (roadAccelDrive: number) =>
+            commit({ roadAccelDrive: clampRoadDrive(roadAccelDrive) }),
         setStretchChannel: (stretchChannel: SynthwaveLive["stretchChannel"]) =>
             commit({ stretchChannel }),
         setStretchDrive: (stretchDrive: number) =>

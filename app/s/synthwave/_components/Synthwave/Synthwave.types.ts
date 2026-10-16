@@ -70,10 +70,14 @@ export type SynthwaveLive = {
     skySpeed: number;
     /** Cloud drift direction in degrees (0 = +X, −90 = −Y) */
     skyDirection: number;
-    /** Band that accelerates road scroll */
+    /** Band that lifts cruise road scroll (smooth) */
     roadChannel: ReactiveChannel;
-    /** How hard road channel punches scroll (legacy single `drive`) */
+    /** Cruise lift strength for grid scroll */
     roadDrive: number;
+    /** Band that kicks scroll acceleration (rising-edge) */
+    roadAccelChannel: ReactiveChannel;
+    /** Kick / acceleration strength for grid scroll */
+    roadAccelDrive: number;
     /** Band that flashes grid glow / line brightness */
     glowChannel: ReactiveChannel;
     /** Color / twinkle pulse boost 0…2 */

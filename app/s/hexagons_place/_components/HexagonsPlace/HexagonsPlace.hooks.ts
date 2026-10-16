@@ -63,8 +63,10 @@ export const HEXAGONS_DEFAULTS: HexagonsPlaceLive = {
     spin: true,
     spinLeft: true,
     spinSpeed: 1,
-    spinChannel: "beat",
-    spinDrive: 2,
+    spinChannel: "mid",
+    spinDrive: 1.2,
+    spinAccelChannel: "beat",
+    spinAccelDrive: 2,
     fogHeight: 2,
     fogDensity: 0.7,
     lightIntensity: 1,
@@ -220,6 +222,15 @@ function readPrefs(): HexagonsPlaceLive {
     ) {
         cached.spinChannel = HEXAGONS_DEFAULTS.spinChannel;
     }
+    if (
+        cached.spinAccelChannel !== "off" &&
+        cached.spinAccelChannel !== "bass" &&
+        cached.spinAccelChannel !== "mid" &&
+        cached.spinAccelChannel !== "high" &&
+        cached.spinAccelChannel !== "beat"
+    ) {
+        cached.spinAccelChannel = HEXAGONS_DEFAULTS.spinAccelChannel;
+    }
     cached.gridDrive = clamp(
         Number(cached.gridDrive),
         0,
@@ -240,6 +251,14 @@ function readPrefs(): HexagonsPlaceLive {
         0,
         HEXAGONS_DRIVE_MAX,
         HEXAGONS_DEFAULTS.spinDrive,
+    );
+    cached.spinAccelDrive = clamp(
+        typeof cached.spinAccelDrive === "number"
+            ? cached.spinAccelDrive
+            : HEXAGONS_DEFAULTS.spinAccelDrive,
+        0,
+        HEXAGONS_DRIVE_MAX,
+        HEXAGONS_DEFAULTS.spinAccelDrive,
     );
     // Caps mutex with twinkle
     if (cached.caps && cached.twinkle) cached.twinkle = false;
@@ -408,6 +427,14 @@ export default function useHexagonsPlaceHook() {
                 commit({ spinChannel }),
             spinDrive: live.spinDrive,
             setSpinDrive: (spinDrive: number) => commit({ spinDrive }),
+            spinAccelChannel: live.spinAccelChannel,
+            setSpinAccelChannel: (
+                spinAccelChannel: HexagonsPlaceLive["spinAccelChannel"],
+            ) => commit({ spinAccelChannel }),
+            spinAccelDrive: live.spinAccelDrive,
+            setSpinAccelDrive: (spinAccelDrive: number) =>
+                commit({ spinAccelDrive }),
+            spinAccelDriveMax: HEXAGONS_DRIVE_MAX,
             fogHeight: live.fogHeight,
             setFogHeight: (fogHeight: number) => commit({ fogHeight }),
             fogDensity: live.fogDensity,

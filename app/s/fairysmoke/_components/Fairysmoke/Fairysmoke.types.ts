@@ -34,11 +34,15 @@ export type FairysmokeLive = {
     saturation: number;
     colorChannel: ReactiveChannel;
     colorDrive: number;
+    /** Smooth cruise — lifts base smoke clock continuously */
     speedChannel: ReactiveChannel;
     speedDrive: number;
+    /** Transient kick — rising-edge accel punches */
+    accelChannel: ReactiveChannel;
+    accelDrive: number;
 };
 
-/** Speed punch drive — short rising-edge hits */
+/** Cruise / kick drive */
 export const FAIRYSMOKE_DRIVE_MAX = 8;
 /** Color / twinkle punch — short 0…2 boost */
 export const FAIRYSMOKE_COLOR_DRIVE_MAX = 2;
@@ -56,8 +60,10 @@ export const FAIRYSMOKE_DEFAULTS: FairysmokeLive = {
     saturation: 1,
     colorChannel: "bass",
     colorDrive: 1.2,
-    speedChannel: "bass",
-    speedDrive: 1,
+    speedChannel: "mid",
+    speedDrive: 1.2,
+    accelChannel: "bass",
+    accelDrive: 1.2,
 };
 
 export const FAIRYSMOKE_RANGES = {
@@ -68,4 +74,5 @@ export const FAIRYSMOKE_RANGES = {
     saturation: { min: 0, max: 2, step: 0.05 },
     colorDrive: { min: 0, max: FAIRYSMOKE_COLOR_DRIVE_MAX, step: 0.05 },
     speedDrive: { min: 0, max: FAIRYSMOKE_DRIVE_MAX, step: 0.1 },
+    accelDrive: { min: 0, max: FAIRYSMOKE_DRIVE_MAX, step: 0.1 },
 } as const;

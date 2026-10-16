@@ -14,9 +14,11 @@ import {
 } from "@/lib/twinkleHsl";
 import {
   channelLevel,
+  createMotionKickState,
   drivenLevel,
   hexToVec3,
   lerpHex,
+  motionSpeedMul,
 } from "@/lib/visualAudio";
 import { useRenderDpr } from "@/lib/renderScale";
 import { registerRuntimeReset } from "@/lib/runtimeReset";
@@ -32,10 +34,6 @@ const COLOR_EDGE_MIN = 0.05;
 const FLICKER_DECAY = 9;
 const FLICKER_EDGE = 0.04;
 const FLICKER_EDGE_MIN = 0.05;
-const SPEED_DECAY = 13;
-const SPEED_EDGE = 0.08;
-const SPEED_EDGE_MIN = 0.1;
-const SPEED_MUL = 0.7;
 
 const MODE_CODE = {
   original: 0,
@@ -70,8 +68,7 @@ function CoralreefQuad({
   const colorPrev = useRef(0);
   const flickerEnv = useRef(0);
   const flickerPrev = useRef(0);
-  const speedEnv = useRef(0);
-  const speedPrev = useRef(0);
+  const motionKick = useRef(createMotionKickState());
   const twinkleHue = useRef(0);
   const lightTwinkleHue = useRef(0);
   const palettePhase = useRef(0);
@@ -140,24 +137,22 @@ function CoralreefQuad({
     const reactive = Boolean(viz?.enabled);
     const colorRaw = reactive ? channelLevel(viz!, live.colorChannel) : 0;
     const speedRaw = reactive ? channelLevel(viz!, live.speedChannel) : 0;
+    const accelRaw = reactive ? channelLevel(viz!, live.accelChannel) : 0;
     const colorPunch = drivenLevel(colorRaw, live.colorDrive);
-    const speedPunch = drivenLevel(speedRaw, live.speedDrive, 1);
 
     const colorArmed = reactive && live.colorChannel !== "off";
-    const speedArmed = reactive && live.speedChannel !== "off";
     const mode = live.colorMode;
 
-    const speedHit = speedArmed ? Math.min(1, speedPunch) : 0;
-    if (
-      risingEdge(speedHit, speedPrev.current, SPEED_EDGE, SPEED_EDGE_MIN)
-    ) {
-      speedEnv.current = Math.max(speedEnv.current, speedHit);
-    }
-    speedEnv.current *= Math.exp(-SPEED_DECAY * dt);
-    if (speedEnv.current < 0.004) speedEnv.current = 0;
-    speedPrev.current = speedHit;
-
-    const speedMul = speedArmed ? 1 + speedEnv.current * SPEED_MUL : 1;
+    const { speedMul } = motionSpeedMul({
+      cruiseRaw: speedRaw,
+      cruiseDrive: live.speedDrive,
+      cruiseArmed: reactive && live.speedChannel !== "off",
+      kickRaw: accelRaw,
+      kickDrive: live.accelDrive,
+      kickArmed: reactive && live.accelChannel !== "off",
+      kick: motionKick.current,
+      dt,
+    });
     flyT.current += dt * Math.max(0.05, live.flightSpeed) * speedMul;
 
     const colorHit = colorArmed ? Math.min(1, colorPunch) : 0;

@@ -58,10 +58,12 @@ const INFO = {
   scaleDrive: "How hard scale punches when Scale punch is on.",
   diskSpin: "Accretion disk / horizon swirl speed.",
   holeChannel: "Band that punches hole / disk color, glow, and scale punch.",
-  yawChannel: "Band that punches yaw orbit speed.",
+  yawChannel: "Band that lifts cruise yaw orbit (smooth).",
+  yawAccelChannel: "Band that kicks yaw acceleration (rising-edge).",
   nebulaChannel: "Band that punches nebula brightness / peak tint.",
   holeDrive: "Hole color / twinkle pulse boost (0…2).",
-  yawDrive: "Yaw orbit punch strength (0…8).",
+  yawDrive: "Cruise yaw lift strength (0…8).",
+  yawAccelDrive: "Kick / acceleration strength for yaw orbit (0…8).",
   nebulaDrive: "Nebula color / twinkle pulse boost (0…2).",
   visualizer: {
     section: "Audio in → bus meters → peak gain for reactive screens.",
@@ -277,6 +279,13 @@ const Blackhole = ({ showOverlay = true }: BlackholeProps) => {
                       info={INFO.yawChannel}
                     />
                     <Select
+                      label="Yaw accel"
+                      value={controls.yawAccelChannel}
+                      options={REACTIVE_CHANNEL_OPTIONS}
+                      onChange={controls.setYawAccelChannel}
+                      info={INFO.yawAccelChannel}
+                    />
+                    <Select
                       label="Nebula"
                       value={controls.nebulaChannel}
                       options={REACTIVE_CHANNEL_OPTIONS}
@@ -304,6 +313,16 @@ const Blackhole = ({ showOverlay = true }: BlackholeProps) => {
                       onChange={controls.setYawDrive}
                       format={(v) => `×${v.toFixed(1)}`}
                       info={INFO.yawDrive}
+                    />
+                    <Slider
+                      label="Yaw accel"
+                      value={controls.yawAccelDrive}
+                      min={BLACKHOLE_RANGES.yawAccelDrive.min}
+                      max={controls.yawAccelDriveMax}
+                      step={BLACKHOLE_RANGES.yawAccelDrive.step}
+                      onChange={controls.setYawAccelDrive}
+                      format={(v) => `×${v.toFixed(1)}`}
+                      info={INFO.yawAccelDrive}
                     />
                     <Slider
                       label="Nebula"

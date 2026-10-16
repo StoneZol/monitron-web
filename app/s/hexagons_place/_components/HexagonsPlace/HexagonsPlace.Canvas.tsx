@@ -4,13 +4,18 @@ import { useEffect, useMemo, useRef, type RefObject } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import type { VizBands } from "@/lib/audioBus";
-import { sliceBands, risingEdge } from "@/lib/audioDerive";
+import { sliceBands } from "@/lib/audioDerive";
 import {
     advanceTwinkleHue,
     createTwinklePulseEnv,
     updateTwinklePulseEnv,
 } from "@/lib/twinkleHsl";
-import { beatRaw, channelLevel } from "@/lib/visualAudio";
+import {
+    beatRaw,
+    channelLevel,
+    createMotionKickState,
+    motionSpeedMul,
+} from "@/lib/visualAudio";
 import { useRenderDpr } from "@/lib/renderScale";
 import { registerRuntimeReset } from "@/lib/runtimeReset";
 import { injectGroundFogShader, FOG_NEUTRAL } from "./HexagonsPlace.fog";
@@ -18,9 +23,6 @@ import { applyGlow } from "./HexagonsPlace.glow";
 import type { HexagonsPlaceLive } from "./HexagonsPlace.types";
 
 const ROTATION_SPEED = 0.00005;
-const SPIN_IMPULSE_DECAY = 3.2;
-const SPIN_EDGE = 0.05;
-const SPIN_MIN = 0.06;
 const FLAT_TOP = Math.PI / 6;
 /**
  * Hex center pitch vs tight pack. 1 = touching faces; >1 opens a seam
@@ -391,9 +393,7 @@ function City({
     const twinklePulse = useRef(createTwinklePulseEnv());
     const prevBands = useRef({ bass: 0, mid: 0, high: 0 });
     const bandEnvs = useRef(createBandEnvs());
-    const spinImpulse = useRef(0);
-    const prevSpinLevel = useRef(0);
-    const prevSpinRaw = useRef(0);
+    const motionKick = useRef(createMotionKickState());
 
     useEffect(() => {
         liveRef.current = live;
@@ -463,9 +463,7 @@ function City({
             twinklePulse.current = createTwinklePulseEnv();
             prevBands.current = { bass: 0, mid: 0, high: 0 };
             bandEnvs.current = createBandEnvs();
-            spinImpulse.current = 0;
-            prevSpinLevel.current = 0;
-            prevSpinRaw.current = 0;
+            motionKick.current = createMotionKickState();
             const field = townRef.current;
             if (field?.userData.pulses instanceof Float32Array) {
                 field.userData.pulses.fill(0);
@@ -737,45 +735,28 @@ function City({
 
         if (knobs.spin) {
             const dir = knobs.spinLeft ? 1 : -1;
-            // Reactive spin: only via Spin channel select (beat = peak/Peak gain)
-            let tempoMul = 1;
-            if (reactive && viz && knobs.spinChannel !== "off") {
-                const level = channelLevel(viz, knobs.spinChannel);
-                // Beat: edge on unclipped raw so Peak gain ×3 still punches faster
-                const edgeSrc =
-                    knobs.spinChannel === "beat"
+            const cruiseRaw =
+                reactive && viz ? channelLevel(viz, knobs.spinChannel) : 0;
+            const kickRaw =
+                reactive && viz
+                    ? knobs.spinAccelChannel === "beat"
                         ? beatRaw(viz)
-                        : level;
-                const edgePrev =
-                    knobs.spinChannel === "beat"
-                        ? prevSpinRaw.current
-                        : prevSpinLevel.current;
-                if (
-                    risingEdge(edgeSrc, edgePrev, SPIN_EDGE, SPIN_MIN)
-                ) {
-                    spinImpulse.current = Math.max(
-                        spinImpulse.current,
-                        Math.min(1, 0.4 + level * 0.65),
-                    );
-                }
-                if (knobs.spinChannel === "beat") {
-                    prevSpinRaw.current = edgeSrc;
-                }
-                prevSpinLevel.current = level;
-                spinImpulse.current = Math.max(
-                    spinImpulse.current * Math.exp(-dt * SPIN_IMPULSE_DECAY),
-                    Math.pow(level, 1.45) * 0.55,
-                );
-                const accel = Math.max(0, knobs.spinDrive);
-                tempoMul =
-                    1 + Math.pow(spinImpulse.current, 1.55) * accel;
-            } else {
-                spinImpulse.current = 0;
-                prevSpinLevel.current = 0;
-                prevSpinRaw.current = 0;
-            }
+                        : channelLevel(viz, knobs.spinAccelChannel)
+                    : 0;
+            const { speedMul: tempoMul } = motionSpeedMul({
+                cruiseRaw,
+                cruiseDrive: knobs.spinDrive,
+                cruiseArmed: reactive && knobs.spinChannel !== "off",
+                kickRaw: Math.min(1, kickRaw),
+                kickDrive: knobs.spinAccelDrive,
+                kickArmed: reactive && knobs.spinAccelChannel !== "off",
+                kick: motionKick.current,
+                dt,
+            });
             city.rotation.y +=
                 dir * 8 * ROTATION_SPEED * knobs.spinSpeed * tempoMul;
+        } else {
+            motionKick.current = createMotionKickState();
         }
         if (city.rotation.x < -0.05) city.rotation.x = -0.05;
     });

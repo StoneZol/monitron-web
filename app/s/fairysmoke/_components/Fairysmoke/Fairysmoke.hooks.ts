@@ -156,6 +156,13 @@ function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
       FAIRYSMOKE_DRIVE_MAX,
       STORED_DEFAULTS.speedDrive,
     ),
+    accelChannel: channel(raw.accelChannel, STORED_DEFAULTS.accelChannel),
+    accelDrive: clamp(
+      Number(raw.accelDrive),
+      0,
+      FAIRYSMOKE_DRIVE_MAX,
+      STORED_DEFAULTS.accelDrive,
+    ),
   };
   delete (next as { twinkle?: boolean }).twinkle;
   return next;
@@ -244,8 +251,11 @@ export default function useFairysmokeHook() {
       colorDrive: live.colorDrive,
       speedChannel: live.speedChannel,
       speedDrive: live.speedDrive,
+      accelChannel: live.accelChannel,
+      accelDrive: live.accelDrive,
       colorDriveMax: FAIRYSMOKE_COLOR_DRIVE_MAX,
       speedDriveMax: FAIRYSMOKE_DRIVE_MAX,
+      accelDriveMax: FAIRYSMOKE_DRIVE_MAX,
       setSmokeSpeed: (smokeSpeed: number) => commit({ smokeSpeed }),
       setChaos: (chaos: number) => commit({ chaos }),
       setDensity: (density: number) => commit({ density }),
@@ -262,6 +272,9 @@ export default function useFairysmokeHook() {
       setSpeedChannel: (speedChannel: ReactiveChannel) =>
         commit({ speedChannel }),
       setSpeedDrive: (speedDrive: number) => commit({ speedDrive }),
+      setAccelChannel: (accelChannel: ReactiveChannel) =>
+        commit({ accelChannel }),
+      setAccelDrive: (accelDrive: number) => commit({ accelDrive }),
       fullscreen: () => void toggleFullscreen(),
       reset: () => {
         writePrefs({ ...STORED_DEFAULTS });

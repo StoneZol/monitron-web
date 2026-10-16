@@ -156,6 +156,13 @@ function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
       KALISTARNEST_DRIVE_MAX,
       STORED_DEFAULTS.speedDrive,
     ),
+    accelChannel: channel(raw.accelChannel, STORED_DEFAULTS.accelChannel),
+    accelDrive: clamp(
+      Number(raw.accelDrive),
+      0,
+      KALISTARNEST_DRIVE_MAX,
+      STORED_DEFAULTS.accelDrive,
+    ),
   };
   return next;
 }
@@ -246,8 +253,11 @@ export default function useKalistarnestHook() {
       colorDrive: live.colorDrive,
       speedChannel: live.speedChannel,
       speedDrive: live.speedDrive,
+      accelChannel: live.accelChannel,
+      accelDrive: live.accelDrive,
       colorDriveMax: KALISTARNEST_COLOR_DRIVE_MAX,
       speedDriveMax: KALISTARNEST_DRIVE_MAX,
+      accelDriveMax: KALISTARNEST_DRIVE_MAX,
       setFlightSpeed: (flightSpeed: number) => commit({ flightSpeed }),
       setCameraMode: (cameraMode: KalistarnestCameraMode) =>
         commit({ cameraMode }),
@@ -270,6 +280,9 @@ export default function useKalistarnestHook() {
       setSpeedChannel: (speedChannel: ReactiveChannel) =>
         commit({ speedChannel }),
       setSpeedDrive: (speedDrive: number) => commit({ speedDrive }),
+      setAccelChannel: (accelChannel: ReactiveChannel) =>
+        commit({ accelChannel }),
+      setAccelDrive: (accelDrive: number) => commit({ accelDrive }),
       fullscreen: () => void toggleFullscreen(),
       reset: () => {
         writePrefs({ ...STORED_DEFAULTS });

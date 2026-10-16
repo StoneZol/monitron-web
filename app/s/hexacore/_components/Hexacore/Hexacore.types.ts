@@ -24,11 +24,15 @@ export type HexacoreLive = {
   saturation: number;
   colorChannel: ReactiveChannel;
   colorDrive: number;
+  /** Smooth cruise — lifts base flight continuously */
   speedChannel: ReactiveChannel;
   speedDrive: number;
+  /** Transient kick — rising-edge accel punches */
+  accelChannel: ReactiveChannel;
+  accelDrive: number;
 };
 
-/** Speed punch drive */
+/** Cruise / kick drive */
 export const HEXACORE_DRIVE_MAX = 8;
 /** Color / twinkle punch — short 0…2 boost */
 export const HEXACORE_COLOR_DRIVE_MAX = 2;
@@ -44,8 +48,10 @@ export const HEXACORE_DEFAULTS: HexacoreLive = {
   saturation: 1,
   colorChannel: "bass",
   colorDrive: 1.2,
-  speedChannel: "bass",
+  speedChannel: "mid",
   speedDrive: 1.2,
+  accelChannel: "bass",
+  accelDrive: 1.2,
 };
 
 export const HEXACORE_RANGES = {
@@ -53,4 +59,5 @@ export const HEXACORE_RANGES = {
   saturation: { min: 0, max: 2, step: 0.05 },
   colorDrive: { min: 0, max: HEXACORE_COLOR_DRIVE_MAX, step: 0.05 },
   speedDrive: { min: 0, max: HEXACORE_DRIVE_MAX, step: 0.1 },
+  accelDrive: { min: 0, max: HEXACORE_DRIVE_MAX, step: 0.1 },
 } as const;

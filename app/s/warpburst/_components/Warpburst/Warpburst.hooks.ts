@@ -155,6 +155,13 @@ function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
       WARPBURST_DRIVE_MAX,
       STORED_DEFAULTS.speedDrive,
     ),
+    accelChannel: channel(raw.accelChannel, STORED_DEFAULTS.accelChannel),
+    accelDrive: clamp(
+      Number(raw.accelDrive),
+      0,
+      WARPBURST_DRIVE_MAX,
+      STORED_DEFAULTS.accelDrive,
+    ),
   };
 }
 
@@ -239,8 +246,11 @@ export default function useWarpburstHook() {
       colorDrive: live.colorDrive,
       speedChannel: live.speedChannel,
       speedDrive: live.speedDrive,
+      accelChannel: live.accelChannel,
+      accelDrive: live.accelDrive,
       colorDriveMax: WARPBURST_COLOR_DRIVE_MAX,
       speedDriveMax: WARPBURST_DRIVE_MAX,
+      accelDriveMax: WARPBURST_DRIVE_MAX,
       setFlightSpeed: (flightSpeed: number) => commit({ flightSpeed }),
       setCameraBank: (cameraBank: number) => commit({ cameraBank }),
       setColor: (color: string) => commit({ color }),
@@ -257,6 +267,9 @@ export default function useWarpburstHook() {
       setSpeedChannel: (speedChannel: ReactiveChannel) =>
         commit({ speedChannel }),
       setSpeedDrive: (speedDrive: number) => commit({ speedDrive }),
+      setAccelChannel: (accelChannel: ReactiveChannel) =>
+        commit({ accelChannel }),
+      setAccelDrive: (accelDrive: number) => commit({ accelDrive }),
       fullscreen: () => void toggleFullscreen(),
       reset: () => {
         writePrefs({ ...STORED_DEFAULTS });
