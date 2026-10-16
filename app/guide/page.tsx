@@ -2,13 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { SiteFooter } from "@/components/SiteFooter";
 import { panelButtonClassName } from "@/components/ControlPanel/PanelButton";
-import { PLUGIN_URL } from "@/lib/audioBus";
+import { PLUGIN_URL, WEB_URL } from "@/lib/audioBus";
 import { SITE_NAME } from "@/lib/seo";
 import { getSiteUrl } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
 const GUIDE_DESCRIPTION =
-  "How to drive Monitron with the Chrome plugin or mic, and share look presets via monitron keys.";
+  "How to drive Monitron with the Chrome plugin or mic, known Chrome tabCapture limits, and monitron preset keys.";
 
 export const metadata: Metadata = {
   title: "Guide",
@@ -155,8 +155,104 @@ export default function GuidePage() {
           </section>
 
           <section className="space-y-4">
+            <h2 className="font-mono text-[11px] uppercase tracking-[0.28em] text-warn">
+              ::3 known limits · chrome
+            </h2>
+            <p className="text-muted">
+              Open bug under multi-window{" "}
+              <span className="text-ink">Page-Fullscreen</span>, tied to the{" "}
+              <span className="text-ink">plugin listening</span> — not to the
+              site’s mic alone. We don’t toggle mute on the tab: Chrome’s{" "}
+              <span className="text-ink">tabCapture</span> always hijacks
+              playback into the extension offscreen doc (we play it back so you
+              still hear it). While that capture is live, stacking Page-Fullscreen
+              windows kills the feed; with the plugin{" "}
+              <span className="text-ink">disconnected</span>, the same fullscreen
+              layout leaves music playing.
+            </p>
+            <ul className="space-y-3 text-muted">
+              <li>
+                <span className="font-mono text-[12px] uppercase tracking-[0.14em] text-warn">
+                  symptom
+                </span>
+                <span className="mx-2 text-muted/40">—</span>
+                plugin connected to a <span className="text-ink">video</span>{" "}
+                tab (YouTube): fine at rest; after Page-Fullscreen on Monitron
+                windows, audio dies in ~1–15s. Switching the site source to{" "}
+                <span className="text-ink">mic</span> while the plugin is still
+                connected also falls over.{" "}
+                <span className="text-ink">Disconnect the plugin</span> → music
+                keeps going under the same fullscreen. Plugin + Spotify-class{" "}
+                <span className="text-ink">audio-only</span> tabs → OK.
+              </li>
+              <li>
+                <span className="font-mono text-[12px] uppercase tracking-[0.14em] text-warn">
+                  not cpu / not mic-alone
+                </span>
+                <span className="mx-2 text-muted/40">—</span>
+                load looks fine. Break tracks{" "}
+                <span className="text-ink">extension tabCapture is on</span>,
+                especially against video tabs — not “Page-Fullscreen always
+                pauses YouTube”.
+              </li>
+              <li>
+                <span className="font-mono text-[12px] uppercase tracking-[0.14em] text-warn">
+                  what we tried
+                </span>
+                <span className="mx-2 text-muted/40">—</span>
+                offscreen <span className="text-ink">USER_MEDIA</span> /{" "}
+                <span className="text-ink">AUDIO_PLAYBACK</span> reasons,{" "}
+                <span className="text-ink">&lt;audio&gt;</span> vs AudioContext
+                playback, keep-alives, audio-only getUserMedia, player iframe +{" "}
+                <span className="text-ink">consumerTabId</span> in the Monitron
+                tab — fragile, rolled back, still open.
+              </li>
+              <li>
+                <span className="font-mono text-[12px] uppercase tracking-[0.14em] text-warn">
+                  workarounds
+                </span>
+                <span className="mx-2 text-muted/40">—</span>
+                plugin + audio-only sources (Spotify Web, etc.); or disconnect
+                the plugin and use <span className="text-ink">mic</span> only;
+                or avoid stacking Page-Fullscreen while capturing a video tab.
+              </li>
+            </ul>
+            <p className="text-muted">
+              Both repos are open source. If you know how to keep tabCapture
+              from a video tab alive under multi-window Page-Fullscreen — PR
+              welcome.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <a
+                href={PLUGIN_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={cn(panelButtonClassName, "inline-flex gap-2")}
+              >
+                <span className="text-muted">src://</span>
+                plugin
+                <span aria-hidden className="text-cyan">
+                  →
+                </span>
+              </a>
+              <a
+                href={WEB_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={cn(panelButtonClassName, "inline-flex gap-2")}
+              >
+                <span className="text-muted">src://</span>
+                web
+                <span aria-hidden className="text-cyan">
+                  →
+                </span>
+              </a>
+            </div>
+          </section>
+
+          <section className="space-y-4">
             <h2 className="font-mono text-[11px] uppercase tracking-[0.28em] text-signal">
-              ::3 microphone
+              ::4 microphone
             </h2>
             <p className="text-muted">
               No extension needed. The page listens through the browser mic —
@@ -180,7 +276,7 @@ export default function GuidePage() {
 
           <section className="space-y-4">
             <h2 className="font-mono text-[11px] uppercase tracking-[0.28em] text-signal">
-              ::4 peak gain
+              ::5 peak gain
             </h2>
             <p className="text-muted">
               Quiet tabs or weak mics: bump{" "}
@@ -191,7 +287,7 @@ export default function GuidePage() {
 
           <section className="space-y-4">
             <h2 className="font-mono text-[11px] uppercase tracking-[0.28em] text-signal">
-              ::5 render scale
+              ::6 render scale
             </h2>
             <p className="text-muted">
               Heavy screens (raymarch / dense shaders) chew GPU even when the
@@ -229,7 +325,7 @@ export default function GuidePage() {
 
           <section className="space-y-4">
             <h2 className="font-mono text-[11px] uppercase tracking-[0.28em] text-signal">
-              ::6 share presets
+              ::7 share presets
             </h2>
             <p className="text-muted">
               Dial a look you like, then pass it around. In the HUD{" "}
