@@ -101,6 +101,7 @@ export type SynthwaveLive = {
     skyTwinkleL: number;
     audioSource: AudioSource;
     micGate: number;
+    micGain: number;
     peakGain: number;
 };
 

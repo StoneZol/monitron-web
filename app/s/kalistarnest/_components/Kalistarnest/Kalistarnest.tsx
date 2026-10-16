@@ -72,6 +72,8 @@ const INFO = {
     source:
       "off disables audio. mic needs a gesture. plugin needs the Monitron extension online.",
     noiseGate: "Ignore mic levels below this floor (room hiss).",
+    micGain:
+      "Boost quiet mic levels so speaker bleed still drives the scene.",
     peakGain:
       "Multiplies bus peak (and the peak meter). Soft-clipped so ×3 still moves.",
   },

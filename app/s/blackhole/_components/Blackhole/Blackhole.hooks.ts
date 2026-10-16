@@ -3,7 +3,9 @@
 import { useEffect, useSyncExternalStore } from "react";
 import {
   migrateAudioSource,
+  MIC_GAIN_DEFAULT,
   MIC_GATE_DEFAULT,
+  normalizeMicGain,
   normalizeMicGate,
   normalizePeakGain,
   PEAK_GAIN_DEFAULT,
@@ -39,6 +41,7 @@ const CHANNELS = new Set<ReactiveChannel>([
 type Stored = BlackholeLive & {
   audioSource: AudioSource;
   micGate: number;
+  micGain: number;
   peakGain: number;
 };
 
@@ -46,6 +49,7 @@ const STORED_DEFAULTS: Stored = {
   ...BLACKHOLE_DEFAULTS,
   audioSource: "off",
   micGate: MIC_GATE_DEFAULT,
+  micGain: MIC_GAIN_DEFAULT,
   peakGain: PEAK_GAIN_DEFAULT,
 };
 
@@ -124,6 +128,7 @@ function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
     ...rest,
     audioSource: migrateAudioSource(raw),
     micGate: normalizeMicGate(raw.micGate),
+    micGain: normalizeMicGain(raw.micGain),
     peakGain: normalizePeakGain(raw.peakGain),
     holeColor,
     holeColorPeak,
@@ -292,9 +297,11 @@ export default function useBlackholeHook() {
   const visualizer = useAudioReactive({
     preferredSource: live.audioSource,
     preferredMicGate: live.micGate,
+    preferredMicGain: live.micGain,
     preferredPeakGain: live.peakGain,
     onSourceChange: (audioSource) => commit({ audioSource }),
     onMicGateChange: (micGate) => commit({ micGate }),
+    onMicGainChange: (micGain) => commit({ micGain }),
     onPeakGainChange: (peakGain) => commit({ peakGain }),
   });
 

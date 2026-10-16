@@ -21,6 +21,7 @@ export type VisualizerInfo = {
   section?: string;
   source?: string;
   noiseGate?: string;
+  micGain?: string;
   peakGain?: string;
 };
 
@@ -81,16 +82,28 @@ export function VisualizerSection({
         info={info?.source}
       />
       {visualizer.source === "mic" && (
-        <Slider
-          label="Noise gate"
-          value={visualizer.micGate}
-          min={0}
-          max={visualizer.micGateMax}
-          step={0.001}
-          onChange={visualizer.setMicGate}
-          format={(v) => (v <= 0.0005 ? "off" : v.toFixed(3))}
-          info={info?.noiseGate}
-        />
+        <>
+          <Slider
+            label="Noise gate"
+            value={visualizer.micGate}
+            min={0}
+            max={visualizer.micGateMax}
+            step={0.001}
+            onChange={visualizer.setMicGate}
+            format={(v) => (v <= 0.0005 ? "off" : v.toFixed(3))}
+            info={info?.noiseGate}
+          />
+          <Slider
+            label="Mic gain"
+            value={visualizer.micGain}
+            min={1}
+            max={visualizer.micGainMax}
+            step={0.1}
+            onChange={visualizer.setMicGain}
+            format={(v) => `×${v.toFixed(1)}`}
+            info={info?.micGain}
+          />
+        </>
       )}
       {visualizer.micNeedsGesture && (
         <p className="text-[10px] uppercase tracking-[0.18em] text-warn">

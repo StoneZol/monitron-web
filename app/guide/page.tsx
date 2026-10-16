@@ -268,8 +268,14 @@ export default function GuidePage() {
                 , tap the page once — browsers need a gesture.
               </li>
               <li>
-                Raise <span className="text-ink">noise gate</span> if room hiss
-                moves the meters. Lower it for quiet sources.
+                <span className="text-ink">Noise gate</span> defaults to off (0).
+                Raise it if room hiss moves the meters; lower it for quiet
+                sources.
+              </li>
+              <li>
+                <span className="text-ink">Mic gain</span> defaults to ×2 and
+                lifts residual levels (speaker bleed, distant mics) before the
+                gate and bus.
               </li>
             </ol>
           </section>
@@ -280,8 +286,10 @@ export default function GuidePage() {
             </h2>
             <p className="text-muted">
               Quiet tabs or weak mics: bump{" "}
-              <span className="text-ink">peak gain</span> on the visualizer.
-              Soft-clipped so ×3 still moves without hard clipping the bus.
+              <span className="text-ink">peak gain</span> on the visualizer
+              (after mic processing). Mic source also has its own{" "}
+              <span className="text-ink">Mic gain</span> slider. Peak gain is
+              soft-clipped so ×3 still moves without hard clipping the bus.
             </p>
           </section>
 

@@ -2,9 +2,13 @@
 
 import { useEffect, useSyncExternalStore } from "react";
 import {
+  MIC_GAIN_DEFAULT,
+  MIC_GATE_DEFAULT,
   migrateAudioSource,
+  normalizeMicGain,
   normalizeMicGate,
   normalizePeakGain,
+  PEAK_GAIN_DEFAULT,
   useAudioReactive,
   type AudioSource,
 } from "@/hooks/useAudioReactive";
@@ -50,14 +54,16 @@ const LIGHT_MODES = new Set<CoralreefLightMode>(["original", "custom"]);
 type Stored = CoralreefLive & {
   audioSource: AudioSource;
   micGate: number;
+  micGain: number;
   peakGain: number;
 };
 
 const STORED_DEFAULTS: Stored = {
   ...CORALREEF_DEFAULTS,
   audioSource: "plugin",
-  micGate: 0.02,
-  peakGain: 1.5,
+  micGate: MIC_GATE_DEFAULT,
+  micGain: MIC_GAIN_DEFAULT,
+  peakGain: PEAK_GAIN_DEFAULT,
 };
 
 function clamp(n: number, min: number, max: number, fallback: number) {
@@ -103,6 +109,7 @@ function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
     ...STORED_DEFAULTS,
     audioSource: migrateAudioSource(raw),
     micGate: normalizeMicGate(raw.micGate),
+    micGain: normalizeMicGain(raw.micGain),
     peakGain: normalizePeakGain(raw.peakGain),
     flightSpeed: clamp(
       Number(raw.flightSpeed),
@@ -249,9 +256,11 @@ export default function useCoralreefHook() {
   const visualizer = useAudioReactive({
     preferredSource: live.audioSource,
     preferredMicGate: live.micGate,
+    preferredMicGain: live.micGain,
     preferredPeakGain: live.peakGain,
     onSourceChange: (audioSource) => commit({ audioSource }),
     onMicGateChange: (micGate) => commit({ micGate }),
+    onMicGainChange: (micGain) => commit({ micGain }),
     onPeakGainChange: (peakGain) => commit({ peakGain }),
   });
 

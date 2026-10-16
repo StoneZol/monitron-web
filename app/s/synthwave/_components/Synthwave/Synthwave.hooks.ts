@@ -2,8 +2,10 @@
 
 import { useEffect, useLayoutEffect, useSyncExternalStore } from "react";
 import {
+    MIC_GAIN_DEFAULT,
     MIC_GATE_DEFAULT,
     migrateAudioSource,
+    normalizeMicGain,
     normalizeMicGate,
     normalizePeakGain,
     PEAK_GAIN_DEFAULT,
@@ -82,6 +84,7 @@ export const SYNTHWAVE_DEFAULTS: SynthwaveLive = {
     skyTwinkleL: TWINKLE_DEFAULT_L,
     audioSource: "off",
     micGate: MIC_GATE_DEFAULT,
+    micGain: MIC_GAIN_DEFAULT,
     peakGain: PEAK_GAIN_DEFAULT,
 };
 
@@ -144,6 +147,7 @@ function migratePrefs(
                 : SYNTHWAVE_DEFAULTS.roadFar,
         audioSource,
         micGate: normalizeMicGate(raw.micGate),
+        micGain: normalizeMicGain(raw.micGain),
         peakGain: normalizePeakGain(raw.peakGain),
         roadDrive: clampRoadDrive(
             typeof raw.roadDrive === "number"
@@ -444,6 +448,8 @@ export default function useSynthwaveHook() {
         onSourceChange: (audioSource) => commit({ audioSource }),
         preferredMicGate: live.micGate,
         onMicGateChange: (micGate) => commit({ micGate }),
+        preferredMicGain: live.micGain,
+        onMicGainChange: (micGain) => commit({ micGain }),
         preferredPeakGain: live.peakGain,
         onPeakGainChange: (peakGain) => commit({ peakGain }),
     });

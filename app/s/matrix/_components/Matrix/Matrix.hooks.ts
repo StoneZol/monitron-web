@@ -5,7 +5,9 @@ import * as THREE from "three";
 import {
   useAudioReactive,
   migrateAudioSource,
+  MIC_GAIN_DEFAULT,
   MIC_GATE_DEFAULT,
+  normalizeMicGain,
   normalizeMicGate,
   PEAK_GAIN_DEFAULT,
   normalizePeakGain,
@@ -83,6 +85,7 @@ const DEFAULTS: MatrixControls = {
   peakGain: PEAK_GAIN_DEFAULT,
   audioSource: "off",
   micGate: MIC_GATE_DEFAULT,
+  micGain: MIC_GAIN_DEFAULT,
 };
 
 const SCREEN_ID = "matrix";
@@ -150,6 +153,7 @@ function migratePrefs(
     reactive?: boolean;
     colorSpeed?: number;
     micGate?: number;
+    micGain?: number;
   },
 ): MatrixControls {
   const drive = clamp(
@@ -192,6 +196,7 @@ function migratePrefs(
     peakGain: normalizePeakGain(saved.peakGain),
     audioSource: migrateAudioSource(saved),
     micGate: normalizeMicGate(saved.micGate),
+    micGain: normalizeMicGain(saved.micGain),
   };
 }
 
@@ -219,6 +224,7 @@ const useMatrixHook = () => {
   const [colorDrive, setColorDriveState] = useState(DEFAULTS.colorDrive);
   const [sourcePref, setSourcePref] = useState(DEFAULTS.audioSource);
   const [micGatePref, setMicGatePref] = useState(DEFAULTS.micGate);
+  const [micGainPref, setMicGainPref] = useState(DEFAULTS.micGain);
   const [peakGainPref, setPeakGainPref] = useState(DEFAULTS.peakGain);
   const persistSourceRef = useRef(
     (audioSource: MatrixControls["audioSource"]) => {
@@ -232,6 +238,11 @@ const useMatrixHook = () => {
     saveScreenPrefs(SCREEN_ID, prefsRef.current);
     setMicGatePref(micGate);
   });
+  const persistMicGainRef = useRef((micGain: number) => {
+    prefsRef.current = { ...prefsRef.current, micGain };
+    saveScreenPrefs(SCREEN_ID, prefsRef.current);
+    setMicGainPref(micGain);
+  });
   const persistPeakGainRef = useRef((peakGain: number) => {
     prefsRef.current = { ...prefsRef.current, peakGain };
     saveScreenPrefs(SCREEN_ID, prefsRef.current);
@@ -244,6 +255,8 @@ const useMatrixHook = () => {
     onSourceChange: (source) => persistSourceRef.current(source),
     preferredMicGate: micGatePref,
     onMicGateChange: (gate) => persistMicGateRef.current(gate),
+    preferredMicGain: micGainPref,
+    onMicGainChange: (gain) => persistMicGainRef.current(gain),
     preferredPeakGain: peakGainPref,
     onPeakGainChange: (gain) => persistPeakGainRef.current(gain),
   });
@@ -296,6 +309,9 @@ const useMatrixHook = () => {
     if (patch.micGate !== undefined) {
       setMicGatePref(patch.micGate);
     }
+    if (patch.micGain !== undefined) {
+      setMicGainPref(patch.micGain);
+    }
     if (patch.peakGain !== undefined) {
       setPeakGainPref(patch.peakGain);
     }
@@ -322,6 +338,7 @@ const useMatrixHook = () => {
     setColorDriveState(saved.colorDrive);
     setSourcePref(saved.audioSource);
     setMicGatePref(saved.micGate);
+    setMicGainPref(saved.micGain);
     setPeakGainPref(saved.peakGain);
   };
 

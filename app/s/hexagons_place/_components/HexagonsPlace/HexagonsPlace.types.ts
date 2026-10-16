@@ -96,6 +96,8 @@ export type HexagonsPlaceLive = {
   audioSource: AudioSource;
   /** Mic noise-gate threshold (only used when audioSource === mic) */
   micGate: number;
+  /** Mic level boost before gate (only used when audioSource === mic) */
+  micGain: number;
   /** Peak ×gain for bus meters + viz (owned by useAudioReactive) */
   peakGain: number;
   /** When reactive: bounce hex groups on spectrum lows/mids/highs */

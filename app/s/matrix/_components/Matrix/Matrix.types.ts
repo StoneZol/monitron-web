@@ -17,6 +17,8 @@ export type MatrixControls = {
   audioSource: AudioSource;
   /** Mic noise-gate threshold (only used when audioSource === mic) */
   micGate: number;
+  /** Mic level boost before gate (only used when audioSource === mic) */
+  micGain: number;
 };
 
 /** Fall punch drive */

@@ -2,8 +2,10 @@
 
 import { useEffect, useSyncExternalStore } from "react";
 import {
+    MIC_GAIN_DEFAULT,
     MIC_GATE_DEFAULT,
     migrateAudioSource,
+    normalizeMicGain,
     normalizeMicGate,
     normalizePeakGain,
     PEAK_GAIN_DEFAULT,
@@ -71,6 +73,7 @@ export const HEXAGONS_DEFAULTS: HexagonsPlaceLive = {
     hexHeightSpread: 1,
     audioSource: "off",
     micGate: MIC_GATE_DEFAULT,
+    micGain: MIC_GAIN_DEFAULT,
     peakGain: PEAK_GAIN_DEFAULT,
     bandBounce: true,
     bandFlicker: true,
@@ -146,6 +149,7 @@ function readPrefs(): HexagonsPlaceLive {
             reactive: legacyReactive,
         }),
         micGate: normalizeMicGate(rest.micGate),
+        micGain: normalizeMicGain(rest.micGain),
         peakGain: normalizePeakGain(rest.peakGain),
         twinkle: Boolean(
             rest.twinkle !== undefined ? rest.twinkle : legacyGarland,
@@ -282,6 +286,8 @@ export default function useHexagonsPlaceHook() {
         onSourceChange: (audioSource) => commit({ audioSource }),
         preferredMicGate: live.micGate,
         onMicGateChange: (micGate) => commit({ micGate }),
+        preferredMicGain: live.micGain,
+        onMicGainChange: (micGain) => commit({ micGain }),
         preferredPeakGain: live.peakGain,
         onPeakGainChange: (peakGain) => commit({ peakGain }),
     });
