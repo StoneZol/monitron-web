@@ -9,6 +9,7 @@ import {
   resolveTwinkleColor,
 } from "@/lib/twinkleHsl";
 import { scaledPixelRatio } from "@/lib/renderScale";
+import { registerRuntimeReset } from "@/lib/runtimeReset";
 import { VISUAL_PIP_CHANGE } from "@/lib/visualPip";
 import type { SpectrumLive } from "./Spectrum.types";
 
@@ -304,6 +305,13 @@ export default function SpectrumCanvas({
       raf = rafView.requestAnimationFrame(draw);
     };
 
+    const unregRuntime = registerRuntimeReset("spectrum", () => {
+      peaksRef.current.fill(0);
+      ceilRef.current.fill(0);
+      phaseRef.current = 0;
+      lastTRef.current = 0;
+    });
+
     syncObservers();
     rafView = viewOf();
     raf = rafView.requestAnimationFrame(draw);
@@ -312,6 +320,7 @@ export default function SpectrumCanvas({
     window.addEventListener(VISUAL_PIP_CHANGE, onPipChange);
 
     return () => {
+      unregRuntime();
       cancelRaf();
       ro.disconnect();
       window.removeEventListener("resize", resize);

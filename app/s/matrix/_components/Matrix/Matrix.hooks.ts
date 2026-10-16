@@ -19,6 +19,8 @@ import { resetFxOverlay } from "@/components/FxOverlay";
 import { toggleFullscreen } from "@/lib/fullscreen";
 import { loadScreenPrefs, saveScreenPrefs } from "@/lib/screenPrefs";
 import { scaledPixelRatio } from "@/lib/renderScale";
+import { registerRuntimeReset } from "@/lib/runtimeReset";
+import { onTabSyncApply } from "@/lib/tabSyncHotApply";
 import { VISUAL_PIP_CHANGE } from "@/lib/visualPip";
 import {
   advanceTwinkleHue,
@@ -299,11 +301,7 @@ const useMatrixHook = () => {
     }
   };
 
-  useLayoutEffect(() => {
-    const loaded = loadScreenPrefs<
-      MatrixControls & { bassBoost?: number; colorSpeed?: number }
-    >(SCREEN_ID, { ...DEFAULTS });
-    const saved = migratePrefs(loaded);
+  const applySaved = (saved: MatrixControls) => {
     prefsRef.current = saved;
     twinkleRef.current = saved.twinkle;
     twinkleSpeedRef.current = saved.twinkleSpeed;
@@ -325,7 +323,20 @@ const useMatrixHook = () => {
     setSourcePref(saved.audioSource);
     setMicGatePref(saved.micGate);
     setPeakGainPref(saved.peakGain);
+  };
+
+  const rehydrateFromStorage = () => {
+    const loaded = loadScreenPrefs<
+      MatrixControls & { bassBoost?: number; colorSpeed?: number }
+    >(SCREEN_ID, { ...DEFAULTS });
+    applySaved(migratePrefs(loaded));
+  };
+
+  useLayoutEffect(() => {
+    rehydrateFromStorage();
   }, []);
+
+  useEffect(() => onTabSyncApply(SCREEN_ID, rehydrateFromStorage), []);
 
   const setTwinkle = (on: boolean) => {
     if (!on && twinkleRef.current) {
@@ -594,6 +605,19 @@ const useMatrixHook = () => {
       raf = rafView.requestAnimationFrame(tick);
     };
 
+    const resetRuntime = () => {
+      seedDrops();
+      lowImpulse = 0;
+      peakHold = 0;
+      prevLow = 0;
+      last = performance.now();
+      twinkleHueRef.current = hueDegFromHex(prefsRef.current.color);
+      twinklePulseRef.current = createTwinklePulseEnv();
+      context.fillStyle = "#000";
+      context.fillRect(0, 0, width, height);
+    };
+    const unregRuntime = registerRuntimeReset(SCREEN_ID, resetRuntime);
+
     resize();
     rafView = viewOf();
     raf = rafView.requestAnimationFrame(tick);
@@ -601,6 +625,7 @@ const useMatrixHook = () => {
     window.addEventListener(VISUAL_PIP_CHANGE, onPipChange);
 
     return () => {
+      unregRuntime();
       cancelRaf();
       window.removeEventListener("resize", resize);
       window.removeEventListener(VISUAL_PIP_CHANGE, onPipChange);

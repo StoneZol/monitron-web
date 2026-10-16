@@ -19,6 +19,7 @@ import {
   lerpHex,
 } from "@/lib/visualAudio";
 import { useRenderDpr } from "@/lib/renderScale";
+import { registerRuntimeReset } from "@/lib/runtimeReset";
 import type { KalistarnestLive } from "./Kalistarnest.types";
 import {
   kalistarnestFragmentShader,
@@ -98,6 +99,15 @@ function KalistarnestQuad({
   }, [size.height, size.width]);
 
   useEffect(() => () => mat.dispose(), [mat]);
+
+  useEffect(() => {
+    return registerRuntimeReset("kalistarnest", () => {
+      flyT.current = FLY_T_SEED;
+      lastT.current = 0;
+      starHue.current = 0;
+      starPulse.current = createTwinklePulseEnv();
+    });
+  }, []);
 
   useFrame(({ clock }) => {
     const m = matRef.current;

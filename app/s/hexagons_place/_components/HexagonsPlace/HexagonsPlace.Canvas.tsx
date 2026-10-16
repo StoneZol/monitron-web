@@ -12,6 +12,7 @@ import {
 } from "@/lib/twinkleHsl";
 import { beatRaw, channelLevel } from "@/lib/visualAudio";
 import { useRenderDpr } from "@/lib/renderScale";
+import { registerRuntimeReset } from "@/lib/runtimeReset";
 import { injectGroundFogShader, FOG_NEUTRAL } from "./HexagonsPlace.fog";
 import { applyGlow } from "./HexagonsPlace.glow";
 import type { HexagonsPlaceLive } from "./HexagonsPlace.types";
@@ -452,6 +453,25 @@ function City({
             edgeMaterial.dispose();
         };
     }, [edgeMaterial]);
+
+    useEffect(() => {
+        return registerRuntimeReset("hexagons_place", () => {
+            const city = cityRef.current;
+            if (city) city.rotation.y = 0;
+            twinkleHue.current = 0;
+            fogTwinkleHue.current = 0;
+            twinklePulse.current = createTwinklePulseEnv();
+            prevBands.current = { bass: 0, mid: 0, high: 0 };
+            bandEnvs.current = createBandEnvs();
+            spinImpulse.current = 0;
+            prevSpinLevel.current = 0;
+            prevSpinRaw.current = 0;
+            const field = townRef.current;
+            if (field?.userData.pulses instanceof Float32Array) {
+                field.userData.pulses.fill(0);
+            }
+        });
+    }, []);
 
     useFrame((state, dt) => {
         const knobs = liveRef.current;

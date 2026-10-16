@@ -19,6 +19,7 @@ import {
   lerpHex,
 } from "@/lib/visualAudio";
 import { useRenderDpr } from "@/lib/renderScale";
+import { registerRuntimeReset } from "@/lib/runtimeReset";
 import type { FairysmokeLive } from "./Fairysmoke.types";
 import {
     fairysmokeFragmentShader,
@@ -95,6 +96,15 @@ function FairysmokeQuad({
     }, [size.height, size.width]);
 
     useEffect(() => () => mat.dispose(), [mat]);
+
+    useEffect(() => {
+        return registerRuntimeReset("fairysmoke", () => {
+            smokeT.current = 0;
+            lastT.current = 0;
+            twinkleHue.current = 0;
+            twinklePulse.current = createTwinklePulseEnv();
+        });
+    }, []);
 
     useFrame(({ clock }) => {
         const m = matRef.current;

@@ -16,6 +16,7 @@ import {
     resolveTwinkleColor,
     updateTwinklePulseEnv,
 } from "@/lib/twinkleHsl";
+import { registerRuntimeReset } from "@/lib/runtimeReset";
 import { channelLevel, hexToVec3, lerpHex, drivenLevel } from "@/lib/visualAudio";
 import {
     CELL,
@@ -151,6 +152,18 @@ export function NeonGrid({
         },
         [floorMat, wallMat],
     );
+
+    useEffect(() => {
+        return registerRuntimeReset("synthwave", () => {
+            scrollRef.current = 0;
+            twinkleHue.current = 0;
+            twinklePulse.current = createTwinklePulseEnv();
+            glowHold.current = 0;
+            roadHold.current = 0;
+            stretchHold.current = 0;
+            stretchSmooth.current = 0;
+        });
+    }, []);
 
     useFrame((_, dt) => {
         const knobs = liveRef.current;

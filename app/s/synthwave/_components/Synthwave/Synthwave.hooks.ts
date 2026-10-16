@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useSyncExternalStore } from "react";
+import { useEffect, useLayoutEffect, useSyncExternalStore } from "react";
 import {
     MIC_GATE_DEFAULT,
     migrateAudioSource,
@@ -12,6 +12,7 @@ import {
 import { resetFxOverlay } from "@/components/FxOverlay";
 import { toggleFullscreen } from "@/lib/fullscreen";
 import { loadScreenPrefs, saveScreenPrefs } from "@/lib/screenPrefs";
+import { onTabSyncApply } from "@/lib/tabSyncHotApply";
 import {
     TWINKLE_DEFAULT_L,
     TWINKLE_DEFAULT_S,
@@ -418,6 +419,13 @@ function useWakeLock() {
     }, []);
 }
 
+
+function rehydrateFromStorage() {
+  cached = null;
+  readPrefs();
+  emit();
+}
+
 export default function useSynthwaveHook() {
     const live = useSyncExternalStore(
         subscribe,
@@ -425,7 +433,9 @@ export default function useSynthwaveHook() {
         () => SYNTHWAVE_DEFAULTS,
     );
 
-    const commit = (patch: Partial<SynthwaveLive>) => {
+      useEffect(() => onTabSyncApply(SCREEN_ID, rehydrateFromStorage), []);
+
+  const commit = (patch: Partial<SynthwaveLive>) => {
         writePrefs({ ...readPrefs(), ...patch });
     };
 

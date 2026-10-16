@@ -2,10 +2,15 @@
 
 import { saveScreenPrefs } from "@/lib/screenPrefs";
 
-export const TAB_SYNC_VERSION = 3 as const;
+export const TAB_SYNC_VERSION = 4 as const;
 
-/** How far ahead of "now" all tabs aim to reload together. */
+/** How far ahead of "now" all tabs aim to hot-apply together. */
 export const TAB_SYNC_LEAD_MS = 1000;
+
+/** Fired at the shared sync deadline — prefs already on disk; screens rehydrate. */
+export const TAB_SYNC_APPLY = "monitron:tab-sync-apply";
+
+export type TabSyncApplyDetail = { screenId: string };
 
 export type TabSyncMessage = {
   v: typeof TAB_SYNC_VERSION;
@@ -15,8 +20,8 @@ export type TabSyncMessage = {
   senderId: string;
   /** Full prefs snapshot (incl. micGate / peakGain / audioSource). */
   prefs: Record<string, unknown>;
-  /** Absolute Date.now() deadline — all tabs reload at/after this. */
-  reloadAt: number;
+  /** Absolute Date.now() deadline — all tabs hot-apply at/after this. */
+  applyAt: number;
 };
 
 let tabSenderId: string | null = null;
@@ -40,25 +45,47 @@ export function hudSessionKey(screenId: string) {
   return `monitron:${screenId}:hudHidden`;
 }
 
-/** Wait until wall-clock `reloadAt`, then reload (0 delay if already past). */
-export function scheduleReloadAt(reloadAt: number): void {
-  const delay = Math.max(0, reloadAt - Date.now());
+/**
+ * Wait until wall-clock `applyAt`, then fire hot-apply for this screen
+ * (0 delay if already past). No navigation — fullscreen survives.
+ */
+export function scheduleTabSyncApply(applyAt: number, screenId: string): void {
+  const delay = Math.max(0, applyAt - Date.now());
   window.setTimeout(() => {
-    window.location.reload();
+    window.dispatchEvent(
+      new CustomEvent<TabSyncApplyDetail>(TAB_SYNC_APPLY, {
+        detail: { screenId },
+      }),
+    );
   }, delay);
 }
 
+/** Subscribe to the shared sync deadline for one screen. */
+export function subscribeTabSyncApply(
+  screenId: string,
+  onApply: () => void,
+): () => void {
+  if (typeof window === "undefined") return () => {};
+  const handler = (ev: Event) => {
+    const detail = (ev as CustomEvent<TabSyncApplyDetail>).detail;
+    if (detail?.screenId !== screenId) return;
+    onApply();
+  };
+  window.addEventListener(TAB_SYNC_APPLY, handler);
+  return () => window.removeEventListener(TAB_SYNC_APPLY, handler);
+}
+
 /**
- * Push full prefs + shared reload deadline. Does not touch HUD visibility.
- * Returns reloadAt so the sender can reload on the same tick.
+ * Push full prefs + shared apply deadline. Does not touch HUD visibility.
+ * Returns applyAt so the sender can hot-apply on the same tick.
  */
 export function broadcastTabSync(
   screenId: string,
   prefs: Record<string, unknown>,
 ): number {
-  const reloadAt = Date.now() + TAB_SYNC_LEAD_MS;
+  const applyAt = Date.now() + TAB_SYNC_LEAD_MS;
   if (typeof window === "undefined" || typeof BroadcastChannel === "undefined") {
-    return reloadAt;
+    return applyAt;
   }
   const path = window.location.pathname;
   const msg: TabSyncMessage = {
@@ -67,12 +94,12 @@ export function broadcastTabSync(
     screenId,
     senderId: getTabSyncSenderId(),
     prefs: { ...prefs },
-    reloadAt,
+    applyAt,
   };
   const ch = new BroadcastChannel(tabSyncChannelName(path));
   ch.postMessage(msg);
   ch.close();
-  return reloadAt;
+  return applyAt;
 }
 
 export function subscribeTabSync(
@@ -100,7 +127,7 @@ export function subscribeTabSync(
 }
 
 /**
- * Persist prefs, then wait for shared reloadAt.
+ * Persist prefs, then wait for shared applyAt.
  * Does not change this tab's HUD (open stays open, hidden stays hidden).
  */
 export function applyIncomingTabSync(
@@ -108,7 +135,7 @@ export function applyIncomingTabSync(
   msg: TabSyncMessage,
 ): void {
   saveScreenPrefs(screenId, msg.prefs);
-  scheduleReloadAt(msg.reloadAt);
+  scheduleTabSyncApply(msg.applyAt, screenId);
 }
 
 // ── HUD hide: broadcast to all tabs; show stays local ───────────────
@@ -275,23 +302,30 @@ export function subscribeTabPresence(
     bucket!.listeners.delete(onChange);
     if (bucket!.listeners.size > 0) return;
 
-    const id = getTabSyncSenderId();
-    try {
-      bucket!.channel?.postMessage({
-        kind: "presence",
-        type: "bye",
-        id,
-        screenId,
-      } satisfies PresenceMsg);
-    } catch {
-      /* ignore */
-    }
-    if (bucket!.beatTimer != null) window.clearInterval(bucket!.beatTimer);
-    if (bucket!.pruneTimer != null) window.clearInterval(bucket!.pruneTimer);
-    const hide = (bucket as PresenceBucket & { _onHide?: () => void })._onHide;
-    if (hide) window.removeEventListener("pagehide", hide);
-    bucket!.channel?.close();
-    presenceByKey.delete(key);
+    // Defer teardown so a same-tick re-subscribe (unstable useSyncExternalStore
+    // subscribe identity) does not bye→hello thrash with sibling tabs.
+    queueMicrotask(() => {
+      const current = presenceByKey.get(key);
+      if (!current || current !== bucket || current.listeners.size > 0) return;
+
+      const id = getTabSyncSenderId();
+      try {
+        current.channel?.postMessage({
+          kind: "presence",
+          type: "bye",
+          id,
+          screenId,
+        } satisfies PresenceMsg);
+      } catch {
+        /* ignore */
+      }
+      if (current.beatTimer != null) window.clearInterval(current.beatTimer);
+      if (current.pruneTimer != null) window.clearInterval(current.pruneTimer);
+      const hide = (current as PresenceBucket & { _onHide?: () => void })._onHide;
+      if (hide) window.removeEventListener("pagehide", hide);
+      current.channel?.close();
+      presenceByKey.delete(key);
+    });
   };
 }
 

@@ -19,6 +19,7 @@ import {
   lerpHex,
 } from "@/lib/visualAudio";
 import { useRenderDpr } from "@/lib/renderScale";
+import { registerRuntimeReset } from "@/lib/runtimeReset";
 import type { CoralreefLive } from "./Coralreef.types";
 import {
   coralreefFragmentShader,
@@ -115,6 +116,18 @@ function CoralreefQuad({
   }, [size.height, size.width]);
 
   useEffect(() => () => mat.dispose(), [mat]);
+
+  useEffect(() => {
+    return registerRuntimeReset("coralreef", () => {
+      flyT.current = 0;
+      lastT.current = 0;
+      palettePhase.current = 0;
+      twinkleHue.current = 0;
+      lightTwinkleHue.current = 0;
+      twinklePulse.current = createTwinklePulseEnv();
+      lightTwinklePulse.current = createTwinklePulseEnv();
+    });
+  }, []);
 
   useFrame(({ clock }) => {
     const m = matRef.current;

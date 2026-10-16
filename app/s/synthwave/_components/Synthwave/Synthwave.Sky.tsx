@@ -15,6 +15,7 @@ import {
     resolveTwinkleColor,
     updateTwinklePulseEnv,
 } from "@/lib/twinkleHsl";
+import { registerRuntimeReset } from "@/lib/runtimeReset";
 import {
     channelLevel,
     hexToVec3,
@@ -69,6 +70,16 @@ export function Sky({
     }, [size.width, size.height]);
 
     useEffect(() => () => mat.dispose(), [mat]);
+
+    useEffect(() => {
+        return registerRuntimeReset("synthwave", () => {
+            skyOffset.current.set(0, 0);
+            skyPhase.current = 0;
+            twinkleHue.current = 0;
+            twinklePulse.current = createTwinklePulseEnv();
+            skyHold.current = 0;
+        });
+    }, []);
 
     useFrame(({ clock }, dt) => {
         const m = matRef.current;

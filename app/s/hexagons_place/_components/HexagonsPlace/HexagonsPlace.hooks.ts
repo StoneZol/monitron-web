@@ -1,6 +1,6 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import {
     MIC_GATE_DEFAULT,
     migrateAudioSource,
@@ -12,6 +12,7 @@ import {
 import { resetFxOverlay } from "@/components/FxOverlay";
 import { toggleFullscreen } from "@/lib/fullscreen";
 import { loadScreenPrefs, saveScreenPrefs } from "@/lib/screenPrefs";
+import { onTabSyncApply } from "@/lib/tabSyncHotApply";
 import {
     TWINKLE_DEFAULT_L,
     TWINKLE_DEFAULT_S,
@@ -256,6 +257,13 @@ function writePrefs(next: HexagonsPlaceLive) {
     emit();
 }
 
+
+function rehydrateFromStorage() {
+  cached = null;
+  readPrefs();
+  emit();
+}
+
 export default function useHexagonsPlaceHook() {
     const live = useSyncExternalStore(
         subscribe,
@@ -263,7 +271,9 @@ export default function useHexagonsPlaceHook() {
         () => HEXAGONS_DEFAULTS,
     );
 
-    const commit = (patch: Partial<HexagonsPlaceLive>) => {
+      useEffect(() => onTabSyncApply(SCREEN_ID, rehydrateFromStorage), []);
+
+  const commit = (patch: Partial<HexagonsPlaceLive>) => {
         writePrefs({ ...readPrefs(), ...patch });
     };
 

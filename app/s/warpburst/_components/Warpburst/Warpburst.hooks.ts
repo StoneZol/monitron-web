@@ -1,6 +1,6 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import {
   migrateAudioSource,
   normalizeMicGate,
@@ -11,6 +11,7 @@ import {
 import { toggleFullscreen } from "@/lib/fullscreen";
 import { resetFxOverlay } from "@/components/FxOverlay";
 import { loadScreenPrefs, saveScreenPrefs } from "@/lib/screenPrefs";
+import { onTabSyncApply } from "@/lib/tabSyncHotApply";
 import {
   TWINKLE_DEFAULT_L,
   TWINKLE_DEFAULT_S,
@@ -181,12 +182,21 @@ function writePrefs(next: Stored) {
   emit();
 }
 
+
+function rehydrateFromStorage() {
+  cached = null;
+  readPrefs();
+  emit();
+}
+
 export default function useWarpburstHook() {
   const live = useSyncExternalStore(
     subscribe,
     readPrefs,
     () => STORED_DEFAULTS,
   );
+
+    useEffect(() => onTabSyncApply(SCREEN_ID, rehydrateFromStorage), []);
 
   const commit = (patch: Partial<Stored>) => {
     writePrefs({ ...readPrefs(), ...patch });
