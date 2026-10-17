@@ -6,7 +6,7 @@
  * - iTime / iResolution / uCamZ (flight via accumulated cam Z)
  * - uCrosses: toggle cross SDF (stock black bodies)
  * - uCrossesAir / uCrossesFlip: lift off terrain / slide crossbar down
- * - uCrossBaseLight: sun-tinted glow at each cross base
+ * - uCrossBaseLight / uCrossBaseColor: ground lamp in front of each cross
  * - uCrossSway: scale stock path rotation when crosses on (1 = Shadertoy)
  * - uCamBank: coral-style flex look when crosses off
  * - uLightning: toggle sharp stripe / flash spikes only (sun stays)
@@ -37,6 +37,7 @@ uniform float uCrosses;
 uniform float uCrossesAir;
 uniform float uCrossesFlip;
 uniform float uCrossBaseLight;
+uniform vec3 uCrossBaseColor;
 uniform float uCrossSway;
 uniform float uCamBank;
 uniform float uLightning;
@@ -127,8 +128,9 @@ void main() {
         max(max(abs(q.x) - 0.35, abs(q.y - barY) - 0.04), abs(q.z) - 0.02)
       );
       if (baseLightOn) {
-        // Soft lamp at cross local origin (base).
-        float bd = length(q);
+        // Fixed on the ground in front of the cross (−Z face). Does not track the camera.
+        vec3 lightQ = vec3(0.0, -lift, -0.57);
+        float bd = length(q - lightQ);
         baseAcc += 0.035 / (0.02 + bd * bd);
       }
       s = 0.5 * min(min(g, terrain), 0.01 + 0.2 * abs(s));
@@ -175,7 +177,7 @@ void main() {
       abs(vec3(3.0, 2.0, 1.0) * baseAcc),
       vec3(0.5)
     );
-    col += tanh(lamp * uSunColor * 0.22);
+    col += tanh(lamp * uCrossBaseColor * 0.22);
   }
 
   gl_FragColor = vec4(col, 1.0);

@@ -25,6 +25,7 @@ import {
   OBSERVANCE_COLOR_DRIVE_MAX,
   OBSERVANCE_DEFAULTS,
   OBSERVANCE_DRIVE_MAX,
+  type CrossBaseLightMode,
   type ObservanceLive,
   type ReactiveChannel,
 } from "./Observance.types";
@@ -36,6 +37,12 @@ const CHANNELS = new Set<ReactiveChannel>([
   "mid",
   "high",
   "beat",
+]);
+const BASE_LIGHT_MODES = new Set<CrossBaseLightMode>([
+  "off",
+  "sun",
+  "custom",
+  "twinkle",
 ]);
 
 type Stored = ObservanceLive & {
@@ -73,6 +80,20 @@ function channel(v: unknown, fallback: ReactiveChannel): ReactiveChannel {
     : fallback;
 }
 
+function baseLightMode(
+  raw: Record<string, unknown>,
+  fallback: CrossBaseLightMode,
+): CrossBaseLightMode {
+  const mode = raw.crossBaseLightMode;
+  if (typeof mode === "string" && BASE_LIGHT_MODES.has(mode as CrossBaseLightMode)) {
+    return mode as CrossBaseLightMode;
+  }
+  // Migrate old boolean toggle → sun when on.
+  if (raw.crossBaseLight === true) return "sun";
+  if (raw.crossBaseLight === false) return "off";
+  return fallback;
+}
+
 function twinkleSpeed(v: unknown, fallback: number): number {
   return clamp(Number(v), 0, 4, fallback);
 }
@@ -105,10 +126,24 @@ function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
       raw.crossesFlip === undefined
         ? STORED_DEFAULTS.crossesFlip
         : Boolean(raw.crossesFlip),
-    crossBaseLight:
-      raw.crossBaseLight === undefined
-        ? STORED_DEFAULTS.crossBaseLight
-        : Boolean(raw.crossBaseLight),
+    crossBaseLightMode: baseLightMode(raw, STORED_DEFAULTS.crossBaseLightMode),
+    crossBaseColor: asHex(raw.crossBaseColor, STORED_DEFAULTS.crossBaseColor),
+    crossBaseColorPeak: asHex(
+      raw.crossBaseColorPeak,
+      STORED_DEFAULTS.crossBaseColorPeak,
+    ),
+    crossBaseTwinkleSpeed: twinkleSpeed(
+      raw.crossBaseTwinkleSpeed,
+      STORED_DEFAULTS.crossBaseTwinkleSpeed ?? TWINKLE_DEFAULT_SPEED,
+    ),
+    crossBaseTwinkleS: twinklePct(
+      raw.crossBaseTwinkleS,
+      STORED_DEFAULTS.crossBaseTwinkleS ?? TWINKLE_DEFAULT_S,
+    ),
+    crossBaseTwinkleL: twinklePct(
+      raw.crossBaseTwinkleL,
+      STORED_DEFAULTS.crossBaseTwinkleL ?? TWINKLE_DEFAULT_L,
+    ),
     crossSway: clamp(
       Number(raw.crossSway),
       0,
@@ -247,7 +282,12 @@ export default function useObservanceHook() {
       crosses: live.crosses,
       crossesAir: live.crossesAir,
       crossesFlip: live.crossesFlip,
-      crossBaseLight: live.crossBaseLight,
+      crossBaseLightMode: live.crossBaseLightMode,
+      crossBaseColor: live.crossBaseColor,
+      crossBaseColorPeak: live.crossBaseColorPeak,
+      crossBaseTwinkleSpeed: live.crossBaseTwinkleSpeed,
+      crossBaseTwinkleS: live.crossBaseTwinkleS,
+      crossBaseTwinkleL: live.crossBaseTwinkleL,
       crossSway: live.crossSway,
       cameraBank: live.cameraBank,
       sunColor: live.sunColor,
@@ -273,8 +313,18 @@ export default function useObservanceHook() {
       setCrosses: (crosses: boolean) => commit({ crosses }),
       setCrossesAir: (crossesAir: boolean) => commit({ crossesAir }),
       setCrossesFlip: (crossesFlip: boolean) => commit({ crossesFlip }),
-      setCrossBaseLight: (crossBaseLight: boolean) =>
-        commit({ crossBaseLight }),
+      setCrossBaseLightMode: (crossBaseLightMode: CrossBaseLightMode) =>
+        commit({ crossBaseLightMode }),
+      setCrossBaseColor: (crossBaseColor: string) =>
+        commit({ crossBaseColor }),
+      setCrossBaseColorPeak: (crossBaseColorPeak: string) =>
+        commit({ crossBaseColorPeak }),
+      setCrossBaseTwinkleSpeed: (crossBaseTwinkleSpeed: number) =>
+        commit({ crossBaseTwinkleSpeed }),
+      setCrossBaseTwinkleS: (crossBaseTwinkleS: number) =>
+        commit({ crossBaseTwinkleS }),
+      setCrossBaseTwinkleL: (crossBaseTwinkleL: number) =>
+        commit({ crossBaseTwinkleL }),
       setCrossSway: (crossSway: number) => commit({ crossSway }),
       setCameraBank: (cameraBank: number) => commit({ cameraBank }),
       setSunColor: (sunColor: string) => commit({ sunColor }),

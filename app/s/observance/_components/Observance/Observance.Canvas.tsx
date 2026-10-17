@@ -53,6 +53,7 @@ function ObservanceQuad({
   vizRef: RefObject<VizBands>;
 }) {
   const sunTint = useMemo(() => new THREE.Color("#ffcc88"), []);
+  const baseTint = useMemo(() => new THREE.Color("#ffcc88"), []);
   const camZ = useRef(0);
   const swayT = useRef(0);
   const lastT = useRef(0);
@@ -60,6 +61,8 @@ function ObservanceQuad({
   const colorPrev = useRef(0);
   const sunHue = useRef(0);
   const sunPulse = useRef(createTwinklePulseEnv());
+  const baseHue = useRef(0);
+  const basePulse = useRef(createTwinklePulseEnv());
 
   const mat = useMemo(
     () =>
@@ -77,6 +80,7 @@ function ObservanceQuad({
           uCrossesAir: { value: 0 },
           uCrossesFlip: { value: 0 },
           uCrossBaseLight: { value: 0 },
+          uCrossBaseColor: { value: new THREE.Color("#ffcc88") },
           uCrossSway: { value: 1 },
           uCamBank: { value: 0.5 },
           uLightning: { value: 1 },
@@ -101,6 +105,8 @@ function ObservanceQuad({
       lastT.current = 0;
       sunHue.current = 0;
       sunPulse.current = createTwinklePulseEnv();
+      baseHue.current = 0;
+      basePulse.current = createTwinklePulseEnv();
     });
   }, []);
 
@@ -182,13 +188,52 @@ function ObservanceQuad({
       hexToVec3(live.sunColor, sunTint);
     }
 
+    const baseMode = live.crossBaseLightMode;
+    const baseOn = live.crosses && baseMode !== "off";
+    if (baseMode === "sun") {
+      baseTint.copy(sunTint);
+    } else if (baseMode === "custom") {
+      if (colorArmed && colorAmt > 0.001) {
+        lerpHex(
+          live.crossBaseColor,
+          live.crossBaseColorPeak,
+          colorAmt,
+          baseTint,
+        );
+      } else {
+        hexToVec3(live.crossBaseColor, baseTint);
+      }
+    } else if (baseMode === "twinkle") {
+      baseHue.current = advanceTwinkleHue(
+        baseHue.current,
+        dt,
+        live.crossBaseTwinkleSpeed,
+      );
+      resolveTwinkleColor(
+        baseHue.current,
+        live.crossBaseTwinkleS,
+        live.crossBaseTwinkleL,
+        baseTint,
+      );
+      if (colorArmed) {
+        const pulseAmt = updateTwinklePulseEnv(
+          basePulse.current,
+          colorRaw,
+          live.colorDrive,
+          dt,
+        );
+        pulseTwinkleLight(baseTint, pulseAmt, live.colorDrive);
+      }
+    }
+
     m.uniforms.iTime!.value = t;
     m.uniforms.uCamZ!.value = camZ.current;
     m.uniforms.uSwayT!.value = swayT.current;
     m.uniforms.uCrosses!.value = live.crosses ? 1 : 0;
     m.uniforms.uCrossesAir!.value = live.crossesAir ? 1 : 0;
     m.uniforms.uCrossesFlip!.value = live.crossesFlip ? 1 : 0;
-    m.uniforms.uCrossBaseLight!.value = live.crossBaseLight ? 1 : 0;
+    m.uniforms.uCrossBaseLight!.value = baseOn ? 1 : 0;
+    m.uniforms.uCrossBaseColor!.value.copy(baseTint);
     m.uniforms.uCrossSway!.value = live.crossSway;
     m.uniforms.uCamBank!.value = live.cameraBank;
     m.uniforms.uLightning!.value = live.lightning ? 1 : 0;

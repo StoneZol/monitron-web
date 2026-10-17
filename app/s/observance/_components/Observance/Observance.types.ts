@@ -6,6 +6,9 @@ export type ObservanceProps = {
   showOverlay?: boolean;
 };
 
+/** Base lamp tint: off / follow sun / solid custom / own HSL twinkle */
+export type CrossBaseLightMode = "off" | "sun" | "custom" | "twinkle";
+
 export type ObservanceLive = {
   /** Camera advance along the path (1 ≈ Shadertoy default) */
   flightSpeed: number;
@@ -15,8 +18,14 @@ export type ObservanceLive = {
   crossesAir: boolean;
   /** Slide crossbar down the stem (inverted cross, no rotate) */
   crossesFlip: boolean;
-  /** Sun-tinted glow at each cross base */
-  crossBaseLight: boolean;
+  /** Glow on ground in front of each cross */
+  crossBaseLightMode: CrossBaseLightMode;
+  /** Idle / peak tint when mode is custom (Color channel lerps idle→peak) */
+  crossBaseColor: string;
+  crossBaseColorPeak: string;
+  crossBaseTwinkleSpeed: number;
+  crossBaseTwinkleS: number;
+  crossBaseTwinkleL: number;
   /** Scale stock path sway when crosses on (1 = Shadertoy) */
   crossSway: number;
   /** Flex look cone when crosses off (coral-style bank) */
@@ -51,7 +60,12 @@ export const OBSERVANCE_DEFAULTS: ObservanceLive = {
   crosses: true,
   crossesAir: false,
   crossesFlip: false,
-  crossBaseLight: false,
+  crossBaseLightMode: "off",
+  crossBaseColor: "#ffcc88",
+  crossBaseColorPeak: "#ff8844",
+  crossBaseTwinkleSpeed: 1,
+  crossBaseTwinkleS: 100,
+  crossBaseTwinkleL: 50,
   crossSway: 1,
   cameraBank: 0.5,
   sunColor: "#ffcc88",
