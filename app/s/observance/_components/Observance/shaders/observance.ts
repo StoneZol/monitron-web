@@ -5,7 +5,7 @@
  * Changes from original:
  * - iTime / iResolution / uCamZ (flight via accumulated cam Z)
  * - uCrosses: toggle cross SDF (stock black bodies)
- * - uCrossesAir / uCrossesFlip: lift off terrain / invert local Y
+ * - uCrossesAir / uCrossesFlip: lift off terrain / slide crossbar down
  * - uCrossSway: scale stock path rotation when crosses on (1 = Shadertoy)
  * - uCamBank: coral-style flex look when crosses off
  * - uLightning: toggle sharp stripe / flash spikes only (sun stays)
@@ -113,14 +113,14 @@ void main() {
       q += cos(t + q.yzx) * 0.2;
       // Lower hills = terrain plane at s≈3. Air = fixed lift toward canopy.
       float terrain = 3.0 - s;
-      float lift =
-        (uCrossesAir > 0.5 ? 1.85 : 0.0) + (uCrossesFlip > 0.5 ? 0.35 : 0.0);
-      float along = terrain - lift;
-      q.y = uCrossesFlip > 0.5 ? -along : along;
-      // ~75% of stock height; base still near terrain (q.y≈0) when air/flip off.
+      float lift = uCrossesAir > 0.5 ? 1.85 : 0.0;
+      q.y = terrain - lift;
+      // Flip = mirror crossbar about stem mid (0.45): default 0.68 ↔ flip 0.22.
+      float barY = uCrossesFlip > 0.5 ? 0.22 : 0.68;
+      // ~75% of stock height; base still near terrain (q.y≈0) when air off.
       float g = min(
         max(max(abs(q.x) - 0.05, abs(q.y - 0.45) - 0.6), abs(q.z) - 0.02),
-        max(max(abs(q.x) - 0.28, abs(q.y - 0.82) - 0.04), abs(q.z) - 0.02)
+        max(max(abs(q.x) - 0.35, abs(q.y - barY) - 0.04), abs(q.z) - 0.02)
       );
       s = 0.5 * min(min(g, terrain), 0.01 + 0.2 * abs(s));
       d += s;

@@ -34,7 +34,7 @@ const INFO = {
   flightSpeed: "Base camera advance along the path (1 ≈ Shadertoy default).",
   crosses: "Draw stock black cross markers (on/off only).",
   crossesAir: "Lift crosses off the hills by a fixed height (float in air).",
-  crossesFlip: "Invert crosses upside-down (does not change air lift).",
+  crossesFlip: "Slide the crossbar down the stem (inverted cross). No rotation.",
   crossSway:
     "When crosses on: scale stock path sway (1 = Shadertoy, 0 = locked, 2 = 2×).",
   cameraBank:

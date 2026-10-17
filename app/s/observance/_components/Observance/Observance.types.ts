@@ -13,7 +13,7 @@ export type ObservanceLive = {
   crosses: boolean;
   /** Lift crosses off the lower hills into the air */
   crossesAir: boolean;
-  /** Invert cross local Y (upside-down) */
+  /** Slide crossbar down the stem (inverted cross, no rotate) */
   crossesFlip: boolean;
   /** Scale stock path sway when crosses on (1 = Shadertoy) */
   crossSway: number;
