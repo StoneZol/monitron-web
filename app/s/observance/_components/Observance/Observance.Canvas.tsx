@@ -76,13 +76,11 @@ function ObservanceQuad({
           iTime: { value: 0 },
           uCamZ: { value: 0 },
           uSwayT: { value: 0 },
-          uCrosses: { value: 1 },
           uCrossesAir: { value: 0 },
           uCrossesFlip: { value: 0 },
           uCrossBaseLight: { value: 0 },
           uCrossBaseColor: { value: new THREE.Color("#ffcc88") },
           uCrossSway: { value: 1 },
-          uCamBank: { value: 0.5 },
           uLightning: { value: 1 },
           uSunColor: { value: new THREE.Color("#ffcc88") },
         },
@@ -144,7 +142,7 @@ function ObservanceQuad({
     camZ.current +=
       dt * 1.1 * Math.max(0.05, live.flightSpeed) * flightMul;
 
-    // Look clock: Cam accel scales how fast bank / cross-sway animates.
+    // Look clock: Cam accel scales how fast cross-sway animates.
     const lookMul = smoothRateMul(
       reactive && live.camAccelChannel !== "off",
       camAccelRaw,
@@ -189,7 +187,7 @@ function ObservanceQuad({
     }
 
     const baseMode = live.crossBaseLightMode;
-    const baseOn = live.crosses && baseMode !== "off";
+    const baseOn = baseMode !== "off";
     if (baseMode === "sun") {
       baseTint.copy(sunTint);
     } else if (baseMode === "custom") {
@@ -229,13 +227,11 @@ function ObservanceQuad({
     m.uniforms.iTime!.value = t;
     m.uniforms.uCamZ!.value = camZ.current;
     m.uniforms.uSwayT!.value = swayT.current;
-    m.uniforms.uCrosses!.value = live.crosses ? 1 : 0;
     m.uniforms.uCrossesAir!.value = live.crossesAir ? 1 : 0;
     m.uniforms.uCrossesFlip!.value = live.crossesFlip ? 1 : 0;
     m.uniforms.uCrossBaseLight!.value = baseOn ? 1 : 0;
     m.uniforms.uCrossBaseColor!.value.copy(baseTint);
     m.uniforms.uCrossSway!.value = live.crossSway;
-    m.uniforms.uCamBank!.value = live.cameraBank;
     m.uniforms.uLightning!.value = live.lightning ? 1 : 0;
     m.uniforms.uSunColor!.value.copy(sunTint);
   });

@@ -12,8 +12,6 @@ export type CrossBaseLightMode = "off" | "sun" | "custom" | "twinkle";
 export type ObservanceLive = {
   /** Camera advance along the path (1 ≈ Shadertoy default) */
   flightSpeed: number;
-  /** Draw stock black crosses */
-  crosses: boolean;
   /** Lift crosses off the lower hills into the air */
   crossesAir: boolean;
   /** Slide crossbar down the stem (inverted cross, no rotate) */
@@ -26,10 +24,8 @@ export type ObservanceLive = {
   crossBaseTwinkleSpeed: number;
   crossBaseTwinkleS: number;
   crossBaseTwinkleL: number;
-  /** Scale stock path sway when crosses on (1 = Shadertoy) */
+  /** Scale stock path sway (1 = Shadertoy) */
   crossSway: number;
-  /** Flex look cone when crosses off (coral-style bank) */
-  cameraBank: number;
   /** Soft chromatic sun tint for lightning stripes */
   sunColor: string;
   sunColorPeak: string;
@@ -45,7 +41,7 @@ export type ObservanceLive = {
   speedDrive: number;
   accelChannel: ReactiveChannel;
   accelDrive: number;
-  /** Camera look (bank / cross sway) — cruise+kick, not flight speed */
+  /** Cross sway animation rate — smooth, not flight speed */
   camAccelChannel: ReactiveChannel;
   camAccelDrive: number;
 };
@@ -57,7 +53,6 @@ export const OBSERVANCE_COLOR_DRIVE_MAX = 2;
 
 export const OBSERVANCE_DEFAULTS: ObservanceLive = {
   flightSpeed: 1,
-  crosses: true,
   crossesAir: false,
   crossesFlip: false,
   crossBaseLightMode: "off",
@@ -67,7 +62,6 @@ export const OBSERVANCE_DEFAULTS: ObservanceLive = {
   crossBaseTwinkleS: 100,
   crossBaseTwinkleL: 50,
   crossSway: 1,
-  cameraBank: 0.5,
   sunColor: "#ffcc88",
   sunColorPeak: "#ff8844",
   sunTwinkle: false,
@@ -88,7 +82,6 @@ export const OBSERVANCE_DEFAULTS: ObservanceLive = {
 export const OBSERVANCE_RANGES = {
   flightSpeed: { min: 0.1, max: 3, step: 0.05 },
   crossSway: { min: 0, max: 2, step: 0.05 },
-  cameraBank: { min: 0, max: 2, step: 0.05 },
   colorDrive: { min: 0, max: OBSERVANCE_COLOR_DRIVE_MAX, step: 0.05 },
   speedDrive: { min: 0, max: OBSERVANCE_DRIVE_MAX, step: 0.1 },
   accelDrive: { min: 0, max: OBSERVANCE_DRIVE_MAX, step: 0.1 },

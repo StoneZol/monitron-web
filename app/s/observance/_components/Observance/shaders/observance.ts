@@ -4,15 +4,12 @@
  *
  * Changes from original:
  * - iTime / iResolution / uCamZ (flight via accumulated cam Z)
- * - uCrosses: toggle cross SDF (stock black bodies)
+ * - Crosses always on (no-cross fork lives in Dark Terrain)
  * - uCrossesAir / uCrossesFlip: lift off terrain / slide crossbar down
  * - uCrossBaseLight / uCrossBaseColor: ground lamp in front of each cross
- * - uCrossSway: scale stock path rotation when crosses on (1 = Shadertoy)
- * - uCamBank: coral-style flex look when crosses off
+ * - uCrossSway: scale stock path rotation (1 = Shadertoy)
  * - uLightning: toggle sharp stripe / flash spikes only (sun stays)
  * - uSunColor: CPU twinkle or idle→peak tint for sun + stripes
- *
- * Terrain without crosses follows the simpler fork (no cross SDF).
  */
 
 export const observanceVertexShader = /* glsl */ `
@@ -31,15 +28,13 @@ varying vec2 vUv;
 uniform vec3 iResolution;
 uniform float iTime;
 uniform float uCamZ;
-/** Clock for cross-path sway / flex look (audio scales rate, not punches). */
+/** Clock for cross-path sway (audio scales rate, not punches). */
 uniform float uSwayT;
-uniform float uCrosses;
 uniform float uCrossesAir;
 uniform float uCrossesFlip;
 uniform float uCrossBaseLight;
 uniform vec3 uCrossBaseColor;
 uniform float uCrossSway;
-uniform float uCamBank;
 uniform float uLightning;
 uniform vec3 uSunColor;
 
@@ -61,40 +56,15 @@ void main() {
   vec3 p = vec3(0.0);
   vec3 q = vec3(0.0);
 
-  bool crossesOn = uCrosses > 0.5;
   bool lightningOn = uLightning > 0.5;
-  bool baseLightOn = crossesOn && uCrossBaseLight > 0.5;
+  bool baseLightOn = uCrossBaseLight > 0.5;
   float swayAmt = clamp(uCrossSway, 0.0, 2.0);
 
-  // Ray basis: stock D = vec3(u, 1). Without crosses, flex-wander like coral.
+  // Stock look: D = vec3(u, 1)
   float yaw = 0.0;
   float pitch = 0.0;
-  if (!crossesOn) {
-    float bank = clamp(uCamBank, 0.0, 2.0);
-    float ft = uSwayT;
-    float ax =
-      sin(ft * 0.097) * 0.50 +
-      sin(ft * 0.173 + 2.15) * 0.32 +
-      sin(ft * 0.281 + 5.10) * 0.22 +
-      sin(ft * 0.041 + 1.30) * 0.18;
-    float ay =
-      cos(ft * 0.113) * 0.50 +
-      sin(ft * 0.197 + 0.90) * 0.32 +
-      cos(ft * 0.251 + 3.70) * 0.22 +
-      cos(ft * 0.053 + 4.40) * 0.18;
-    vec2 look = vec2(ax, ay);
-    float r = max(length(look), 1e-5);
-    float diskR = r / sqrt(1.0 + r * r);
-    look *= diskR / r;
-    float breath = 0.78 + 0.22 * (0.5 + 0.5 * sin(ft * 0.037));
-    float cone = 0.62 * bank * breath;
-    yaw = look.x * cone;
-    pitch = look.y * cone;
-    pitch = clamp(pitch, -1.45, 1.45);
-  }
   vec3 fwd = dirFrom(yaw, pitch);
   vec3 rt = vec3(cos(yaw), 0.0, -sin(yaw));
-  // cross(fwd, rt) → +Y when yaw/pitch = 0 (stock D = vec3(u, 1))
   vec3 up = cross(fwd, rt);
   vec3 D = u.x * rt + u.y * up + fwd;
 
@@ -102,49 +72,39 @@ void main() {
     p = D * d;
     p.z += uCamZ;
 
-    if (crossesOn) {
-      q.xz = mod(p.xz, 4.0) - 2.0;
-      vec4 c = cos(
-        p.x * 0.01 +
-          cos(uSwayT * 0.2) * 0.2 * swayAmt +
-          vec4(0.0, 33.0, 11.0, 0.0)
-      );
-      p.xy *= mat2(c.x, c.y, c.z, c.w);
-      s = 2.2 - p.y;
-      for (float n = 0.01; n < 0.4; n += n) {
-        s -= abs(dot(sin(0.1 * p / n), vec3(n)));
-      }
-
-      q += cos(t + q.yzx) * 0.2;
-      // Lower hills = terrain plane at s≈3. Air = fixed lift toward canopy.
-      float terrain = 3.0 - s;
-      float lift = uCrossesAir > 0.5 ? 1.85 : 0.0;
-      q.y = terrain - lift;
-      // Flip = mirror crossbar about stem mid (0.45): default 0.68 ↔ flip 0.22.
-      float barY = uCrossesFlip > 0.5 ? 0.22 : 0.68;
-      // ~75% of stock height; base still near terrain (q.y≈0) when air off.
-      float g = min(
-        max(max(abs(q.x) - 0.05, abs(q.y - 0.45) - 0.6), abs(q.z) - 0.02),
-        max(max(abs(q.x) - 0.35, abs(q.y - barY) - 0.04), abs(q.z) - 0.02)
-      );
-      if (baseLightOn) {
-        // Fixed on the ground in front of the cross (−Z face). Does not track the camera.
-        vec3 lightQ = vec3(0.0, -lift, -0.57);
-        float bd = length(q - lightQ);
-        baseAcc += 0.035 / (0.02 + bd * bd);
-      }
-      s = 0.5 * min(min(g, terrain), 0.01 + 0.2 * abs(s));
-      d += s;
-      dens += s;
-    } else {
-      s = 2.2 - p.y + cos(p.x * 0.3) * 0.3;
-      for (float n = 0.01; n < 0.4; n += n) {
-        s -= abs(dot(sin(0.23 * p / n), vec3(n)));
-      }
-      s = 0.4 * min(2.9 - s, 0.01 + 0.2 * abs(s));
-      d += s;
-      dens += s;
+    q.xz = mod(p.xz, 4.0) - 2.0;
+    vec4 c = cos(
+      p.x * 0.01 +
+        cos(uSwayT * 0.2) * 0.2 * swayAmt +
+        vec4(0.0, 33.0, 11.0, 0.0)
+    );
+    p.xy *= mat2(c.x, c.y, c.z, c.w);
+    s = 2.2 - p.y;
+    for (float n = 0.01; n < 0.4; n += n) {
+      s -= abs(dot(sin(0.1 * p / n), vec3(n)));
     }
+
+    q += cos(t + q.yzx) * 0.2;
+    // Lower hills = terrain plane at s≈3. Air = fixed lift toward canopy.
+    float terrain = 3.0 - s;
+    float lift = uCrossesAir > 0.5 ? 1.85 : 0.0;
+    q.y = terrain - lift;
+    // Flip = mirror crossbar about stem mid (0.45): default 0.68 ↔ flip 0.22.
+    float barY = uCrossesFlip > 0.5 ? 0.22 : 0.68;
+    // ~75% of stock height; base still near terrain (q.y≈0) when air off.
+    float g = min(
+      max(max(abs(q.x) - 0.05, abs(q.y - 0.45) - 0.6), abs(q.z) - 0.02),
+      max(max(abs(q.x) - 0.35, abs(q.y - barY) - 0.04), abs(q.z) - 0.02)
+    );
+    if (baseLightOn) {
+      // Fixed on the ground in front of the cross (−Z face).
+      vec3 lightQ = vec3(0.0, -lift, -0.57);
+      float bd = length(q - lightQ);
+      baseAcc += 0.035 / (0.02 + bd * bd);
+    }
+    s = 0.5 * min(min(g, terrain), 0.01 + 0.2 * abs(s));
+    d += s;
+    dens += s;
   }
 
   vec3 col = dens * vec3(1.0);
@@ -171,7 +131,6 @@ void main() {
   float falloff = length(u - sunUV);
   col = tanh(col / max(falloff, 1e-3) / 20.0);
 
-  // After sun tonemap so base lamps stay visible away from the disc.
   if (baseLightOn) {
     vec3 lamp = pow(
       abs(vec3(3.0, 2.0, 1.0) * baseAcc),

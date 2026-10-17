@@ -340,4 +340,20 @@ export const placeholders: PlaceholderMeta[] = [
             }),
         ],
     },
+    {
+        id: "darkterrain",
+        title: "Dark Terrain",
+        href: "/s/darkterrain",
+        previewSrc: "/s/darkterrain.webp",
+        tags: ["reactive"],
+        cost: "mid",
+        ai: MONITRON_AI,
+        sources: [
+            withPorter({
+                author: "diatribes",
+                title: "Dark Terrain",
+                href: "https://www.shadertoy.com/view/WcccRl",
+            }),
+        ],
+    },
 ];

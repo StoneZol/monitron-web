@@ -116,8 +116,6 @@ function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
       3,
       STORED_DEFAULTS.flightSpeed,
     ),
-    crosses:
-      raw.crosses === undefined ? STORED_DEFAULTS.crosses : Boolean(raw.crosses),
     crossesAir:
       raw.crossesAir === undefined
         ? STORED_DEFAULTS.crossesAir
@@ -149,12 +147,6 @@ function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
       0,
       2,
       STORED_DEFAULTS.crossSway,
-    ),
-    cameraBank: clamp(
-      Number(raw.cameraBank),
-      0,
-      2,
-      STORED_DEFAULTS.cameraBank,
     ),
     sunColor: asHex(raw.sunColor, STORED_DEFAULTS.sunColor),
     sunColorPeak: asHex(raw.sunColorPeak, STORED_DEFAULTS.sunColorPeak),
@@ -279,7 +271,6 @@ export default function useObservanceHook() {
     visualizer,
     controls: {
       flightSpeed: live.flightSpeed,
-      crosses: live.crosses,
       crossesAir: live.crossesAir,
       crossesFlip: live.crossesFlip,
       crossBaseLightMode: live.crossBaseLightMode,
@@ -289,7 +280,6 @@ export default function useObservanceHook() {
       crossBaseTwinkleS: live.crossBaseTwinkleS,
       crossBaseTwinkleL: live.crossBaseTwinkleL,
       crossSway: live.crossSway,
-      cameraBank: live.cameraBank,
       sunColor: live.sunColor,
       sunColorPeak: live.sunColorPeak,
       sunTwinkle: live.sunTwinkle,
@@ -310,7 +300,6 @@ export default function useObservanceHook() {
       accelDriveMax: OBSERVANCE_DRIVE_MAX,
       camAccelDriveMax: OBSERVANCE_DRIVE_MAX,
       setFlightSpeed: (flightSpeed: number) => commit({ flightSpeed }),
-      setCrosses: (crosses: boolean) => commit({ crosses }),
       setCrossesAir: (crossesAir: boolean) => commit({ crossesAir }),
       setCrossesFlip: (crossesFlip: boolean) => commit({ crossesFlip }),
       setCrossBaseLightMode: (crossBaseLightMode: CrossBaseLightMode) =>
@@ -326,7 +315,6 @@ export default function useObservanceHook() {
       setCrossBaseTwinkleL: (crossBaseTwinkleL: number) =>
         commit({ crossBaseTwinkleL }),
       setCrossSway: (crossSway: number) => commit({ crossSway }),
-      setCameraBank: (cameraBank: number) => commit({ cameraBank }),
       setSunColor: (sunColor: string) => commit({ sunColor }),
       setSunColorPeak: (sunColorPeak: string) => commit({ sunColorPeak }),
       setSunTwinkle: (sunTwinkle: boolean) => commit({ sunTwinkle }),

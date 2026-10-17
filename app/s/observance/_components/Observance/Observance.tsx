@@ -41,7 +41,6 @@ const INFO = {
   look: "Observance flight — black crosses and sun-tinted lightning stripes.",
   flightSpeed: "Base camera advance along the path (1 ≈ Shadertoy default).",
   crosses: "Cross markers, plant / air / bar / base lamps, and path sway.",
-  crossesOn: "Draw stock black cross markers (on/off).",
   crossesAir: "Lift crosses off the hills by a fixed height (float in air).",
   crossesFlip: "Slide the crossbar down the stem (inverted cross). No rotation.",
   crossBaseLight:
@@ -53,10 +52,7 @@ const INFO = {
   crossBaseTwinkleSpeed: "How fast base-lamp hue runs a full lap (1 ≈ 6s).",
   crossBaseTwinkleS: "Saturation % for base-lamp twinkle hsl().",
   crossBaseTwinkleL: "Lightness % for base-lamp twinkle hsl().",
-  crossSway:
-    "Scale stock path sway (1 = Shadertoy, 0 = locked, 2 = 2×).",
-  cameraBank:
-    "When crosses off: coral-style flex look cone (0 = dead ahead, 1 = default wander).",
+  crossSway: "Scale stock path sway (1 = Shadertoy, 0 = locked, 2 = 2×).",
   sun: "Tint for the chromatic lightning stripes (idle→peak or HSL twinkle).",
   sunPalette:
     "Idle = rest. Peak = color-channel target. Hidden while sun twinkle is on; peak locked when audio is off.",
@@ -73,11 +69,11 @@ const INFO = {
   accelChannel:
     "Second band that smoothly scales flight speed (stacks with Speed; no punches).",
   camAccelChannel:
-    "Band that smoothly scales how fast camera look animates (sway / bank). Off = 1×. No punches.",
+    "Band that smoothly scales how fast cross-sway animates. Off = 1×. No punches.",
   colorDrive: "Color / twinkle pulse boost (0…2).",
   speedDrive: "Flight speed scale strength (0…4).",
   accelDrive: "Extra flight speed scale strength (0…4).",
-  camAccelDrive: "Camera look animation rate strength (0…4).",
+  camAccelDrive: "Cross-sway animation rate strength (0…4).",
   visualizer: {
     section: "Audio in → bus meters → peak gain for reactive screens.",
     source:
@@ -129,87 +125,77 @@ const Observance = ({ showOverlay = true }: ObservanceProps) => {
 
               <ControlSubSection label="crosses" info={INFO.crosses}>
                 <Toggle
-                  label="Crosses"
-                  checked={controls.crosses}
-                  onChange={controls.setCrosses}
-                  info={INFO.crossesOn}
+                  label="In air"
+                  checked={controls.crossesAir}
+                  onChange={controls.setCrossesAir}
+                  info={INFO.crossesAir}
                 />
-                {controls.crosses ? (
-                  <>
-                    <Toggle
-                      label="In air"
-                      checked={controls.crossesAir}
-                      onChange={controls.setCrossesAir}
-                      info={INFO.crossesAir}
-                    />
-                    <Toggle
-                      label="Flip bar"
-                      checked={controls.crossesFlip}
-                      onChange={controls.setCrossesFlip}
-                      info={INFO.crossesFlip}
-                    />
-                    <Select
-                      label="Base lights"
-                      value={controls.crossBaseLightMode}
-                      options={BASE_LIGHT_OPTIONS}
-                      onChange={controls.setCrossBaseLightMode}
-                      info={INFO.crossBaseLight}
-                    />
-                    {controls.crossBaseLightMode === "custom" ? (
-                      <ColorTable
-                        label="base lamp"
-                        info={INFO.crossBaseColor}
-                        columns={["idle", "peak"]}
-                        lockedColumns={audioLocked ? ["peak"] : []}
-                        columnStamps={audioStamp}
-                        rows={[
+                <Toggle
+                  label="Flip bar"
+                  checked={controls.crossesFlip}
+                  onChange={controls.setCrossesFlip}
+                  info={INFO.crossesFlip}
+                />
+                <Select
+                  label="Base lights"
+                  value={controls.crossBaseLightMode}
+                  options={BASE_LIGHT_OPTIONS}
+                  onChange={controls.setCrossBaseLightMode}
+                  info={INFO.crossBaseLight}
+                />
+                {controls.crossBaseLightMode === "custom" ? (
+                  <ColorTable
+                    label="base lamp"
+                    info={INFO.crossBaseColor}
+                    columns={["idle", "peak"]}
+                    lockedColumns={audioLocked ? ["peak"] : []}
+                    columnStamps={audioStamp}
+                    rows={[
+                      {
+                        label: "lamp",
+                        cells: [
                           {
-                            label: "lamp",
-                            cells: [
-                              {
-                                value: controls.crossBaseColor,
-                                onChange: controls.setCrossBaseColor,
-                              },
-                              {
-                                value: controls.crossBaseColorPeak,
-                                onChange: controls.setCrossBaseColorPeak,
-                              },
-                            ],
+                            value: controls.crossBaseColor,
+                            onChange: controls.setCrossBaseColor,
                           },
-                        ]}
-                      />
-                    ) : null}
-                    {controls.crossBaseLightMode === "twinkle" ? (
-                      <TwinkleControls
-                        title="base twinkle"
-                        checked
-                        onCheckedChange={(on) => {
-                          if (!on) controls.setCrossBaseLightMode("off");
-                        }}
-                        speed={controls.crossBaseTwinkleSpeed}
-                        onSpeedChange={controls.setCrossBaseTwinkleSpeed}
-                        s={controls.crossBaseTwinkleS}
-                        onSChange={controls.setCrossBaseTwinkleS}
-                        l={controls.crossBaseTwinkleL}
-                        onLChange={controls.setCrossBaseTwinkleL}
-                        info={INFO.crossBaseTwinkle}
-                        speedInfo={INFO.crossBaseTwinkleSpeed}
-                        sInfo={INFO.crossBaseTwinkleS}
-                        lInfo={INFO.crossBaseTwinkleL}
-                      />
-                    ) : null}
-                    <Slider
-                      label="Cross sway"
-                      value={controls.crossSway}
-                      min={OBSERVANCE_RANGES.crossSway.min}
-                      max={OBSERVANCE_RANGES.crossSway.max}
-                      step={OBSERVANCE_RANGES.crossSway.step}
-                      onChange={controls.setCrossSway}
-                      format={(v) => `×${v.toFixed(2)}`}
-                      info={INFO.crossSway}
-                    />
-                  </>
+                          {
+                            value: controls.crossBaseColorPeak,
+                            onChange: controls.setCrossBaseColorPeak,
+                          },
+                        ],
+                      },
+                    ]}
+                  />
                 ) : null}
+                {controls.crossBaseLightMode === "twinkle" ? (
+                  <TwinkleControls
+                    title="base twinkle"
+                    checked
+                    onCheckedChange={(on) => {
+                      if (!on) controls.setCrossBaseLightMode("off");
+                    }}
+                    speed={controls.crossBaseTwinkleSpeed}
+                    onSpeedChange={controls.setCrossBaseTwinkleSpeed}
+                    s={controls.crossBaseTwinkleS}
+                    onSChange={controls.setCrossBaseTwinkleS}
+                    l={controls.crossBaseTwinkleL}
+                    onLChange={controls.setCrossBaseTwinkleL}
+                    info={INFO.crossBaseTwinkle}
+                    speedInfo={INFO.crossBaseTwinkleSpeed}
+                    sInfo={INFO.crossBaseTwinkleS}
+                    lInfo={INFO.crossBaseTwinkleL}
+                  />
+                ) : null}
+                <Slider
+                  label="Cross sway"
+                  value={controls.crossSway}
+                  min={OBSERVANCE_RANGES.crossSway.min}
+                  max={OBSERVANCE_RANGES.crossSway.max}
+                  step={OBSERVANCE_RANGES.crossSway.step}
+                  onChange={controls.setCrossSway}
+                  format={(v) => `×${v.toFixed(2)}`}
+                  info={INFO.crossSway}
+                />
               </ControlSubSection>
 
               <Toggle
@@ -218,21 +204,6 @@ const Observance = ({ showOverlay = true }: ObservanceProps) => {
                 onChange={controls.setLightning}
                 info={INFO.lightning}
               />
-
-              {!controls.crosses ? (
-                <ControlSubSection label="camera">
-                  <Slider
-                    label="Camera bank"
-                    value={controls.cameraBank}
-                    min={OBSERVANCE_RANGES.cameraBank.min}
-                    max={OBSERVANCE_RANGES.cameraBank.max}
-                    step={OBSERVANCE_RANGES.cameraBank.step}
-                    onChange={controls.setCameraBank}
-                    format={(v) => `×${v.toFixed(2)}`}
-                    info={INFO.cameraBank}
-                  />
-                </ControlSubSection>
-              ) : null}
 
               <ControlSubSection label="sun" info={INFO.sun}>
                 <TwinkleControls
