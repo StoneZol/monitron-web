@@ -4,6 +4,9 @@ export const AUDIO_PAGE_SOURCE = "monitron-page" as const;
 /** Chrome extension repo — shown when the plugin is offline */
 export const PLUGIN_URL = "https://github.com/StoneZol/monitron-plugin";
 
+/** Site / library repo */
+export const WEB_URL = "https://github.com/StoneZol/monitron-web";
+
 export const AUDIO_FRAME_TYPE = "audio-frame" as const;
 export const AUDIO_HELLO_TYPE = "hello" as const;
 /** Page asks extension to start/stop feeding bands into the visualizer */

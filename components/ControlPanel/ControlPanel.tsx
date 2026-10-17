@@ -148,7 +148,7 @@ export function ControlPanel({
                         <div className="flex w-full gap-1.5">
                             <ChromePair
                                 label="display"
-                                info="Sync pushes this tab’s prefs to other open tabs of the same screen, then reloads. Hide clears the HUD on this tab only."
+                                info="Sync pushes this tab’s prefs (incl. audio source) to other open tabs of the same screen and hot-applies them (no reload — fullscreen stays). Hide clears the HUD on this tab only."
                             >
                                 {overlay.hasPeers ? (
                                     <PanelButton

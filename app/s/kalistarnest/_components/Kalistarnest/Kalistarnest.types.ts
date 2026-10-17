@@ -37,8 +37,12 @@ export type KalistarnestLive = {
   saturation: number;
   colorChannel: ReactiveChannel;
   colorDrive: number;
+  /** Smooth cruise — lifts base flight continuously */
   speedChannel: ReactiveChannel;
   speedDrive: number;
+  /** Transient kick — rising-edge accel punches */
+  accelChannel: ReactiveChannel;
+  accelDrive: number;
 };
 
 export const KALISTARNEST_DRIVE_MAX = 4;
@@ -61,8 +65,10 @@ export const KALISTARNEST_DEFAULTS: KalistarnestLive = {
   saturation: 1,
   colorChannel: "bass",
   colorDrive: 1.2,
-  speedChannel: "bass",
+  speedChannel: "mid",
   speedDrive: 1,
+  accelChannel: "bass",
+  accelDrive: 1,
 };
 
 export const KALISTARNEST_RANGES = {
@@ -73,4 +79,5 @@ export const KALISTARNEST_RANGES = {
   saturation: { min: 0, max: 2, step: 0.05 },
   colorDrive: { min: 0, max: KALISTARNEST_COLOR_DRIVE_MAX, step: 0.05 },
   speedDrive: { min: 0, max: KALISTARNEST_DRIVE_MAX, step: 0.1 },
+  accelDrive: { min: 0, max: KALISTARNEST_DRIVE_MAX, step: 0.1 },
 } as const;

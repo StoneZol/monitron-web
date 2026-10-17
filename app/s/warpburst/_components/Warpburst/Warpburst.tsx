@@ -45,9 +45,11 @@ const INFO = {
     "Fog structure — low = soft blobs, high = micro-filaments (1 ≈ default, 4 = max).",
   colorChannel:
     "Band that punches color (twinkle: shared light pulse + fog flash; off: idle→peak).",
-  speedChannel: "Band that punches flight speed.",
+  speedChannel: "Band that lifts cruise flight speed (smooth).",
+  accelChannel: "Band that kicks acceleration (rising-edge punches).",
   colorDrive: "Color / twinkle pulse boost (0…2).",
-  speedDrive: "Speed punch strength (0…8).",
+  speedDrive: "Cruise lift strength (0…8).",
+  accelDrive: "Kick / acceleration strength (0…8).",
   visualizer: {
     section: "Audio in → bus meters → peak gain for reactive screens.",
     source:
@@ -188,6 +190,13 @@ const Warpburst = ({ showOverlay = true }: WarpburstProps) => {
                       onChange={controls.setSpeedChannel}
                       info={INFO.speedChannel}
                     />
+                    <Select
+                      label="Accel"
+                      value={controls.accelChannel}
+                      options={REACTIVE_CHANNEL_OPTIONS}
+                      onChange={controls.setAccelChannel}
+                      info={INFO.accelChannel}
+                    />
                   </ControlSubSection>
                   <ControlSubSection label="drive">
                     <Slider
@@ -209,6 +218,16 @@ const Warpburst = ({ showOverlay = true }: WarpburstProps) => {
                       onChange={controls.setSpeedDrive}
                       format={(v) => `×${v.toFixed(1)}`}
                       info={INFO.speedDrive}
+                    />
+                    <Slider
+                      label="Accel"
+                      value={controls.accelDrive}
+                      min={WARPBURST_RANGES.accelDrive.min}
+                      max={controls.accelDriveMax}
+                      step={WARPBURST_RANGES.accelDrive.step}
+                      onChange={controls.setAccelDrive}
+                      format={(v) => `×${v.toFixed(1)}`}
+                      info={INFO.accelDrive}
                     />
                   </ControlSubSection>
                 </>

@@ -60,8 +60,10 @@ const INFO = {
         "Camera foreshortening only (0 = higher eye, 40 = lower + wider FOV). Does not warp the grid mesh.",
     roadLength:
         "How far the neon road runs toward the sun. Default is short (~⅓ of the view); slide up to extend.",
-    roadChannel: "Band that punches grid scroll speed.",
-    roadDrive: "Scroll punch strength for grid speed (0…8).",
+    roadChannel: "Band that lifts cruise grid scroll (smooth).",
+    roadDrive: "Cruise scroll lift strength (0…8).",
+    roadAccelChannel: "Band that kicks scroll acceleration (rising-edge).",
+    roadAccelDrive: "Kick / acceleration strength for grid scroll (0…8).",
     stretchChannel:
         "Band that elongates the road toward the horizon; idle eases back to Road length.",
     stretchDrive:
@@ -458,6 +460,13 @@ const Synthwave = ({ showOverlay = true }: SynthwaveProps) => {
                                             info={INFO.roadChannel}
                                         />
                                         <Select
+                                            label="Grid accel"
+                                            value={controls.roadAccelChannel}
+                                            options={[...REACTIVE_CHANNEL_OPTIONS]}
+                                            onChange={controls.setRoadAccelChannel}
+                                            info={INFO.roadAccelChannel}
+                                        />
+                                        <Select
                                             label="Road stretch"
                                             value={controls.stretchChannel}
                                             options={[...REACTIVE_CHANNEL_OPTIONS]}
@@ -489,6 +498,16 @@ const Synthwave = ({ showOverlay = true }: SynthwaveProps) => {
                                             onChange={controls.setRoadDrive}
                                             format={(v) => `×${v.toFixed(1)}`}
                                             info={INFO.roadDrive}
+                                        />
+                                        <Slider
+                                            label="Grid accel"
+                                            value={controls.roadAccelDrive}
+                                            min={0}
+                                            max={controls.speedDriveMax}
+                                            step={0.5}
+                                            onChange={controls.setRoadAccelDrive}
+                                            format={(v) => `×${v.toFixed(1)}`}
+                                            info={INFO.roadAccelDrive}
                                         />
                                         <Slider
                                             label="Road stretch"

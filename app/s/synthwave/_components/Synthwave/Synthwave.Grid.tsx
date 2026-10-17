@@ -16,7 +16,15 @@ import {
     resolveTwinkleColor,
     updateTwinklePulseEnv,
 } from "@/lib/twinkleHsl";
-import { channelLevel, hexToVec3, lerpHex, drivenLevel } from "@/lib/visualAudio";
+import { registerRuntimeReset } from "@/lib/runtimeReset";
+import {
+    channelLevel,
+    createMotionKickState,
+    hexToVec3,
+    lerpHex,
+    drivenLevel,
+    motionSpeedMul,
+} from "@/lib/visualAudio";
 import {
     CELL,
     CELL_SQUASH,
@@ -139,10 +147,10 @@ export function NeonGrid({
     const twinklePulse = useRef(createTwinklePulseEnv());
     /** Peak-hold so bass kicks flash like Hexagons band flicker */
     const glowHold = useRef(0);
-    const roadHold = useRef(0);
     const stretchHold = useRef(0);
     /** Smoothed stretch 0…1 — channel×drive shaped */
     const stretchSmooth = useRef(0);
+    const motionKick = useRef(createMotionKickState());
 
     useEffect(
         () => () => {
@@ -151,6 +159,18 @@ export function NeonGrid({
         },
         [floorMat, wallMat],
     );
+
+    useEffect(() => {
+        return registerRuntimeReset("synthwave", () => {
+            scrollRef.current = 0;
+            twinkleHue.current = 0;
+            twinklePulse.current = createTwinklePulseEnv();
+            glowHold.current = 0;
+            stretchHold.current = 0;
+            stretchSmooth.current = 0;
+            motionKick.current = createMotionKickState();
+        });
+    }, []);
 
     useFrame((_, dt) => {
         const knobs = liveRef.current;
@@ -161,25 +181,23 @@ export function NeonGrid({
 
         const reactive = Boolean(viz?.enabled);
         const roadRaw = reactive ? channelLevel(viz!, knobs.roadChannel) : 0;
+        const roadAccelRaw = reactive
+            ? channelLevel(viz!, knobs.roadAccelChannel)
+            : 0;
         const stretchRaw = reactive
             ? channelLevel(viz!, knobs.stretchChannel)
             : 0;
         const glowRaw = reactive ? channelLevel(viz!, knobs.glowChannel) : 0;
-        // Road / stretch: short sharp kicks. Glow can linger a bit longer.
-        const roadDecay = Math.exp(-Math.max(0, dt) * 12);
+        // Stretch / glow: peak-hold. Road motion uses cruise + kick helper.
         const stretchDecay = Math.exp(-Math.max(0, dt) * 10);
         const glowDecay = Math.exp(-Math.max(0, dt) * 7);
-        roadHold.current = Math.max(roadRaw, roadHold.current * roadDecay);
         stretchHold.current = Math.max(
             stretchRaw,
             stretchHold.current * stretchDecay,
         );
         glowHold.current = Math.max(glowRaw, glowHold.current * glowDecay);
-        const roadPunch = Math.min(1, roadHold.current);
         const stretchPunch = Math.min(1, stretchHold.current);
         const flash = Math.min(1, glowHold.current);
-        // Emphasize peaks so mid mush disappears — idle floor stays 0.7
-        const roadKick = roadPunch * roadPunch;
 
         if (knobs.gridTwinkle) {
             twinkleHue.current = advanceTwinkleHue(
@@ -192,11 +210,16 @@ export function NeonGrid({
         const leanDeg = knobs.wallAngle;
         const offsetCells = Math.max(1, Math.round(knobs.wallOffset));
 
-        // Idle a bit slower when road channel is armed; peaks punch with roadDrive
-        const roadArmed = reactive && knobs.roadChannel !== "off";
-        const speedMul = roadArmed
-            ? 0.7 + roadKick * (0.3 + knobs.roadDrive * 0.9)
-            : 1;
+        const { speedMul } = motionSpeedMul({
+            cruiseRaw: roadRaw,
+            cruiseDrive: knobs.roadDrive,
+            cruiseArmed: reactive && knobs.roadChannel !== "off",
+            kickRaw: roadAccelRaw,
+            kickDrive: knobs.roadAccelDrive,
+            kickArmed: reactive && knobs.roadAccelChannel !== "off",
+            kick: motionKick.current,
+            dt: Math.max(0, dt),
+        });
         const rate = 2 * knobs.roadSpeed * speedMul;
         scrollRef.current += Math.max(0, dt) * rate;
 

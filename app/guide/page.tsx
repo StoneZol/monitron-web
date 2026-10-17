@@ -1,14 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { SiteFooter } from "@/components/SiteFooter";
+import { SiteHeader } from "@/components/SiteHeader";
 import { panelButtonClassName } from "@/components/ControlPanel/PanelButton";
-import { PLUGIN_URL } from "@/lib/audioBus";
+import { PLUGIN_URL, WEB_URL } from "@/lib/audioBus";
 import { SITE_NAME } from "@/lib/seo";
 import { getSiteUrl } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
 const GUIDE_DESCRIPTION =
-  "How to drive Monitron with the Chrome plugin or mic, and share look presets via monitron keys.";
+  "How to drive Monitron with the Chrome plugin or mic, known Chrome GPU decode limits, and monitron preset keys.";
 
 export const metadata: Metadata = {
   title: "Guide",
@@ -42,6 +43,7 @@ export const metadata: Metadata = {
 export default function GuidePage() {
   return (
     <div className="atmosphere relative flex min-h-full flex-1 flex-col overflow-x-hidden">
+      <SiteHeader />
       <main className="relative z-10 mx-auto w-full max-w-2xl flex-1 px-4 pb-16 pt-10 sm:px-8 sm:pt-14">
         <header className="mb-12 sm:mb-16">
           <div className="mb-5 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[10px] uppercase tracking-[0.24em] text-muted">
@@ -155,8 +157,104 @@ export default function GuidePage() {
           </section>
 
           <section className="space-y-4">
+            <h2 className="font-mono text-[11px] uppercase tracking-[0.28em] text-warn">
+              ::3 known limits · chrome · multi-monitor
+            </h2>
+            <p className="text-muted">
+              Dual / multi-monitor setup. Not “your GPU is maxed” — Task Manager
+              can look calm while media still falls over. Run a Monitron screen
+              on one display and a hardware-decoded video tab (YouTube VP9 via{" "}
+              <span className="text-ink">D3D11VideoDecoder</span>) on another —
+              even without fullscreen. Chrome’s GPU process has to VSync /
+              composite two independent surfaces plus the video decoder through
+              the same ANGLE↔D3D11 path; the queue stalls. Confirmed in{" "}
+              <span className="text-ink">chrome://media-internals</span>:{" "}
+              <span className="text-ink">DECODER_UNDERFLOW</span> /{" "}
+              <span className="text-ink">BUFFERING_HAVE_NOTHING</span> on video
+              while Opus audio still reports{" "}
+              <span className="text-ink">BUFFERING_HAVE_ENOUGH</span>. Spotify
+              Web (no video decoder) does not trip this. Heavier WebGL / Canvas
+              scenes hit it more often than light ones.
+            </p>
+            <ul className="space-y-3 text-muted">
+              <li>
+                <span className="font-mono text-[12px] uppercase tracking-[0.14em] text-warn">
+                  workaround that fixed it here
+                </span>
+                <span className="mx-2 text-muted/40">—</span>
+                Chrome → <span className="text-ink">chrome://flags</span> →
+                search{" "}
+                <span className="text-ink">
+                  Hardware-accelerated video decode
+                </span>{" "}
+                → set to <span className="text-ink">Disabled</span> (forces
+                software decode; CPU handles 1080p fine, GPU stops sharing the
+                D3D11 decoder path with WebGL). Relaunch Chrome after changing
+                the flag.
+              </li>
+              <li>
+                <span className="font-mono text-[12px] uppercase tracking-[0.14em] text-warn">
+                  other things to try
+                </span>
+                <span className="mx-2 text-muted/40">—</span>
+                drop <span className="text-ink">Render scale</span> on heavy
+                screens; play audio-only instead of video next to Monitron; or
+                experiment with{" "}
+                <span className="text-ink">Choose ANGLE graphics backend</span>{" "}
+                (D3D11 → OpenGL / Vulkan / D3D9) — same layer, different
+                machines.
+              </li>
+              <li>
+                <span className="font-mono text-[12px] uppercase tracking-[0.14em] text-warn">
+                  for developers
+                </span>
+                <span className="mx-2 text-muted/40">—</span>
+                throttle or pause{" "}
+                <span className="text-ink">requestAnimationFrame</span> on{" "}
+                <span className="text-ink">visibilitychange</span> when the tab
+                is hidden; consider{" "}
+                <span className="text-ink">OffscreenCanvas</span> / workers for
+                heavy loops. That cuts background load — it does not by itself
+                fix the dual-monitor visible-window case above.
+              </li>
+            </ul>
+
+            <p className="text-muted">
+              Both repos are open source. If you know how to coexist WebGL /
+              Canvas with Chrome’s D3D11 HW video decode on dual monitors
+              without disabling hardware decode — PRs welcome.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <a
+                href={PLUGIN_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={cn(panelButtonClassName, "inline-flex gap-2")}
+              >
+                <span className="text-muted">src://</span>
+                plugin
+                <span aria-hidden className="text-cyan">
+                  →
+                </span>
+              </a>
+              <a
+                href={WEB_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={cn(panelButtonClassName, "inline-flex gap-2")}
+              >
+                <span className="text-muted">src://</span>
+                web
+                <span aria-hidden className="text-cyan">
+                  →
+                </span>
+              </a>
+            </div>
+          </section>
+
+          <section className="space-y-4">
             <h2 className="font-mono text-[11px] uppercase tracking-[0.28em] text-signal">
-              ::3 microphone
+              ::4 microphone
             </h2>
             <p className="text-muted">
               No extension needed. The page listens through the browser mic —
@@ -172,26 +270,34 @@ export default function GuidePage() {
                 , tap the page once — browsers need a gesture.
               </li>
               <li>
-                Raise <span className="text-ink">noise gate</span> if room hiss
-                moves the meters. Lower it for quiet sources.
+                <span className="text-ink">Noise gate</span> defaults to off (0).
+                Raise it if room hiss moves the meters; lower it for quiet
+                sources.
+              </li>
+              <li>
+                <span className="text-ink">Mic gain</span> defaults to ×2 and
+                lifts residual levels (speaker bleed, distant mics) before the
+                gate and bus.
               </li>
             </ol>
           </section>
 
           <section className="space-y-4">
             <h2 className="font-mono text-[11px] uppercase tracking-[0.28em] text-signal">
-              ::4 peak gain
+              ::5 peak gain
             </h2>
             <p className="text-muted">
               Quiet tabs or weak mics: bump{" "}
-              <span className="text-ink">peak gain</span> on the visualizer.
-              Soft-clipped so ×3 still moves without hard clipping the bus.
+              <span className="text-ink">peak gain</span> on the visualizer
+              (after mic processing). Mic source also has its own{" "}
+              <span className="text-ink">Mic gain</span> slider. Peak gain is
+              soft-clipped so ×3 still moves without hard clipping the bus.
             </p>
           </section>
 
           <section className="space-y-4">
             <h2 className="font-mono text-[11px] uppercase tracking-[0.28em] text-signal">
-              ::5 render scale
+              ::6 render scale
             </h2>
             <p className="text-muted">
               Heavy screens (raymarch / dense shaders) chew GPU even when the
@@ -229,7 +335,7 @@ export default function GuidePage() {
 
           <section className="space-y-4">
             <h2 className="font-mono text-[11px] uppercase tracking-[0.28em] text-signal">
-              ::6 share presets
+              ::7 share presets
             </h2>
             <p className="text-muted">
               Dial a look you like, then pass it around. In the HUD{" "}

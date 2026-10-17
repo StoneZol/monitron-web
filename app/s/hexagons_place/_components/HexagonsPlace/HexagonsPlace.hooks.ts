@@ -1,9 +1,11 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import {
+    MIC_GAIN_DEFAULT,
     MIC_GATE_DEFAULT,
     migrateAudioSource,
+    normalizeMicGain,
     normalizeMicGate,
     normalizePeakGain,
     PEAK_GAIN_DEFAULT,
@@ -12,6 +14,7 @@ import {
 import { resetFxOverlay } from "@/components/FxOverlay";
 import { toggleFullscreen } from "@/lib/fullscreen";
 import { loadScreenPrefs, saveScreenPrefs } from "@/lib/screenPrefs";
+import { onTabSyncApply } from "@/lib/tabSyncHotApply";
 import {
     TWINKLE_DEFAULT_L,
     TWINKLE_DEFAULT_S,
@@ -60,8 +63,10 @@ export const HEXAGONS_DEFAULTS: HexagonsPlaceLive = {
     spin: true,
     spinLeft: true,
     spinSpeed: 1,
-    spinChannel: "beat",
-    spinDrive: 2,
+    spinChannel: "mid",
+    spinDrive: 1.2,
+    spinAccelChannel: "beat",
+    spinAccelDrive: 2,
     fogHeight: 2,
     fogDensity: 0.7,
     lightIntensity: 1,
@@ -70,6 +75,7 @@ export const HEXAGONS_DEFAULTS: HexagonsPlaceLive = {
     hexHeightSpread: 1,
     audioSource: "off",
     micGate: MIC_GATE_DEFAULT,
+    micGain: MIC_GAIN_DEFAULT,
     peakGain: PEAK_GAIN_DEFAULT,
     bandBounce: true,
     bandFlicker: true,
@@ -145,6 +151,7 @@ function readPrefs(): HexagonsPlaceLive {
             reactive: legacyReactive,
         }),
         micGate: normalizeMicGate(rest.micGate),
+        micGain: normalizeMicGain(rest.micGain),
         peakGain: normalizePeakGain(rest.peakGain),
         twinkle: Boolean(
             rest.twinkle !== undefined ? rest.twinkle : legacyGarland,
@@ -215,6 +222,15 @@ function readPrefs(): HexagonsPlaceLive {
     ) {
         cached.spinChannel = HEXAGONS_DEFAULTS.spinChannel;
     }
+    if (
+        cached.spinAccelChannel !== "off" &&
+        cached.spinAccelChannel !== "bass" &&
+        cached.spinAccelChannel !== "mid" &&
+        cached.spinAccelChannel !== "high" &&
+        cached.spinAccelChannel !== "beat"
+    ) {
+        cached.spinAccelChannel = HEXAGONS_DEFAULTS.spinAccelChannel;
+    }
     cached.gridDrive = clamp(
         Number(cached.gridDrive),
         0,
@@ -236,6 +252,14 @@ function readPrefs(): HexagonsPlaceLive {
         HEXAGONS_DRIVE_MAX,
         HEXAGONS_DEFAULTS.spinDrive,
     );
+    cached.spinAccelDrive = clamp(
+        typeof cached.spinAccelDrive === "number"
+            ? cached.spinAccelDrive
+            : HEXAGONS_DEFAULTS.spinAccelDrive,
+        0,
+        HEXAGONS_DRIVE_MAX,
+        HEXAGONS_DEFAULTS.spinAccelDrive,
+    );
     // Caps mutex with twinkle
     if (cached.caps && cached.twinkle) cached.twinkle = false;
     delete (cached as { spinAccel?: number }).spinAccel;
@@ -256,6 +280,13 @@ function writePrefs(next: HexagonsPlaceLive) {
     emit();
 }
 
+
+function rehydrateFromStorage() {
+  cached = null;
+  readPrefs();
+  emit();
+}
+
 export default function useHexagonsPlaceHook() {
     const live = useSyncExternalStore(
         subscribe,
@@ -263,7 +294,9 @@ export default function useHexagonsPlaceHook() {
         () => HEXAGONS_DEFAULTS,
     );
 
-    const commit = (patch: Partial<HexagonsPlaceLive>) => {
+      useEffect(() => onTabSyncApply(SCREEN_ID, rehydrateFromStorage), []);
+
+  const commit = (patch: Partial<HexagonsPlaceLive>) => {
         writePrefs({ ...readPrefs(), ...patch });
     };
 
@@ -272,6 +305,8 @@ export default function useHexagonsPlaceHook() {
         onSourceChange: (audioSource) => commit({ audioSource }),
         preferredMicGate: live.micGate,
         onMicGateChange: (micGate) => commit({ micGate }),
+        preferredMicGain: live.micGain,
+        onMicGainChange: (micGain) => commit({ micGain }),
         preferredPeakGain: live.peakGain,
         onPeakGainChange: (peakGain) => commit({ peakGain }),
     });
@@ -392,6 +427,14 @@ export default function useHexagonsPlaceHook() {
                 commit({ spinChannel }),
             spinDrive: live.spinDrive,
             setSpinDrive: (spinDrive: number) => commit({ spinDrive }),
+            spinAccelChannel: live.spinAccelChannel,
+            setSpinAccelChannel: (
+                spinAccelChannel: HexagonsPlaceLive["spinAccelChannel"],
+            ) => commit({ spinAccelChannel }),
+            spinAccelDrive: live.spinAccelDrive,
+            setSpinAccelDrive: (spinAccelDrive: number) =>
+                commit({ spinAccelDrive }),
+            spinAccelDriveMax: HEXAGONS_DRIVE_MAX,
             fogHeight: live.fogHeight,
             setFogHeight: (fogHeight: number) => commit({ fogHeight }),
             fogDensity: live.fogDensity,

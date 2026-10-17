@@ -92,9 +92,11 @@ const INFO = {
     "Shadow / edge smooth. 0 = stock Yusef28, ×1 = default soft, ×2 = softer + finer march + 4× AA (heavier GPU).",
   saturation: "Look chroma (0 = gray, 1 = default).",
   colorChannel: "Band that punches light / color.",
-  speedChannel: "Band that punches flight speed (rising-edge hits).",
+  speedChannel: "Band that lifts cruise flight speed (smooth).",
+  accelChannel: "Band that kicks acceleration (rising-edge punches).",
   colorDrive: "Color / twinkle pulse boost (0…2).",
-  speedDrive: "Speed punch strength (0…4).",
+  speedDrive: "Cruise lift strength (0…4).",
+  accelDrive: "Kick / acceleration strength (0…4).",
   visualizer: {
     section: "Audio in → bus meters → peak gain for reactive screens.",
     source:
@@ -357,6 +359,13 @@ const Coralreef = ({ showOverlay = true }: CoralreefProps) => {
                       onChange={controls.setSpeedChannel}
                       info={INFO.speedChannel}
                     />
+                    <Select
+                      label="Accel"
+                      value={controls.accelChannel}
+                      options={[...REACTIVE_CHANNEL_OPTIONS]}
+                      onChange={controls.setAccelChannel}
+                      info={INFO.accelChannel}
+                    />
                   </ControlSubSection>
                   <ControlSubSection label="drive">
                     <Slider
@@ -378,6 +387,16 @@ const Coralreef = ({ showOverlay = true }: CoralreefProps) => {
                       onChange={controls.setSpeedDrive}
                       format={(v) => `×${v.toFixed(1)}`}
                       info={INFO.speedDrive}
+                    />
+                    <Slider
+                      label="Accel"
+                      value={controls.accelDrive}
+                      min={CORALREEF_RANGES.accelDrive.min}
+                      max={controls.accelDriveMax}
+                      step={CORALREEF_RANGES.accelDrive.step}
+                      onChange={controls.setAccelDrive}
+                      format={(v) => `×${v.toFixed(1)}`}
+                      info={INFO.accelDrive}
                     />
                   </ControlSubSection>
                 </>

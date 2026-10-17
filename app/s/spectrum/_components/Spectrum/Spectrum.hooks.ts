@@ -1,16 +1,21 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import {
+  MIC_GAIN_DEFAULT,
+  MIC_GATE_DEFAULT,
   migrateAudioSource,
+  normalizeMicGain,
   normalizeMicGate,
   normalizePeakGain,
+  PEAK_GAIN_DEFAULT,
   useAudioReactive,
   type AudioSource,
 } from "@/hooks/useAudioReactive";
 import { resetFxOverlay } from "@/components/FxOverlay";
 import { toggleFullscreen } from "@/lib/fullscreen";
 import { loadScreenPrefs, saveScreenPrefs } from "@/lib/screenPrefs";
+import { onTabSyncApply } from "@/lib/tabSyncHotApply";
 import {
   TWINKLE_DEFAULT_L,
   TWINKLE_DEFAULT_S,
@@ -27,6 +32,7 @@ const SCREEN_ID = "spectrum";
 type Stored = SpectrumLive & {
   audioSource: AudioSource;
   micGate: number;
+  micGain: number;
   peakGain: number;
 };
 
@@ -36,8 +42,9 @@ const STORED_DEFAULTS: Stored = {
   twinkleS: TWINKLE_DEFAULT_S,
   twinkleL: TWINKLE_DEFAULT_L,
   audioSource: "off",
-  micGate: 0.02,
-  peakGain: 1.5,
+  micGate: MIC_GATE_DEFAULT,
+  micGain: MIC_GAIN_DEFAULT,
+  peakGain: PEAK_GAIN_DEFAULT,
 };
 
 function isHex(v: unknown): v is string {
@@ -60,6 +67,7 @@ function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
     ...raw,
     audioSource: migrateAudioSource(raw),
     micGate: normalizeMicGate(raw.micGate),
+    micGain: normalizeMicGain(raw.micGain),
     peakGain: normalizePeakGain(raw.peakGain),
     colorLow: asHex(raw.colorLow, STORED_DEFAULTS.colorLow),
     colorHigh: asHex(raw.colorHigh, STORED_DEFAULTS.colorHigh),
@@ -114,12 +122,20 @@ function writePrefs(next: Stored) {
   emit();
 }
 
+function rehydrateFromStorage() {
+  cached = null;
+  readPrefs();
+  emit();
+}
+
 export default function useSpectrumHook() {
   const live = useSyncExternalStore(
     subscribe,
     readPrefs,
     () => STORED_DEFAULTS,
   );
+
+  useEffect(() => onTabSyncApply(SCREEN_ID, rehydrateFromStorage), []);
 
   const commit = (patch: Partial<Stored>) => {
     writePrefs({ ...readPrefs(), ...patch });
@@ -128,9 +144,11 @@ export default function useSpectrumHook() {
   const visualizer = useAudioReactive({
     preferredSource: live.audioSource,
     preferredMicGate: live.micGate,
+    preferredMicGain: live.micGain,
     preferredPeakGain: live.peakGain,
     onSourceChange: (audioSource) => commit({ audioSource }),
     onMicGateChange: (micGate) => commit({ micGate }),
+    onMicGainChange: (micGain) => commit({ micGain }),
     onPeakGainChange: (peakGain) => commit({ peakGain }),
   });
 

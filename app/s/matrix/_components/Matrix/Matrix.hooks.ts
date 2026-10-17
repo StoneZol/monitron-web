@@ -5,7 +5,9 @@ import * as THREE from "three";
 import {
   useAudioReactive,
   migrateAudioSource,
+  MIC_GAIN_DEFAULT,
   MIC_GATE_DEFAULT,
+  normalizeMicGain,
   normalizeMicGate,
   PEAK_GAIN_DEFAULT,
   normalizePeakGain,
@@ -19,7 +21,15 @@ import { resetFxOverlay } from "@/components/FxOverlay";
 import { toggleFullscreen } from "@/lib/fullscreen";
 import { loadScreenPrefs, saveScreenPrefs } from "@/lib/screenPrefs";
 import { scaledPixelRatio } from "@/lib/renderScale";
+import { registerRuntimeReset } from "@/lib/runtimeReset";
+import { onTabSyncApply } from "@/lib/tabSyncHotApply";
 import { VISUAL_PIP_CHANGE } from "@/lib/visualPip";
+import {
+  channelLevel,
+  createMotionKickState,
+  motionSpeedMul,
+  type ReactiveChannel,
+} from "@/lib/visualAudio";
 import {
   advanceTwinkleHue,
   createTwinklePulseEnv,
@@ -54,9 +64,22 @@ const DEFAULT_COLOR = "#36ff00";
 
 /** Drive → fall punch strength (slider multiplies the dump) */
 const DRIVE_DEFAULT = 2;
-/** Extra fall steps on low-slice rising edge */
+/** Extra fall steps on accel rising edge */
 const LOW_FALL_DUMP = 1.1;
 const LOW_EDGE = 0.05;
+const CHANNELS = new Set<ReactiveChannel>([
+  "off",
+  "bass",
+  "mid",
+  "high",
+  "beat",
+]);
+
+function channel(v: unknown, fallback: ReactiveChannel): ReactiveChannel {
+  return typeof v === "string" && CHANNELS.has(v as ReactiveChannel)
+    ? (v as ReactiveChannel)
+    : fallback;
+}
 const LOW_MIN = 0.06;
 const LOW_IMPULSE_DECAY = 3;
 /** Peak-hold for brightness / trail (non-twinkle path) */
@@ -76,11 +99,15 @@ const DEFAULTS: MatrixControls = {
   twinkleL: TWINKLE_DEFAULT_L,
   color: DEFAULT_COLOR,
   fallSpeed: 10,
+  speedChannel: "mid",
+  speedDrive: 1.2,
+  accelChannel: "bass",
   drive: DRIVE_DEFAULT,
   colorDrive: 1,
   peakGain: PEAK_GAIN_DEFAULT,
   audioSource: "off",
   micGate: MIC_GATE_DEFAULT,
+  micGain: MIC_GAIN_DEFAULT,
 };
 
 const SCREEN_ID = "matrix";
@@ -148,6 +175,7 @@ function migratePrefs(
     reactive?: boolean;
     colorSpeed?: number;
     micGate?: number;
+    micGain?: number;
   },
 ): MatrixControls {
   const drive = clamp(
@@ -180,6 +208,14 @@ function migratePrefs(
     ),
     color: saved.color ?? DEFAULTS.color,
     fallSpeed: saved.fallSpeed ?? DEFAULTS.fallSpeed,
+    speedChannel: channel(saved.speedChannel, DEFAULTS.speedChannel),
+    speedDrive: clamp(
+      Number(saved.speedDrive),
+      0,
+      MATRIX_DRIVE_MAX,
+      DEFAULTS.speedDrive,
+    ),
+    accelChannel: channel(saved.accelChannel, DEFAULTS.accelChannel),
     drive,
     colorDrive: clamp(
       Number(saved.colorDrive),
@@ -190,6 +226,7 @@ function migratePrefs(
     peakGain: normalizePeakGain(saved.peakGain),
     audioSource: migrateAudioSource(saved),
     micGate: normalizeMicGate(saved.micGate),
+    micGain: normalizeMicGain(saved.micGain),
   };
 }
 
@@ -203,8 +240,12 @@ const useMatrixHook = () => {
   const twinkleSRef = useRef(DEFAULTS.twinkleS);
   const twinkleLRef = useRef(DEFAULTS.twinkleL);
   const fallSpeedRef = useRef(DEFAULTS.fallSpeed);
+  const speedChannelRef = useRef(DEFAULTS.speedChannel);
+  const speedDriveRef = useRef(DEFAULTS.speedDrive);
+  const accelChannelRef = useRef(DEFAULTS.accelChannel);
   const driveRef = useRef(DEFAULTS.drive);
   const colorDriveRef = useRef(DEFAULTS.colorDrive);
+  const motionKickRef = useRef(createMotionKickState());
   const prefsRef = useRef<MatrixControls>({ ...DEFAULTS });
 
   const [twinkle, setTwinkleState] = useState(DEFAULTS.twinkle);
@@ -213,10 +254,14 @@ const useMatrixHook = () => {
   const [twinkleL, setTwinkleLState] = useState(DEFAULTS.twinkleL);
   const [color, setColorState] = useState(DEFAULTS.color);
   const [fallSpeed, setFallSpeedState] = useState(DEFAULTS.fallSpeed);
+  const [speedChannel, setSpeedChannelState] = useState(DEFAULTS.speedChannel);
+  const [speedDrive, setSpeedDriveState] = useState(DEFAULTS.speedDrive);
+  const [accelChannel, setAccelChannelState] = useState(DEFAULTS.accelChannel);
   const [drive, setDriveState] = useState(DEFAULTS.drive);
   const [colorDrive, setColorDriveState] = useState(DEFAULTS.colorDrive);
   const [sourcePref, setSourcePref] = useState(DEFAULTS.audioSource);
   const [micGatePref, setMicGatePref] = useState(DEFAULTS.micGate);
+  const [micGainPref, setMicGainPref] = useState(DEFAULTS.micGain);
   const [peakGainPref, setPeakGainPref] = useState(DEFAULTS.peakGain);
   const persistSourceRef = useRef(
     (audioSource: MatrixControls["audioSource"]) => {
@@ -230,6 +275,11 @@ const useMatrixHook = () => {
     saveScreenPrefs(SCREEN_ID, prefsRef.current);
     setMicGatePref(micGate);
   });
+  const persistMicGainRef = useRef((micGain: number) => {
+    prefsRef.current = { ...prefsRef.current, micGain };
+    saveScreenPrefs(SCREEN_ID, prefsRef.current);
+    setMicGainPref(micGain);
+  });
   const persistPeakGainRef = useRef((peakGain: number) => {
     prefsRef.current = { ...prefsRef.current, peakGain };
     saveScreenPrefs(SCREEN_ID, prefsRef.current);
@@ -242,6 +292,8 @@ const useMatrixHook = () => {
     onSourceChange: (source) => persistSourceRef.current(source),
     preferredMicGate: micGatePref,
     onMicGateChange: (gate) => persistMicGateRef.current(gate),
+    preferredMicGain: micGainPref,
+    onMicGainChange: (gain) => persistMicGainRef.current(gain),
     preferredPeakGain: peakGainPref,
     onPeakGainChange: (gain) => persistPeakGainRef.current(gain),
   });
@@ -280,6 +332,18 @@ const useMatrixHook = () => {
       fallSpeedRef.current = patch.fallSpeed;
       setFallSpeedState(patch.fallSpeed);
     }
+    if (patch.speedChannel !== undefined) {
+      speedChannelRef.current = patch.speedChannel;
+      setSpeedChannelState(patch.speedChannel);
+    }
+    if (patch.speedDrive !== undefined) {
+      speedDriveRef.current = patch.speedDrive;
+      setSpeedDriveState(patch.speedDrive);
+    }
+    if (patch.accelChannel !== undefined) {
+      accelChannelRef.current = patch.accelChannel;
+      setAccelChannelState(patch.accelChannel);
+    }
     if (patch.drive !== undefined) {
       driveRef.current = patch.drive;
       setDriveState(patch.drive);
@@ -294,16 +358,15 @@ const useMatrixHook = () => {
     if (patch.micGate !== undefined) {
       setMicGatePref(patch.micGate);
     }
+    if (patch.micGain !== undefined) {
+      setMicGainPref(patch.micGain);
+    }
     if (patch.peakGain !== undefined) {
       setPeakGainPref(patch.peakGain);
     }
   };
 
-  useLayoutEffect(() => {
-    const loaded = loadScreenPrefs<
-      MatrixControls & { bassBoost?: number; colorSpeed?: number }
-    >(SCREEN_ID, { ...DEFAULTS });
-    const saved = migratePrefs(loaded);
+  const applySaved = (saved: MatrixControls) => {
     prefsRef.current = saved;
     twinkleRef.current = saved.twinkle;
     twinkleSpeedRef.current = saved.twinkleSpeed;
@@ -312,6 +375,9 @@ const useMatrixHook = () => {
     fixedHslRef.current = hexToHslCss(saved.color);
     twinkleHueRef.current = hueDegFromHex(saved.color);
     fallSpeedRef.current = saved.fallSpeed;
+    speedChannelRef.current = saved.speedChannel;
+    speedDriveRef.current = saved.speedDrive;
+    accelChannelRef.current = saved.accelChannel;
     driveRef.current = saved.drive;
     colorDriveRef.current = saved.colorDrive;
     setTwinkleState(saved.twinkle);
@@ -320,12 +386,29 @@ const useMatrixHook = () => {
     setTwinkleLState(saved.twinkleL);
     setColorState(saved.color);
     setFallSpeedState(saved.fallSpeed);
+    setSpeedChannelState(saved.speedChannel);
+    setSpeedDriveState(saved.speedDrive);
+    setAccelChannelState(saved.accelChannel);
     setDriveState(saved.drive);
     setColorDriveState(saved.colorDrive);
     setSourcePref(saved.audioSource);
     setMicGatePref(saved.micGate);
+    setMicGainPref(saved.micGain);
     setPeakGainPref(saved.peakGain);
+  };
+
+  const rehydrateFromStorage = () => {
+    const loaded = loadScreenPrefs<
+      MatrixControls & { bassBoost?: number; colorSpeed?: number }
+    >(SCREEN_ID, { ...DEFAULTS });
+    applySaved(migratePrefs(loaded));
+  };
+
+  useLayoutEffect(() => {
+    rehydrateFromStorage();
   }, []);
+
+  useEffect(() => onTabSyncApply(SCREEN_ID, rehydrateFromStorage), []);
 
   const setTwinkle = (on: boolean) => {
     if (!on && twinkleRef.current) {
@@ -345,6 +428,14 @@ const useMatrixHook = () => {
   const setTwinkleL = (value: number) => commitPrefs({ twinkleL: value });
   const setColor = (value: string) => commitPrefs({ color: value });
   const setFallSpeed = (value: number) => commitPrefs({ fallSpeed: value });
+  const setSpeedChannel = (value: ReactiveChannel) =>
+    commitPrefs({ speedChannel: value });
+  const setSpeedDrive = (value: number) =>
+    commitPrefs({
+      speedDrive: clamp(value, 0, MATRIX_DRIVE_MAX, DEFAULTS.speedDrive),
+    });
+  const setAccelChannel = (value: ReactiveChannel) =>
+    commitPrefs({ accelChannel: value });
   const setDrive = (value: number) =>
     commitPrefs({ drive: clamp(value, 0, MATRIX_DRIVE_MAX, DEFAULTS.drive) });
   const setColorDrive = (value: number) =>
@@ -476,30 +567,47 @@ const useMatrixHook = () => {
       const low = spectrum
         ? sliceBands(spectrum, LOW_HZ.lo, LOW_HZ.hi)
         : 0;
+      const speedRaw = reactiveOn
+        ? channelLevel(viz, speedChannelRef.current)
+        : 0;
+      const accelRaw = reactiveOn
+        ? channelLevel(viz, accelChannelRef.current)
+        : 0;
 
       // peak → brightness (hold) for non-twinkle trail
       peakHold = Math.max(peak, peakHold * Math.exp(-dt * PEAK_HOLD_DECAY));
 
-      // low-slice rising edge → fall dump
-      if (risingEdge(low, prevLow, LOW_EDGE, LOW_MIN)) {
+      // accel rising edge → column fall dump
+      if (risingEdge(accelRaw, prevLow, LOW_EDGE, LOW_MIN)) {
         lowImpulse = Math.max(
           lowImpulse,
-          Math.min(1, 0.35 + low * 0.35),
+          Math.min(1, 0.35 + accelRaw * 0.35),
         );
-        const dump = (1 + drive) * LOW_FALL_DUMP * low;
+        const dump = (1 + drive) * LOW_FALL_DUMP * accelRaw;
         for (let i = 0; i < dropAcc.length; i++) {
           dropAcc[i]! += dump;
         }
       }
-      prevLow = low;
+      prevLow = accelRaw;
       lowImpulse = Math.max(
         lowImpulse * Math.exp(-dt * LOW_IMPULSE_DECAY),
-        low * 0.35,
+        accelRaw * 0.35,
       );
+
+      const { speedMul, kickEnv } = motionSpeedMul({
+        cruiseRaw: speedRaw,
+        cruiseDrive: speedDriveRef.current,
+        cruiseArmed: reactiveOn && speedChannelRef.current !== "off",
+        kickRaw: accelRaw,
+        kickDrive: drive,
+        kickArmed: reactiveOn && accelChannelRef.current !== "off",
+        kick: motionKickRef.current,
+        dt,
+      });
 
       const crest = Math.max(0, peak - rms * 1.15);
       const punch = Math.min(1, Math.max(peakHold, crest * 1.4));
-      const flash = Math.min(1, lowImpulse);
+      const flash = Math.min(1, Math.max(lowImpulse, kickEnv));
       const twinkleOn = twinkleRef.current;
 
       let glyphColor: string;
@@ -518,7 +626,7 @@ const useMatrixHook = () => {
         if (reactiveOn) {
           const pulseAmt = updateTwinklePulseEnv(
             twinklePulseRef.current,
-            low,
+            Math.max(low, accelRaw),
             colorDrive,
             dt,
           );
@@ -545,7 +653,6 @@ const useMatrixHook = () => {
         glyphColor = `hsl(${current.h}, ${s}%, ${l}%)`;
       }
 
-      const speedMul = 1 + flash * drive;
       const trailScale = 1 - (reactiveOn ? flash : punch) * 0.25;
       const stepsPerSec = fallSpeedRef.current * speedMul;
       const fade = Math.min(
@@ -594,6 +701,20 @@ const useMatrixHook = () => {
       raf = rafView.requestAnimationFrame(tick);
     };
 
+    const resetRuntime = () => {
+      seedDrops();
+      lowImpulse = 0;
+      peakHold = 0;
+      prevLow = 0;
+      motionKickRef.current = createMotionKickState();
+      last = performance.now();
+      twinkleHueRef.current = hueDegFromHex(prefsRef.current.color);
+      twinklePulseRef.current = createTwinklePulseEnv();
+      context.fillStyle = "#000";
+      context.fillRect(0, 0, width, height);
+    };
+    const unregRuntime = registerRuntimeReset(SCREEN_ID, resetRuntime);
+
     resize();
     rafView = viewOf();
     raf = rafView.requestAnimationFrame(tick);
@@ -601,6 +722,7 @@ const useMatrixHook = () => {
     window.addEventListener(VISUAL_PIP_CHANGE, onPipChange);
 
     return () => {
+      unregRuntime();
       cancelRaf();
       window.removeEventListener("resize", resize);
       window.removeEventListener(VISUAL_PIP_CHANGE, onPipChange);
@@ -622,9 +744,16 @@ const useMatrixHook = () => {
       setColor,
       fallSpeed,
       setFallSpeed,
+      speedChannel,
+      setSpeedChannel,
+      speedDrive,
+      setSpeedDrive,
+      accelChannel,
+      setAccelChannel,
       drive,
       setDrive,
       driveMax: MATRIX_DRIVE_MAX,
+      speedDriveMax: MATRIX_DRIVE_MAX,
       colorDrive,
       setColorDrive,
       colorDriveMax: MATRIX_COLOR_DRIVE_MAX,

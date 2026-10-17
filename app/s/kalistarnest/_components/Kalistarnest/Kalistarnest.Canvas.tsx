@@ -14,11 +14,14 @@ import {
 } from "@/lib/twinkleHsl";
 import {
   channelLevel,
+  createMotionKickState,
   drivenLevel,
   hexToVec3,
   lerpHex,
+  motionSpeedMul,
 } from "@/lib/visualAudio";
 import { useRenderDpr } from "@/lib/renderScale";
+import { registerRuntimeReset } from "@/lib/runtimeReset";
 import type { KalistarnestLive } from "./Kalistarnest.types";
 import {
   kalistarnestFragmentShader,
@@ -31,10 +34,6 @@ const COLOR_EDGE_MIN = 0.05;
 const FLICKER_DECAY = 9;
 const FLICKER_EDGE = 0.04;
 const FLICKER_EDGE_MIN = 0.05;
-const SPEED_DECAY = 13;
-const SPEED_EDGE = 0.08;
-const SPEED_EDGE_MIN = 0.1;
-const SPEED_MUL = 0.7;
 
 /** Shader starts at iTime+33 — seed the flight clock the same way */
 const FLY_T_SEED = 33;
@@ -61,8 +60,7 @@ function KalistarnestQuad({
   const colorPrev = useRef(0);
   const flickerEnv = useRef(0);
   const flickerPrev = useRef(0);
-  const speedEnv = useRef(0);
-  const speedPrev = useRef(0);
+  const motionKick = useRef(createMotionKickState());
   const starHue = useRef(0);
   const starPulse = useRef(createTwinklePulseEnv());
 
@@ -99,6 +97,15 @@ function KalistarnestQuad({
 
   useEffect(() => () => mat.dispose(), [mat]);
 
+  useEffect(() => {
+    return registerRuntimeReset("kalistarnest", () => {
+      flyT.current = FLY_T_SEED;
+      lastT.current = 0;
+      starHue.current = 0;
+      starPulse.current = createTwinklePulseEnv();
+    });
+  }, []);
+
   useFrame(({ clock }) => {
     const m = matRef.current;
     const live = liveRef.current;
@@ -110,24 +117,22 @@ function KalistarnestQuad({
     const reactive = Boolean(viz?.enabled);
     const colorRaw = reactive ? channelLevel(viz!, live.colorChannel) : 0;
     const speedRaw = reactive ? channelLevel(viz!, live.speedChannel) : 0;
+    const accelRaw = reactive ? channelLevel(viz!, live.accelChannel) : 0;
     const colorPunch = drivenLevel(colorRaw, live.colorDrive);
-    const speedPunch = drivenLevel(speedRaw, live.speedDrive, 1);
 
     const colorArmed = reactive && live.colorChannel !== "off";
-    const speedArmed = reactive && live.speedChannel !== "off";
     const custom = live.colorMode === "custom";
 
-    const speedHit = speedArmed ? Math.min(1, speedPunch) : 0;
-    if (
-      risingEdge(speedHit, speedPrev.current, SPEED_EDGE, SPEED_EDGE_MIN)
-    ) {
-      speedEnv.current = Math.max(speedEnv.current, speedHit);
-    }
-    speedEnv.current *= Math.exp(-SPEED_DECAY * dt);
-    if (speedEnv.current < 0.004) speedEnv.current = 0;
-    speedPrev.current = speedHit;
-
-    const speedMul = speedArmed ? 1 + speedEnv.current * SPEED_MUL : 1;
+    const { speedMul } = motionSpeedMul({
+      cruiseRaw: speedRaw,
+      cruiseDrive: live.speedDrive,
+      cruiseArmed: reactive && live.speedChannel !== "off",
+      kickRaw: accelRaw,
+      kickDrive: live.accelDrive,
+      kickArmed: reactive && live.accelChannel !== "off",
+      kick: motionKick.current,
+      dt,
+    });
     flyT.current += dt * Math.max(0.05, live.flightSpeed) * speedMul;
 
     const colorHit = colorArmed ? Math.min(1, colorPunch) : 0;

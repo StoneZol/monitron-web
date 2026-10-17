@@ -1,9 +1,11 @@
 "use client";
 
-import { useLayoutEffect, useSyncExternalStore } from "react";
+import { useEffect, useLayoutEffect, useSyncExternalStore } from "react";
 import {
+    MIC_GAIN_DEFAULT,
     MIC_GATE_DEFAULT,
     migrateAudioSource,
+    normalizeMicGain,
     normalizeMicGate,
     normalizePeakGain,
     PEAK_GAIN_DEFAULT,
@@ -12,6 +14,7 @@ import {
 import { resetFxOverlay } from "@/components/FxOverlay";
 import { toggleFullscreen } from "@/lib/fullscreen";
 import { loadScreenPrefs, saveScreenPrefs } from "@/lib/screenPrefs";
+import { onTabSyncApply } from "@/lib/tabSyncHotApply";
 import {
     TWINKLE_DEFAULT_L,
     TWINKLE_DEFAULT_S,
@@ -58,8 +61,10 @@ export const SYNTHWAVE_DEFAULTS: SynthwaveLive = {
     skyHorizonPeak: "#5f006b",
     skySpeed: 2,
     skyDirection: 0,
-    roadChannel: "bass",
-    roadDrive: 2,
+    roadChannel: "mid",
+    roadDrive: 1.2,
+    roadAccelChannel: "bass",
+    roadAccelDrive: 2,
     stretchChannel: "bass",
     stretchDrive: 2,
     glowChannel: "bass",
@@ -81,6 +86,7 @@ export const SYNTHWAVE_DEFAULTS: SynthwaveLive = {
     skyTwinkleL: TWINKLE_DEFAULT_L,
     audioSource: "off",
     micGate: MIC_GATE_DEFAULT,
+    micGain: MIC_GAIN_DEFAULT,
     peakGain: PEAK_GAIN_DEFAULT,
 };
 
@@ -143,6 +149,7 @@ function migratePrefs(
                 : SYNTHWAVE_DEFAULTS.roadFar,
         audioSource,
         micGate: normalizeMicGate(raw.micGate),
+        micGain: normalizeMicGain(raw.micGain),
         peakGain: normalizePeakGain(raw.peakGain),
         roadDrive: clampRoadDrive(
             typeof raw.roadDrive === "number"
@@ -150,6 +157,11 @@ function migratePrefs(
                 : typeof raw.drive === "number"
                     ? raw.drive
                     : SYNTHWAVE_DEFAULTS.roadDrive,
+        ),
+        roadAccelDrive: clampRoadDrive(
+            typeof raw.roadAccelDrive === "number"
+                ? raw.roadAccelDrive
+                : SYNTHWAVE_DEFAULTS.roadAccelDrive,
         ),
         stretchDrive: clampRoadDrive(
             typeof raw.stretchDrive === "number"
@@ -176,6 +188,8 @@ function migratePrefs(
     delete (next as { roadStretch?: boolean }).roadStretch;
     if (!CHANNELS.has(next.roadChannel))
         next.roadChannel = SYNTHWAVE_DEFAULTS.roadChannel;
+    if (!CHANNELS.has(next.roadAccelChannel))
+        next.roadAccelChannel = SYNTHWAVE_DEFAULTS.roadAccelChannel;
     if (!CHANNELS.has(next.stretchChannel))
         next.stretchChannel = SYNTHWAVE_DEFAULTS.stretchChannel;
     if (!CHANNELS.has(next.glowChannel))
@@ -418,6 +432,13 @@ function useWakeLock() {
     }, []);
 }
 
+
+function rehydrateFromStorage() {
+  cached = null;
+  readPrefs();
+  emit();
+}
+
 export default function useSynthwaveHook() {
     const live = useSyncExternalStore(
         subscribe,
@@ -425,7 +446,9 @@ export default function useSynthwaveHook() {
         () => SYNTHWAVE_DEFAULTS,
     );
 
-    const commit = (patch: Partial<SynthwaveLive>) => {
+      useEffect(() => onTabSyncApply(SCREEN_ID, rehydrateFromStorage), []);
+
+  const commit = (patch: Partial<SynthwaveLive>) => {
         writePrefs({ ...readPrefs(), ...patch });
     };
 
@@ -434,6 +457,8 @@ export default function useSynthwaveHook() {
         onSourceChange: (audioSource) => commit({ audioSource }),
         preferredMicGate: live.micGate,
         onMicGateChange: (micGate) => commit({ micGate }),
+        preferredMicGain: live.micGain,
+        onMicGainChange: (micGain) => commit({ micGain }),
         preferredPeakGain: live.peakGain,
         onPeakGainChange: (peakGain) => commit({ peakGain }),
     });
@@ -479,6 +504,11 @@ export default function useSynthwaveHook() {
             commit({ roadChannel }),
         setRoadDrive: (roadDrive: number) =>
             commit({ roadDrive: clampRoadDrive(roadDrive) }),
+        setRoadAccelChannel: (
+            roadAccelChannel: SynthwaveLive["roadAccelChannel"],
+        ) => commit({ roadAccelChannel }),
+        setRoadAccelDrive: (roadAccelDrive: number) =>
+            commit({ roadAccelDrive: clampRoadDrive(roadAccelDrive) }),
         setStretchChannel: (stretchChannel: SynthwaveLive["stretchChannel"]) =>
             commit({ stretchChannel }),
         setStretchDrive: (stretchDrive: number) =>

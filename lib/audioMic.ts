@@ -11,11 +11,16 @@ type MicCaptureHandlers = {
 };
 
 /** Default / max for ControlPanel noise-gate slider (RMS 0..1).
- * Mic RMS often sits tiny (~0.01–0.05 even when “loud”) — keep the
- * usable range tight so 0.03 doesn’t eat the whole signal.
+ * Default 0 = pass-through (catch everything). Raise only to kill room hiss.
+ * Max stays tight — mic RMS is tiny (~0.01–0.05) even when “loud”.
  */
-export const MIC_GATE_DEFAULT = 0.02;
+export const MIC_GATE_DEFAULT = 0;
 export const MIC_GATE_MAX = 0.05;
+
+/** Pre-amp on mic frames only (after gate, before bus / deriver). */
+export const MIC_GAIN_DEFAULT = 2;
+export const MIC_GAIN_MIN = 1;
+export const MIC_GAIN_MAX = 5;
 
 /** Clamp live slider / prefs into the mic-gate window */
 export function clampMicGate(value: number): number {
@@ -23,13 +28,14 @@ export function clampMicGate(value: number): number {
   return Math.min(MIC_GATE_MAX, Math.max(0, value));
 }
 
-/** Migrate stored prefs (old 0..0.3 scale / aggressive default) */
+/** Migrate stored prefs (old defaults → open gate) */
 export function normalizeMicGate(value: unknown): number {
   if (typeof value !== "number" || !Number.isFinite(value)) {
     return MIC_GATE_DEFAULT;
   }
-  // Old defaults (0.05 max-scale / 0.008 tight) → current default
+  // Prior shipped defaults → open gate
   if (
+    Math.abs(value - 0.02) < 1e-6 ||
     Math.abs(value - 0.05) < 1e-6 ||
     Math.abs(value - 0.008) < 1e-6 ||
     value > MIC_GATE_MAX
@@ -37,6 +43,38 @@ export function normalizeMicGate(value: unknown): number {
     return MIC_GATE_DEFAULT;
   }
   return clampMicGate(value);
+}
+
+export function clampMicGain(value: number): number {
+  if (!Number.isFinite(value)) return MIC_GAIN_DEFAULT;
+  return Math.min(MIC_GAIN_MAX, Math.max(MIC_GAIN_MIN, value));
+}
+
+export function normalizeMicGain(value: unknown): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return MIC_GAIN_DEFAULT;
+  }
+  return clampMicGain(value);
+}
+
+function clip01(n: number) {
+  return Math.min(1, Math.max(0, n));
+}
+
+/** Lift quiet mic levels so residual speaker bleed still drives the scene. */
+export function boostMicFrame(
+  bands: number[],
+  rms: number,
+  peak: number,
+  gain: number,
+): { bands: number[]; rms: number; peak: number } {
+  const g = clampMicGain(gain);
+  if (g <= 1.001) return { bands, rms, peak };
+  return {
+    bands: bands.map((b) => clip01(b * g)),
+    rms: clip01(rms * g),
+    peak: clip01(peak * g),
+  };
 }
 
 /**

@@ -1,9 +1,11 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import {
   migrateAudioSource,
+  MIC_GAIN_DEFAULT,
   MIC_GATE_DEFAULT,
+  normalizeMicGain,
   normalizeMicGate,
   normalizePeakGain,
   PEAK_GAIN_DEFAULT,
@@ -13,6 +15,7 @@ import {
 import { resetFxOverlay } from "@/components/FxOverlay";
 import { toggleFullscreen } from "@/lib/fullscreen";
 import { loadScreenPrefs, saveScreenPrefs } from "@/lib/screenPrefs";
+import { onTabSyncApply } from "@/lib/tabSyncHotApply";
 import {
   TWINKLE_DEFAULT_L,
   TWINKLE_DEFAULT_S,
@@ -38,6 +41,7 @@ const CHANNELS = new Set<ReactiveChannel>([
 type Stored = BlackholeLive & {
   audioSource: AudioSource;
   micGate: number;
+  micGain: number;
   peakGain: number;
 };
 
@@ -45,6 +49,7 @@ const STORED_DEFAULTS: Stored = {
   ...BLACKHOLE_DEFAULTS,
   audioSource: "off",
   micGate: MIC_GATE_DEFAULT,
+  micGain: MIC_GAIN_DEFAULT,
   peakGain: PEAK_GAIN_DEFAULT,
 };
 
@@ -117,12 +122,23 @@ function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
     BLACKHOLE_DRIVE_MAX,
     STORED_DEFAULTS.yawDrive,
   );
+  const yawAccelChannel = channel(
+    rest.yawAccelChannel,
+    STORED_DEFAULTS.yawAccelChannel,
+  );
+  const yawAccelDrive = clamp(
+    Number(rest.yawAccelDrive),
+    0,
+    BLACKHOLE_DRIVE_MAX,
+    STORED_DEFAULTS.yawAccelDrive,
+  );
 
   return {
     ...STORED_DEFAULTS,
     ...rest,
     audioSource: migrateAudioSource(raw),
     micGate: normalizeMicGate(raw.micGate),
+    micGain: normalizeMicGain(raw.micGain),
     peakGain: normalizePeakGain(raw.peakGain),
     holeColor,
     holeColorPeak,
@@ -216,6 +232,8 @@ function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
     ),
     yawChannel,
     yawDrive,
+    yawAccelChannel,
+    yawAccelDrive,
     nebulaChannel: channel(rest.nebulaChannel, STORED_DEFAULTS.nebulaChannel),
     nebulaDrive: clamp(
       Number(rest.nebulaDrive),
@@ -268,12 +286,21 @@ function writePrefs(next: Stored) {
   emit();
 }
 
+
+function rehydrateFromStorage() {
+  cached = null;
+  readPrefs();
+  emit();
+}
+
 export default function useBlackholeHook() {
   const live = useSyncExternalStore(
     subscribe,
     readPrefs,
     () => STORED_DEFAULTS,
   );
+
+    useEffect(() => onTabSyncApply(SCREEN_ID, rehydrateFromStorage), []);
 
   const commit = (patch: Partial<Stored>) => {
     writePrefs({ ...readPrefs(), ...patch });
@@ -282,9 +309,11 @@ export default function useBlackholeHook() {
   const visualizer = useAudioReactive({
     preferredSource: live.audioSource,
     preferredMicGate: live.micGate,
+    preferredMicGain: live.micGain,
     preferredPeakGain: live.peakGain,
     onSourceChange: (audioSource) => commit({ audioSource }),
     onMicGateChange: (micGate) => commit({ micGate }),
+    onMicGainChange: (micGain) => commit({ micGain }),
     onPeakGainChange: (peakGain) => commit({ peakGain }),
   });
 
@@ -316,6 +345,9 @@ export default function useBlackholeHook() {
       holeDrive: live.holeDrive,
       yawChannel: live.yawChannel,
       yawDrive: live.yawDrive,
+      yawAccelChannel: live.yawAccelChannel,
+      yawAccelDrive: live.yawAccelDrive,
+      yawAccelDriveMax: BLACKHOLE_DRIVE_MAX,
       nebulaChannel: live.nebulaChannel,
       nebulaDrive: live.nebulaDrive,
       scalePunch: live.scalePunch,
@@ -350,6 +382,9 @@ export default function useBlackholeHook() {
       setHoleDrive: (holeDrive: number) => commit({ holeDrive }),
       setYawChannel: (yawChannel: ReactiveChannel) => commit({ yawChannel }),
       setYawDrive: (yawDrive: number) => commit({ yawDrive }),
+      setYawAccelChannel: (yawAccelChannel: ReactiveChannel) =>
+        commit({ yawAccelChannel }),
+      setYawAccelDrive: (yawAccelDrive: number) => commit({ yawAccelDrive }),
       setNebulaChannel: (nebulaChannel: ReactiveChannel) =>
         commit({ nebulaChannel }),
       setNebulaDrive: (nebulaDrive: number) => commit({ nebulaDrive }),

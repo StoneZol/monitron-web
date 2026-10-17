@@ -14,11 +14,14 @@ import {
 } from "@/lib/twinkleHsl";
 import {
   channelLevel,
+  createMotionKickState,
   drivenLevel,
   hexToVec3,
   lerpHex,
+  motionSpeedMul,
 } from "@/lib/visualAudio";
 import { useRenderDpr } from "@/lib/renderScale";
+import { registerRuntimeReset } from "@/lib/runtimeReset";
 import type { WarpburstLive } from "./Warpburst.types";
 import {
   warpburstFragmentShader,
@@ -55,6 +58,7 @@ function WarpburstQuad({
   const colorPrev = useRef(0);
   const flickerEnv = useRef(0);
   const flickerPrev = useRef(0);
+  const motionKick = useRef(createMotionKickState());
   const twinkleHue = useRef(0);
   const twinklePulse = useRef(createTwinklePulseEnv());
 
@@ -89,6 +93,15 @@ function WarpburstQuad({
 
   useEffect(() => () => mat.dispose(), [mat]);
 
+  useEffect(() => {
+    return registerRuntimeReset("warpburst", () => {
+      camZ.current = 0;
+      lastT.current = 0;
+      twinkleHue.current = 0;
+      twinklePulse.current = createTwinklePulseEnv();
+    });
+  }, []);
+
   useFrame(({ clock }) => {
     const m = matRef.current;
     const live = liveRef.current;
@@ -100,14 +113,20 @@ function WarpburstQuad({
     const reactive = Boolean(viz?.enabled);
     const colorRaw = reactive ? channelLevel(viz!, live.colorChannel) : 0;
     const speedRaw = reactive ? channelLevel(viz!, live.speedChannel) : 0;
+    const accelRaw = reactive ? channelLevel(viz!, live.accelChannel) : 0;
     const colorPunch = drivenLevel(colorRaw, live.colorDrive);
-    const speedPunch = drivenLevel(speedRaw, live.speedDrive);
 
     const colorArmed = reactive && live.colorChannel !== "off";
-    const speedArmed = reactive && live.speedChannel !== "off";
-
-    // Original: time = iTime * 1.2; ro.z = time * 2.5 → ~3.0 units/sec at ×1
-    const speedMul = speedArmed ? 1 + speedPunch * 1.4 : 1;
+    const { speedMul } = motionSpeedMul({
+      cruiseRaw: speedRaw,
+      cruiseDrive: live.speedDrive,
+      cruiseArmed: reactive && live.speedChannel !== "off",
+      kickRaw: accelRaw,
+      kickDrive: live.accelDrive,
+      kickArmed: reactive && live.accelChannel !== "off",
+      kick: motionKick.current,
+      dt,
+    });
     camZ.current +=
       dt * 1.2 * Math.max(0.05, live.flightSpeed) * speedMul;
 

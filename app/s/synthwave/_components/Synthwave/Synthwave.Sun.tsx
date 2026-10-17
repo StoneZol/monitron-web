@@ -17,6 +17,7 @@ import {
     resolveTwinkleColor,
     updateTwinklePulseEnv,
 } from "@/lib/twinkleHsl";
+import { registerRuntimeReset } from "@/lib/runtimeReset";
 import { channelLevel, lerpHex, drivenLevel } from "@/lib/visualAudio";
 import { DEPTH_MIN, liveRoadDepthRef, roadDepth, Z_PAD } from "./Synthwave.constants";
 import type { SynthwaveLive } from "./Synthwave.types";
@@ -83,6 +84,14 @@ export function NeonSun({
         },
         [mat, flashMat],
     );
+
+    useEffect(() => {
+        return registerRuntimeReset("synthwave", () => {
+            twinkleHue.current = 0;
+            twinklePulse.current = createTwinklePulseEnv();
+            sunHold.current = 0;
+        });
+    }, []);
 
     useFrame(({ clock }, dt) => {
         const m = matRef.current;

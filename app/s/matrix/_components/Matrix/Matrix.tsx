@@ -8,10 +8,20 @@ import {
     ControlSection,
     ControlSubSection,
     PanelButton,
+    Select,
     Slider,
     TwinkleControls,
 } from "@/components/ControlPanel";
 import useMatrixHook from "./Matrix.hooks";
+import type { ReactiveChannel } from "./Matrix.types";
+
+const REACTIVE_CHANNEL_OPTIONS: { value: ReactiveChannel; label: string }[] = [
+    { value: "off", label: "off" },
+    { value: "bass", label: "bass (30–180 Hz)" },
+    { value: "mid", label: "mid (200 Hz–2 kHz)" },
+    { value: "high", label: "high (2–10 kHz)" },
+    { value: "beat", label: "beat (peak punches)" },
+];
 
 const INFO = {
     look: "Glyph look — color and how the rain falls.",
@@ -23,7 +33,10 @@ const INFO = {
     colorField: "Fixed glyph color when Twinkle is off.",
     rain: "Column drop speed.",
     fallSpeed: "Base column drop speed (higher = faster rain).",
-    drive: "How hard the audio bus punches fall speed when reactive.",
+    speedChannel: "Band that lifts cruise fall speed (smooth).",
+    accelChannel: "Band that kicks fall acceleration + column dumps.",
+    speedDrive: "Cruise fall lift strength (0…8).",
+    drive: "Kick / acceleration strength for fall when reactive (0…8).",
     colorDrive: "Color / twinkle pulse boost (0…2).",
     visualizer: {
         section: "Audio in → bus meters → peak gain for reactive screens.",
@@ -113,28 +126,56 @@ const Matrix = ({ showOverlay = true }: { showOverlay?: boolean }) => {
                             info={INFO.visualizer}
                         >
                             {visualizer.reactive && (
-                                <ControlSubSection label="drive">
-                                    <Slider
-                                        label="Fall"
-                                        value={controls.drive}
-                                        min={0}
-                                        max={controls.driveMax}
-                                        step={0.5}
-                                        onChange={controls.setDrive}
-                                        format={(v) => `×${v.toFixed(1)}`}
-                                        info={INFO.drive}
-                                    />
-                                    <Slider
-                                        label="Color"
-                                        value={controls.colorDrive}
-                                        min={0}
-                                        max={controls.colorDriveMax}
-                                        step={0.05}
-                                        onChange={controls.setColorDrive}
-                                        format={(v) => `×${v.toFixed(2)}`}
-                                        info={INFO.colorDrive}
-                                    />
-                                </ControlSubSection>
+                                <>
+                                    <ControlSubSection label="channels">
+                                        <Select
+                                            label="Speed"
+                                            value={controls.speedChannel}
+                                            options={REACTIVE_CHANNEL_OPTIONS}
+                                            onChange={controls.setSpeedChannel}
+                                            info={INFO.speedChannel}
+                                        />
+                                        <Select
+                                            label="Accel"
+                                            value={controls.accelChannel}
+                                            options={REACTIVE_CHANNEL_OPTIONS}
+                                            onChange={controls.setAccelChannel}
+                                            info={INFO.accelChannel}
+                                        />
+                                    </ControlSubSection>
+                                    <ControlSubSection label="drive">
+                                        <Slider
+                                            label="Speed"
+                                            value={controls.speedDrive}
+                                            min={0}
+                                            max={controls.speedDriveMax}
+                                            step={0.5}
+                                            onChange={controls.setSpeedDrive}
+                                            format={(v) => `×${v.toFixed(1)}`}
+                                            info={INFO.speedDrive}
+                                        />
+                                        <Slider
+                                            label="Accel"
+                                            value={controls.drive}
+                                            min={0}
+                                            max={controls.driveMax}
+                                            step={0.5}
+                                            onChange={controls.setDrive}
+                                            format={(v) => `×${v.toFixed(1)}`}
+                                            info={INFO.drive}
+                                        />
+                                        <Slider
+                                            label="Color"
+                                            value={controls.colorDrive}
+                                            min={0}
+                                            max={controls.colorDriveMax}
+                                            step={0.05}
+                                            onChange={controls.setColorDrive}
+                                            format={(v) => `×${v.toFixed(2)}`}
+                                            info={INFO.colorDrive}
+                                        />
+                                    </ControlSubSection>
+                                </>
                             )}
                         </VisualizerSection>
                     </ControlPanel>

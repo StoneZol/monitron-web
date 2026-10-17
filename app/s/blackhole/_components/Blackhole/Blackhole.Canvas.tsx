@@ -13,11 +13,14 @@ import {
 } from "@/lib/twinkleHsl";
 import {
   channelLevel,
+  createMotionKickState,
   drivenLevel,
   hexToVec3,
   lerpHex,
+  motionSpeedMul,
 } from "@/lib/visualAudio";
 import { useRenderDpr } from "@/lib/renderScale";
+import { registerRuntimeReset } from "@/lib/runtimeReset";
 import { SCALE_DRIVE_UNIT, type BlackholeLive } from "./Blackhole.types";
 import {
   blackholeFragmentShader,
@@ -37,11 +40,14 @@ function BlackholeQuad({
   vizRef: RefObject<VizBands>;
 }) {
   const yawAcc = useRef(0);
+  const motionKick = useRef(createMotionKickState());
   const holeHue = useRef(0);
   const nebulaHue = useRef(0);
   const holePulse = useRef(createTwinklePulseEnv());
   const nebulaPulse = useRef(createTwinklePulseEnv());
   const lastT = useRef(0);
+  /** Local iTime — R3F clock alone would not match a cold boot after sync. */
+  const sceneT = useRef(0);
   const holeColor = useMemo(() => new THREE.Color("#ffcc00"), []);
   const nebulaColor = useMemo(() => new THREE.Color("#4a2a6e"), []);
 
@@ -81,6 +87,21 @@ function BlackholeQuad({
 
   useEffect(() => () => mat.dispose(), [mat]);
 
+  useEffect(() => {
+    return registerRuntimeReset("blackhole", () => {
+      yawAcc.current = 0;
+      motionKick.current = createMotionKickState();
+      holeHue.current = 0;
+      nebulaHue.current = 0;
+      holePulse.current = createTwinklePulseEnv();
+      nebulaPulse.current = createTwinklePulseEnv();
+      lastT.current = 0;
+      sceneT.current = 0;
+      matRef.current.uniforms.iTime!.value = 0;
+      matRef.current.uniforms.uYaw!.value = 0;
+    });
+  }, []);
+
   useFrame(({ clock }) => {
     const m = matRef.current;
     const live = liveRef.current;
@@ -92,12 +113,15 @@ function BlackholeQuad({
     const reactive = Boolean(viz?.enabled);
     const holeRaw = reactive ? channelLevel(viz!, live.holeChannel) : 0;
     const yawRaw = reactive ? channelLevel(viz!, live.yawChannel) : 0;
+    const yawAccelRaw = reactive
+      ? channelLevel(viz!, live.yawAccelChannel)
+      : 0;
     const nebulaRaw = reactive ? channelLevel(viz!, live.nebulaChannel) : 0;
     const holePunch = drivenLevel(holeRaw, live.holeDrive);
-    const yawPunch = drivenLevel(yawRaw, live.yawDrive);
     const nebulaPunch = drivenLevel(nebulaRaw, live.nebulaDrive);
 
-    m.uniforms.iTime!.value = t * Math.max(0.05, live.flightSpeed);
+    sceneT.current += dt * Math.max(0.05, live.flightSpeed);
+    m.uniforms.iTime!.value = sceneT.current;
 
     const holeArmed = reactive && live.holeChannel !== "off";
     const nebulaArmed = reactive && live.nebulaChannel !== "off";
@@ -109,19 +133,28 @@ function BlackholeQuad({
     const sizeMul = scalePunchOn ? 0.92 + scalePunch * 0.55 : 1;
     m.uniforms.uSize!.value = Math.max(0.05, live.blackHoleSize * sizeMul);
     const shake = scalePunchOn ? scalePunch : 0;
+    const shakeT = sceneT.current;
     m.uniforms.uPitch!.value =
       ((Math.min(179, Math.max(1, live.pitch)) +
-        Math.sin(t * 28) * shake * 4) *
+        Math.sin(shakeT * 28) * shake * 4) *
         Math.PI) /
       180;
     m.uniforms.uBeltAngle!.value = (live.beltAngle * Math.PI) / 180;
     m.uniforms.uSpeed!.value = Math.max(0.05, live.diskRotationSpeed);
 
-    const yawArmed = reactive && live.yawChannel !== "off";
-    const yawMul = yawArmed ? 1 + yawPunch * 1.2 : 1;
+    const { speedMul: yawMul } = motionSpeedMul({
+      cruiseRaw: yawRaw,
+      cruiseDrive: live.yawDrive,
+      cruiseArmed: reactive && live.yawChannel !== "off",
+      kickRaw: yawAccelRaw,
+      kickDrive: live.yawAccelDrive,
+      kickArmed: reactive && live.yawAccelChannel !== "off",
+      kick: motionKick.current,
+      dt,
+    });
     yawAcc.current +=
       dt * live.yawSpeed * yawMul +
-      (scalePunchOn ? Math.sin(t * 37) * shake * 0.015 * dt * 60 : 0);
+      (scalePunchOn ? Math.sin(shakeT * 37) * shake * 0.015 * dt * 60 : 0);
     m.uniforms.uYaw!.value = yawAcc.current;
 
     if (live.holeTwinkle) {

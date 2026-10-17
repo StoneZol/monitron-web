@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useSyncExternalStore } from "react";
 import { bindFullscreenEscape } from "@/lib/fullscreen";
 import { readScreenPrefsRaw } from "@/lib/screenPrefs";
 import {
@@ -10,7 +10,7 @@ import {
   getTabHasPeers,
   getTabSyncSenderId,
   hudSessionKey,
-  scheduleReloadAt,
+  scheduleTabSyncApply,
   subscribeHudHide,
   subscribeTabPresence,
   subscribeTabSync,
@@ -74,14 +74,27 @@ const useScreensOverlayHook = (screenId: string) => {
     () => false,
   );
 
+  // Subscribe fns MUST be stable — inline arrows re-subscribe every render.
+  // Presence teardown posts "bye" + recreates the channel; with 2+ tabs that
+  // becomes a hello/bye storm (CPU melts, audio drops). Fullscreen re-renders
+  // made it obvious.
+  const subscribeHud = useCallback(
+    (listener: () => void) => subscribe(screenId, listener),
+    [screenId],
+  );
+  const subscribePeers = useCallback(
+    (listener: () => void) => subscribeTabPresence(screenId, listener),
+    [screenId],
+  );
+
   const hideHud = useSyncExternalStore(
-    (listener) => subscribe(screenId, listener),
+    subscribeHud,
     () => readHidden(screenId),
     () => false,
   );
 
   const hasPeers = useSyncExternalStore(
-    (listener) => subscribeTabPresence(screenId, listener),
+    subscribePeers,
     () => getTabHasPeers(screenId),
     () => false,
   );
@@ -112,8 +125,8 @@ const useScreensOverlayHook = (screenId: string) => {
 
   const sync = () => {
     if (!getTabHasPeers(screenId)) return;
-    const reloadAt = broadcastTabSync(screenId, readScreenPrefsRaw(screenId));
-    scheduleReloadAt(reloadAt);
+    const applyAt = broadcastTabSync(screenId, readScreenPrefsRaw(screenId));
+    scheduleTabSyncApply(applyAt, screenId);
   };
 
   return {

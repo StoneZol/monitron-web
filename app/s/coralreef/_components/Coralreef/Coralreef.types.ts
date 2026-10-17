@@ -64,8 +64,12 @@ export type CoralreefLive = {
   saturation: number;
   colorChannel: ReactiveChannel;
   colorDrive: number;
+  /** Smooth cruise — lifts base flight continuously */
   speedChannel: ReactiveChannel;
   speedDrive: number;
+  /** Transient kick — rising-edge accel punches */
+  accelChannel: ReactiveChannel;
+  accelDrive: number;
 };
 
 export const CORALREEF_DRIVE_MAX = 4;
@@ -103,8 +107,10 @@ export const CORALREEF_DEFAULTS: CoralreefLive = {
   saturation: 1,
   colorChannel: "bass",
   colorDrive: 1.2,
-  speedChannel: "bass",
+  speedChannel: "mid",
   speedDrive: 1,
+  accelChannel: "bass",
+  accelDrive: 1,
 };
 
 export const CORALREEF_RANGES = {
@@ -116,4 +122,5 @@ export const CORALREEF_RANGES = {
   saturation: { min: 0, max: 2, step: 0.05 },
   colorDrive: { min: 0, max: CORALREEF_COLOR_DRIVE_MAX, step: 0.05 },
   speedDrive: { min: 0, max: CORALREEF_DRIVE_MAX, step: 0.1 },
+  accelDrive: { min: 0, max: CORALREEF_DRIVE_MAX, step: 0.1 },
 } as const;

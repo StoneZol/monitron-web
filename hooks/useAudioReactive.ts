@@ -13,10 +13,29 @@ import {
   type VizBands,
 } from "@/lib/audioBus";
 import { AudioDeriver } from "@/lib/audioDerive";
-import { MicCapture, gateMicFrame, MIC_GATE_DEFAULT, MIC_GATE_MAX, clampMicGate, normalizeMicGate } from "@/lib/audioMic";
+import {
+  MicCapture,
+  gateMicFrame,
+  boostMicFrame,
+  MIC_GATE_DEFAULT,
+  MIC_GATE_MAX,
+  MIC_GAIN_DEFAULT,
+  MIC_GAIN_MAX,
+  clampMicGate,
+  clampMicGain,
+  normalizeMicGate,
+  normalizeMicGain,
+} from "@/lib/audioMic";
 import { acquirePluginViz } from "@/lib/pluginVizLease";
 
-export { MIC_GATE_DEFAULT, MIC_GATE_MAX, normalizeMicGate };
+export {
+  MIC_GATE_DEFAULT,
+  MIC_GATE_MAX,
+  MIC_GAIN_DEFAULT,
+  MIC_GAIN_MAX,
+  normalizeMicGate,
+  normalizeMicGain,
+};
 
 /** Peak gain stacks on bus peak for meters + vizRef (quiet tab volume) */
 export const PEAK_GAIN_DEFAULT = 1.5;
@@ -54,6 +73,9 @@ type UseAudioReactiveOptions = {
   /** Mic noise-gate threshold 0..MIC_GATE_MAX (only affects mic path) */
   preferredMicGate?: number;
   onMicGateChange?: (gate: number) => void;
+  /** Mic pre-amp 1..MIC_GAIN_MAX (only affects mic path, after gate) */
+  preferredMicGain?: number;
+  onMicGainChange?: (gain: number) => void;
   /** Peak multiplier 1..PEAK_GAIN_MAX — meters + vizRef.peak */
   preferredPeakGain?: number;
   onPeakGainChange?: (gain: number) => void;
@@ -100,6 +122,8 @@ export function useAudioReactive({
   onSourceChange,
   preferredMicGate = MIC_GATE_DEFAULT,
   onMicGateChange,
+  preferredMicGain = MIC_GAIN_DEFAULT,
+  onMicGainChange,
   preferredPeakGain = PEAK_GAIN_DEFAULT,
   onPeakGainChange,
 }: UseAudioReactiveOptions = {}) {
@@ -108,9 +132,11 @@ export function useAudioReactive({
   const sourceRef = useRef<AudioSource>(normalizeSource(preferredSource));
   const preferredRef = useRef<AudioSource>(normalizeSource(preferredSource));
   const micGateRef = useRef(clampMicGate(preferredMicGate));
+  const micGainRef = useRef(clampMicGain(preferredMicGain));
   const peakGainRef = useRef(clampPeakGain(preferredPeakGain));
   const onSourceChangeRef = useRef(onSourceChange);
   const onMicGateChangeRef = useRef(onMicGateChange);
+  const onMicGainChangeRef = useRef(onMicGainChange);
   const onPeakGainChangeRef = useRef(onPeakGainChange);
   const micRef = useRef(new MicCapture());
   const deriverRef = useRef(new AudioDeriver());
@@ -132,6 +158,9 @@ export function useAudioReactive({
   const [micGate, setMicGateState] = useState(() =>
     clampMicGate(preferredMicGate),
   );
+  const [micGain, setMicGainState] = useState(() =>
+    clampMicGain(preferredMicGain),
+  );
   const [peakGain, setPeakGainState] = useState(() =>
     clampPeakGain(preferredPeakGain),
   );
@@ -150,6 +179,10 @@ export function useAudioReactive({
   }, [onMicGateChange]);
 
   useEffect(() => {
+    onMicGainChangeRef.current = onMicGainChange;
+  }, [onMicGainChange]);
+
+  useEffect(() => {
     onPeakGainChangeRef.current = onPeakGainChange;
   }, [onPeakGainChange]);
 
@@ -162,6 +195,12 @@ export function useAudioReactive({
     micGateRef.current = next;
     setMicGateState(next);
   }, [preferredMicGate]);
+
+  useEffect(() => {
+    const next = clampMicGain(preferredMicGain);
+    micGainRef.current = next;
+    setMicGainState(next);
+  }, [preferredMicGain]);
 
   useEffect(() => {
     const next = clampPeakGain(preferredPeakGain);
@@ -228,10 +267,16 @@ export function useAudioReactive({
                 frame.peak,
                 micGateRef.current,
               );
+              const boosted = boostMicFrame(
+                gated.bands,
+                gated.rms,
+                gated.peak,
+                micGainRef.current,
+              );
               pushSpectrumRef.current(
-                copyBands(gated.bands),
-                clip01(gated.rms),
-                clip01(gated.peak),
+                copyBands(boosted.bands),
+                clip01(boosted.rms),
+                clip01(boosted.peak),
                 frame.sampleRate,
                 frame.t,
               );
@@ -322,6 +367,13 @@ export function useAudioReactive({
     micGateRef.current = next;
     setMicGateState(next);
     onMicGateChangeRef.current?.(next);
+  };
+
+  const setMicGain = (value: number) => {
+    const next = clampMicGain(value);
+    micGainRef.current = next;
+    setMicGainState(next);
+    onMicGainChangeRef.current?.(next);
   };
 
   const setPeakGain = (value: number) => {
@@ -466,6 +518,10 @@ export function useAudioReactive({
     micGate,
     setMicGate,
     micGateMax: MIC_GATE_MAX,
+    /** Mic pre-amp ×gain — only applied on mic path */
+    micGain,
+    setMicGain,
+    micGainMax: MIC_GAIN_MAX,
     /** Peak ×gain for bus meter + vizRef.peak */
     peakGain,
     setPeakGain,

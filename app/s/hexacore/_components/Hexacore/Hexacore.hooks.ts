@@ -1,9 +1,11 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import {
   migrateAudioSource,
+  MIC_GAIN_DEFAULT,
   MIC_GATE_DEFAULT,
+  normalizeMicGain,
   normalizeMicGate,
   normalizePeakGain,
   PEAK_GAIN_DEFAULT,
@@ -13,6 +15,7 @@ import {
 import { resetFxOverlay } from "@/components/FxOverlay";
 import { toggleFullscreen } from "@/lib/fullscreen";
 import { loadScreenPrefs, saveScreenPrefs } from "@/lib/screenPrefs";
+import { onTabSyncApply } from "@/lib/tabSyncHotApply";
 import {
   TWINKLE_DEFAULT_L,
   TWINKLE_DEFAULT_S,
@@ -38,6 +41,7 @@ const CHANNELS = new Set<ReactiveChannel>([
 type Stored = HexacoreLive & {
   audioSource: AudioSource;
   micGate: number;
+  micGain: number;
   peakGain: number;
 };
 
@@ -45,6 +49,7 @@ const STORED_DEFAULTS: Stored = {
   ...HEXACORE_DEFAULTS,
   audioSource: "off",
   micGate: MIC_GATE_DEFAULT,
+  micGain: MIC_GAIN_DEFAULT,
   peakGain: PEAK_GAIN_DEFAULT,
 };
 
@@ -85,6 +90,7 @@ function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
     ...rest,
     audioSource: migrateAudioSource(raw),
     micGate: normalizeMicGate(raw.micGate),
+    micGain: normalizeMicGain(raw.micGain),
     peakGain: normalizePeakGain(raw.peakGain),
     flightSpeed: clamp(
       Number(raw.flightSpeed),
@@ -136,6 +142,13 @@ function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
       HEXACORE_DRIVE_MAX,
       STORED_DEFAULTS.speedDrive,
     ),
+    accelChannel: channel(raw.accelChannel, STORED_DEFAULTS.accelChannel),
+    accelDrive: clamp(
+      Number(raw.accelDrive),
+      0,
+      HEXACORE_DRIVE_MAX,
+      STORED_DEFAULTS.accelDrive,
+    ),
   };
 }
 
@@ -170,12 +183,21 @@ function writePrefs(next: Stored) {
   emit();
 }
 
+
+function rehydrateFromStorage() {
+  cached = null;
+  readPrefs();
+  emit();
+}
+
 export default function useHexacoreHook() {
   const live = useSyncExternalStore(
     subscribe,
     readPrefs,
     () => STORED_DEFAULTS,
   );
+
+    useEffect(() => onTabSyncApply(SCREEN_ID, rehydrateFromStorage), []);
 
   const commit = (patch: Partial<Stored>) => {
     writePrefs({ ...readPrefs(), ...patch });
@@ -184,9 +206,11 @@ export default function useHexacoreHook() {
   const visualizer = useAudioReactive({
     preferredSource: live.audioSource,
     preferredMicGate: live.micGate,
+    preferredMicGain: live.micGain,
     preferredPeakGain: live.peakGain,
     onSourceChange: (audioSource) => commit({ audioSource }),
     onMicGateChange: (micGate) => commit({ micGate }),
+    onMicGainChange: (micGain) => commit({ micGain }),
     onPeakGainChange: (peakGain) => commit({ peakGain }),
   });
 
@@ -207,8 +231,11 @@ export default function useHexacoreHook() {
       colorDrive: live.colorDrive,
       speedChannel: live.speedChannel,
       speedDrive: live.speedDrive,
+      accelChannel: live.accelChannel,
+      accelDrive: live.accelDrive,
       colorDriveMax: HEXACORE_COLOR_DRIVE_MAX,
       speedDriveMax: HEXACORE_DRIVE_MAX,
+      accelDriveMax: HEXACORE_DRIVE_MAX,
       setFlightSpeed: (flightSpeed: number) => commit({ flightSpeed }),
       setColor: (color: string) => commit({ color }),
       setColorPeak: (colorPeak: string) => commit({ colorPeak }),
@@ -223,6 +250,9 @@ export default function useHexacoreHook() {
       setSpeedChannel: (speedChannel: ReactiveChannel) =>
         commit({ speedChannel }),
       setSpeedDrive: (speedDrive: number) => commit({ speedDrive }),
+      setAccelChannel: (accelChannel: ReactiveChannel) =>
+        commit({ accelChannel }),
+      setAccelDrive: (accelDrive: number) => commit({ accelDrive }),
       fullscreen: () => void toggleFullscreen(),
       reset: () => {
         writePrefs({ ...STORED_DEFAULTS });

@@ -55,8 +55,12 @@ export type BlackholeLive = {
   beltAngle: number;
   holeChannel: ReactiveChannel;
   holeDrive: number;
+  /** Smooth cruise on yaw orbit */
   yawChannel: ReactiveChannel;
   yawDrive: number;
+  /** Rising-edge kick on yaw orbit */
+  yawAccelChannel: ReactiveChannel;
+  yawAccelDrive: number;
   nebulaChannel: ReactiveChannel;
   nebulaDrive: number;
 };
@@ -92,8 +96,10 @@ export const BLACKHOLE_DEFAULTS: BlackholeLive = {
   beltAngle: 10,
   holeChannel: "bass",
   holeDrive: 1.2,
-  yawChannel: "beat",
-  yawDrive: 1.4,
+  yawChannel: "mid",
+  yawDrive: 1.2,
+  yawAccelChannel: "beat",
+  yawAccelDrive: 1.4,
   nebulaChannel: "bass",
   nebulaDrive: 1.2,
 };
@@ -114,5 +120,6 @@ export const BLACKHOLE_RANGES = {
   nebulaIntensity: { min: 0, max: 3, step: 0.05 },
   colorDrive: { min: 0, max: BLACKHOLE_COLOR_DRIVE_MAX, step: 0.05 },
   speedDrive: { min: 0, max: BLACKHOLE_DRIVE_MAX, step: 0.1 },
+  yawAccelDrive: { min: 0, max: BLACKHOLE_DRIVE_MAX, step: 0.1 },
   scaleDrive: { min: 1, max: 16, step: 1 },
 } as const;

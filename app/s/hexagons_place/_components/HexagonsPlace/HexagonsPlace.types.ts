@@ -76,10 +76,14 @@ export type HexagonsPlaceLive = {
   spinLeft: boolean;
   /** Base spin rate multiplier */
   spinSpeed: number;
-  /** Reactive: which band punches spin speed; off = constant spinSpeed */
+  /** Smooth cruise lift on spin; off = constant spinSpeed */
   spinChannel: ReactiveChannel;
-  /** Multiplies spin channel punches (acceleration feel) */
+  /** Multiplies cruise spin channel */
   spinDrive: number;
+  /** Rising-edge kick channel on spin */
+  spinAccelChannel: ReactiveChannel;
+  /** Kick / acceleration strength for spin */
+  spinAccelDrive: number;
   /** How high the fog layer sits above the grid (world Y at zoom=1) */
   fogHeight: number;
   /** 0 = clear, 1 = opaque haze inside the fog layer */
@@ -96,6 +100,8 @@ export type HexagonsPlaceLive = {
   audioSource: AudioSource;
   /** Mic noise-gate threshold (only used when audioSource === mic) */
   micGate: number;
+  /** Mic level boost before gate (only used when audioSource === mic) */
+  micGain: number;
   /** Peak ×gain for bus meters + viz (owned by useAudioReactive) */
   peakGain: number;
   /** When reactive: bounce hex groups on spectrum lows/mids/highs */

@@ -64,14 +64,18 @@ const INFO = {
   twinkleL: "Lightness % for the twinkle hsl().",
   saturation: "Look chroma (0 = gray, 1 = default).",
   colorChannel: "Band that punches light / color.",
-  speedChannel: "Band that punches flight speed (rising-edge hits).",
+  speedChannel: "Band that lifts cruise flight speed (smooth).",
+  accelChannel: "Band that kicks acceleration (rising-edge punches).",
   colorDrive: "Color / twinkle pulse boost (0…2).",
-  speedDrive: "Speed punch strength (0…4).",
+  speedDrive: "Cruise lift strength (0…4).",
+  accelDrive: "Kick / acceleration strength (0…4).",
   visualizer: {
     section: "Audio in → bus meters → peak gain for reactive screens.",
     source:
       "off disables audio. mic needs a gesture. plugin needs the Monitron extension online.",
     noiseGate: "Ignore mic levels below this floor (room hiss).",
+    micGain:
+      "Boost quiet mic levels so speaker bleed still drives the scene.",
     peakGain:
       "Multiplies bus peak (and the peak meter). Soft-clipped so ×3 still moves.",
   },
@@ -242,6 +246,13 @@ const Kalistarnest = ({ showOverlay = true }: KalistarnestProps) => {
                       onChange={controls.setSpeedChannel}
                       info={INFO.speedChannel}
                     />
+                    <Select
+                      label="Accel"
+                      value={controls.accelChannel}
+                      options={[...REACTIVE_CHANNEL_OPTIONS]}
+                      onChange={controls.setAccelChannel}
+                      info={INFO.accelChannel}
+                    />
                   </ControlSubSection>
                   <ControlSubSection label="drive">
                     <Slider
@@ -263,6 +274,16 @@ const Kalistarnest = ({ showOverlay = true }: KalistarnestProps) => {
                       onChange={controls.setSpeedDrive}
                       format={(v) => `×${v.toFixed(1)}`}
                       info={INFO.speedDrive}
+                    />
+                    <Slider
+                      label="Accel"
+                      value={controls.accelDrive}
+                      min={KALISTARNEST_RANGES.accelDrive.min}
+                      max={controls.accelDriveMax}
+                      step={KALISTARNEST_RANGES.accelDrive.step}
+                      onChange={controls.setAccelDrive}
+                      format={(v) => `×${v.toFixed(1)}`}
+                      info={INFO.accelDrive}
                     />
                   </ControlSubSection>
                 </>

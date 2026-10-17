@@ -64,10 +64,12 @@ const INFO = {
     bandFlicker: "Brightness flicker driven by audio bands.",
     gridChannel: "Which bus band drives grid peak / reaction.",
     fogChannel: "Which bus band drives fog peak / twinkle pulse.",
-    spinChannel: "Which bus band boosts camera spin (beat punches hard).",
+    spinChannel: "Band that lifts cruise field spin (smooth).",
+    spinAccelChannel: "Band that kicks spin acceleration (rising-edge).",
     gridDrive: "Grid color punch (0…2).",
     fogDrive: "Fog / twinkle color punch (0…2).",
-    spinDrive: "How hard the spin channel multiplies orbit speed.",
+    spinDrive: "Cruise spin lift strength (0…8).",
+    spinAccelDrive: "Kick / acceleration strength for field spin (0…8).",
     visualizer: {
         section: "Audio in → bus meters → peak gain for reactive screens.",
         source:
@@ -547,6 +549,15 @@ const HexagonsPlace = ({ showOverlay = true }: HexagonsPlaceProps) => {
                                             onChange={controls.setSpinChannel}
                                             info={INFO.spinChannel}
                                         />
+                                        <Select
+                                            label="Spin accel"
+                                            value={controls.spinAccelChannel}
+                                            options={[
+                                                ...REACTIVE_CHANNEL_OPTIONS,
+                                            ]}
+                                            onChange={controls.setSpinAccelChannel}
+                                            info={INFO.spinAccelChannel}
+                                        />
                                     </ControlSubSection>
                                     <ControlSubSection label="drive">
                                         <Slider
@@ -578,6 +589,16 @@ const HexagonsPlace = ({ showOverlay = true }: HexagonsPlaceProps) => {
                                             onChange={controls.setSpinDrive}
                                             format={(v) => `×${v.toFixed(1)}`}
                                             info={INFO.spinDrive}
+                                        />
+                                        <Slider
+                                            label="Spin accel"
+                                            value={controls.spinAccelDrive}
+                                            min={0}
+                                            max={controls.spinAccelDriveMax}
+                                            step={0.1}
+                                            onChange={controls.setSpinAccelDrive}
+                                            format={(v) => `×${v.toFixed(1)}`}
+                                            info={INFO.spinAccelDrive}
                                         />
                                     </ControlSubSection>
                                 </>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useCallback, useSyncExternalStore } from "react";
 import {
   readScreenPrefsRaw,
   saveScreenPrefs,
@@ -116,8 +116,12 @@ function writeFx(screenId: string, next: FxOverlayPrefs) {
 }
 
 export function useFxOverlay(screenId: string) {
+  const subscribeFx = useCallback(
+    (listener: () => void) => subscribe(screenId, listener),
+    [screenId],
+  );
   const prefs = useSyncExternalStore(
-    (listener) => subscribe(screenId, listener),
+    subscribeFx,
     () => readFx(screenId),
     () => FX_OVERLAY_DEFAULTS,
   );
