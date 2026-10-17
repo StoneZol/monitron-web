@@ -1,44 +1,46 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useLayoutEffect, useSyncExternalStore } from "react";
 import { HazardAlert } from "@/components/HazardAlert";
+import {
+  CONSENT_GATE_ID,
+  markPhotosensitiveBoot,
+  readPhotosensitiveAccepted,
+  writePhotosensitiveAccepted,
+} from "@/lib/photosensitiveConsent";
 
-const STORAGE_KEY = "monitron:photosensitive-alert:v3";
+const mountListeners = new Set<() => void>();
+const acceptListeners = new Set<() => void>();
 
-const listeners = new Set<() => void>();
-const subscribeNoop = () => () => {};
+/** Flipped once on the client so the gate can open after hydration. */
+let clientMounted = false;
 
-function emit() {
-  for (const listener of listeners) listener();
-}
-
-function subscribe(listener: () => void) {
-  listeners.add(listener);
+function subscribeMount(listener: () => void) {
+  mountListeners.add(listener);
   return () => {
-    listeners.delete(listener);
+    mountListeners.delete(listener);
   };
 }
 
-let cached: boolean | null = null;
+function subscribeAccept(listener: () => void) {
+  acceptListeners.add(listener);
+  return () => {
+    acceptListeners.delete(listener);
+  };
+}
 
-function readAccepted(): boolean {
-  if (cached !== null) return cached;
-  try {
-    cached = window.localStorage.getItem(STORAGE_KEY) === "1";
-  } catch {
-    cached = false;
-  }
-  return cached;
+function emitMount() {
+  for (const listener of mountListeners) listener();
+}
+
+function emitAccept() {
+  for (const listener of acceptListeners) listener();
 }
 
 function acceptAlert() {
-  try {
-    window.localStorage.setItem(STORAGE_KEY, "1");
-  } catch {
-    /* private mode — still proceed this session */
-  }
-  cached = true;
-  emit();
+  writePhotosensitiveAccepted();
+  markPhotosensitiveBoot(true);
+  emitAccept();
 }
 
 function forceQuit() {
@@ -49,21 +51,35 @@ function forceQuit() {
  * First-visit hazard gate (photosensitive + heavy GPU load) — blocks the whole
  * app until the visitor accepts or leaves. Mounted from the root layout.
  *
- * Never paint until the client has read localStorage (avoids reload / HMR flash).
+ * Mount + localStorage are external stores (not useEffect→setState) so cold
+ * loads always open the gate after hydration, and ConsentTripwire can boot.
  */
 export function PhotosensitiveAlert() {
-  const isClient = useSyncExternalStore(
-    subscribeNoop,
-    () => true,
+  const mounted = useSyncExternalStore(
+    subscribeMount,
+    () => clientMounted,
     () => false,
   );
-  const accepted = useSyncExternalStore(subscribe, readAccepted, () => true);
+  const accepted = useSyncExternalStore(
+    subscribeAccept,
+    readPhotosensitiveAccepted,
+    () => true,
+  );
 
-  if (!isClient || accepted) return null;
+  useLayoutEffect(() => {
+    clientMounted = true;
+    const acceptedNow = readPhotosensitiveAccepted();
+    markPhotosensitiveBoot(acceptedNow);
+    emitMount();
+    emitAccept();
+  }, []);
+
+  if (!mounted || accepted) return null;
 
   return (
     <HazardAlert
       tone="warn"
+      consentGate={CONSENT_GATE_ID}
       eyebrow="!SYSTEM FAILURE // HAZARD_ALERT!"
       title="Health & hardware warning"
       primary={{
