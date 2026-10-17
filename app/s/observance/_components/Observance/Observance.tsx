@@ -33,6 +33,8 @@ const INFO = {
   look: "Observance flight — black crosses and sun-tinted lightning stripes.",
   flightSpeed: "Base camera advance along the path (1 ≈ Shadertoy default).",
   crosses: "Draw stock black cross markers (on/off only).",
+  crossesAir: "Lift crosses off the hills by a fixed height (float in air).",
+  crossesFlip: "Invert crosses upside-down (does not change air lift).",
   crossSway:
     "When crosses on: scale stock path sway (1 = Shadertoy, 0 = locked, 2 = 2×).",
   cameraBank:
@@ -113,6 +115,22 @@ const Observance = ({ showOverlay = true }: ObservanceProps) => {
                 onChange={controls.setCrosses}
                 info={INFO.crosses}
               />
+              {controls.crosses ? (
+                <>
+                  <Toggle
+                    label="Crosses in air"
+                    checked={controls.crossesAir}
+                    onChange={controls.setCrossesAir}
+                    info={INFO.crossesAir}
+                  />
+                  <Toggle
+                    label="Flip crosses"
+                    checked={controls.crossesFlip}
+                    onChange={controls.setCrossesFlip}
+                    info={INFO.crossesFlip}
+                  />
+                </>
+              ) : null}
 
               <Toggle
                 label="Lightning"

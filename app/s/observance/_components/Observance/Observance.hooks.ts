@@ -97,6 +97,14 @@ function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
     ),
     crosses:
       raw.crosses === undefined ? STORED_DEFAULTS.crosses : Boolean(raw.crosses),
+    crossesAir:
+      raw.crossesAir === undefined
+        ? STORED_DEFAULTS.crossesAir
+        : Boolean(raw.crossesAir),
+    crossesFlip:
+      raw.crossesFlip === undefined
+        ? STORED_DEFAULTS.crossesFlip
+        : Boolean(raw.crossesFlip),
     crossSway: clamp(
       Number(raw.crossSway),
       0,
@@ -233,6 +241,8 @@ export default function useObservanceHook() {
     controls: {
       flightSpeed: live.flightSpeed,
       crosses: live.crosses,
+      crossesAir: live.crossesAir,
+      crossesFlip: live.crossesFlip,
       crossSway: live.crossSway,
       cameraBank: live.cameraBank,
       sunColor: live.sunColor,
@@ -256,6 +266,8 @@ export default function useObservanceHook() {
       camAccelDriveMax: OBSERVANCE_DRIVE_MAX,
       setFlightSpeed: (flightSpeed: number) => commit({ flightSpeed }),
       setCrosses: (crosses: boolean) => commit({ crosses }),
+      setCrossesAir: (crossesAir: boolean) => commit({ crossesAir }),
+      setCrossesFlip: (crossesFlip: boolean) => commit({ crossesFlip }),
       setCrossSway: (crossSway: number) => commit({ crossSway }),
       setCameraBank: (cameraBank: number) => commit({ cameraBank }),
       setSunColor: (sunColor: string) => commit({ sunColor }),

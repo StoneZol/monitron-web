@@ -5,6 +5,7 @@
  * Changes from original:
  * - iTime / iResolution / uCamZ (flight via accumulated cam Z)
  * - uCrosses: toggle cross SDF (stock black bodies)
+ * - uCrossesAir / uCrossesFlip: lift off terrain / invert local Y
  * - uCrossSway: scale stock path rotation when crosses on (1 = Shadertoy)
  * - uCamBank: coral-style flex look when crosses off
  * - uLightning: toggle sharp stripe / flash spikes only (sun stays)
@@ -32,6 +33,8 @@ uniform float uCamZ;
 /** Clock for cross-path sway / flex look (audio scales rate, not punches). */
 uniform float uSwayT;
 uniform float uCrosses;
+uniform float uCrossesAir;
+uniform float uCrossesFlip;
 uniform float uCrossSway;
 uniform float uCamBank;
 uniform float uLightning;
@@ -108,11 +111,13 @@ void main() {
       }
 
       q += cos(t + q.yzx) * 0.2;
-      // Lower hills = terrain plane at s≈3 (what reads as ground at screen bottom).
-      // s≈0 is the upper canopy/ceiling — planting there hangs crosses in mid-air.
+      // Lower hills = terrain plane at s≈3. Air = fixed lift toward canopy.
       float terrain = 3.0 - s;
-      q.y = terrain;
-      // ~75% of stock height; base still near terrain (q.y≈0).
+      float lift =
+        (uCrossesAir > 0.5 ? 1.85 : 0.0) + (uCrossesFlip > 0.5 ? 0.35 : 0.0);
+      float along = terrain - lift;
+      q.y = uCrossesFlip > 0.5 ? -along : along;
+      // ~75% of stock height; base still near terrain (q.y≈0) when air/flip off.
       float g = min(
         max(max(abs(q.x) - 0.05, abs(q.y - 0.45) - 0.6), abs(q.z) - 0.02),
         max(max(abs(q.x) - 0.28, abs(q.y - 0.82) - 0.04), abs(q.z) - 0.02)

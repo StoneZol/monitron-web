@@ -11,6 +11,10 @@ export type ObservanceLive = {
   flightSpeed: number;
   /** Draw stock black crosses */
   crosses: boolean;
+  /** Lift crosses off the lower hills into the air */
+  crossesAir: boolean;
+  /** Invert cross local Y (upside-down) */
+  crossesFlip: boolean;
   /** Scale stock path sway when crosses on (1 = Shadertoy) */
   crossSway: number;
   /** Flex look cone when crosses off (coral-style bank) */
@@ -43,6 +47,8 @@ export const OBSERVANCE_COLOR_DRIVE_MAX = 2;
 export const OBSERVANCE_DEFAULTS: ObservanceLive = {
   flightSpeed: 1,
   crosses: true,
+  crossesAir: false,
+  crossesFlip: false,
   crossSway: 1,
   cameraBank: 0.5,
   sunColor: "#ffcc88",
