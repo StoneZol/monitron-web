@@ -10,7 +10,6 @@ import {
   PanelButton,
   Select,
   Slider,
-  Toggle,
   TwinkleControls,
 } from "@/components/ControlPanel";
 import DarkterrainCanvas from "./Darkterrain.Canvas";
@@ -42,8 +41,8 @@ const INFO = {
   sunTwinkleSpeed: "How fast sun hue runs a full lap (1 ≈ 6s).",
   sunTwinkleS: "Saturation % for sun twinkle hsl() (100 = full chroma).",
   sunTwinkleL: "Lightness % for sun twinkle hsl() (50 = vivid mid).",
-  lightning:
-    "Show/hide sharp colored stripe / flash bands (extra vs stock Dark Terrain).",
+  lightningRate:
+    "Flash spawn rate (0 = off, 0.2 = default, 1 = stock cadence, 2 = 2×).",
   colorChannel:
     "Band that punches sun color (twinkle: light pulse; off: idle→peak).",
   speedChannel: "Band that smoothly scales flight speed (no punches).",
@@ -117,11 +116,15 @@ const Darkterrain = ({ showOverlay = true }: DarkterrainProps) => {
                 />
               </ControlSubSection>
 
-              <Toggle
+              <Slider
                 label="Lightning"
-                checked={controls.lightning}
-                onChange={controls.setLightning}
-                info={INFO.lightning}
+                value={controls.lightningRate}
+                min={DARKTERRAIN_RANGES.lightningRate.min}
+                max={DARKTERRAIN_RANGES.lightningRate.max}
+                step={DARKTERRAIN_RANGES.lightningRate.step}
+                onChange={controls.setLightningRate}
+                format={(v) => `×${v.toFixed(2)}`}
+                info={INFO.lightningRate}
               />
 
               <ControlSubSection label="sun" info={INFO.sun}>

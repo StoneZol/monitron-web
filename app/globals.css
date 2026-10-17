@@ -10,6 +10,7 @@
     --magenta: #ff2bd6;
     --cyan: #00f0ff;
     --warn: #ff4d1a;
+    --danger: #e11d2e;
     --line: rgba(212, 255, 0, 0.16);
     --dirt: rgba(120, 90, 40, 0.08);
     --signal-soft: color-mix(
@@ -31,6 +32,7 @@
     --color-magenta: var(--magenta);
     --color-cyan: var(--cyan);
     --color-warn: var(--warn);
+    --color-danger: var(--danger);
     --color-bg: var(--bg);
     --color-line: var(--line);
     --font-sans: var(--font-chakra);

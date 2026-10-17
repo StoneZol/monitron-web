@@ -21,6 +21,7 @@ const TONE_CLASS: Record<ResolvedPlaceholderTag["tone"], string> = {
     warn: "text-warn border-warn",
     cyan: "text-cyan border-cyan",
     magenta: "text-magenta border-magenta",
+    danger: "text-danger border-danger",
 };
 
 const COST_TONE_CLASS: Record<

@@ -81,7 +81,7 @@ function ObservanceQuad({
           uCrossBaseLight: { value: 0 },
           uCrossBaseColor: { value: new THREE.Color("#ffcc88") },
           uCrossSway: { value: 1 },
-          uLightning: { value: 1 },
+          uLightningRate: { value: 0.2 },
           uSunColor: { value: new THREE.Color("#ffcc88") },
         },
       }),
@@ -232,7 +232,7 @@ function ObservanceQuad({
     m.uniforms.uCrossBaseLight!.value = baseOn ? 1 : 0;
     m.uniforms.uCrossBaseColor!.value.copy(baseTint);
     m.uniforms.uCrossSway!.value = live.crossSway;
-    m.uniforms.uLightning!.value = live.lightning ? 1 : 0;
+    m.uniforms.uLightningRate!.value = live.lightningRate;
     m.uniforms.uSunColor!.value.copy(sunTint);
   });
 

@@ -166,10 +166,12 @@ function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
       raw.sunTwinkleL,
       STORED_DEFAULTS.sunTwinkleL ?? TWINKLE_DEFAULT_L,
     ),
-    lightning:
-      raw.lightning === undefined
-        ? STORED_DEFAULTS.lightning
-        : Boolean(raw.lightning),
+    lightningRate: clamp(
+      Number(raw.lightningRate),
+      0,
+      2,
+      raw.lightning === false ? 0 : STORED_DEFAULTS.lightningRate,
+    ),
     colorChannel: channel(raw.colorChannel, STORED_DEFAULTS.colorChannel),
     colorDrive: clamp(
       Number(raw.colorDrive),
@@ -286,7 +288,7 @@ export default function useObservanceHook() {
       sunTwinkleSpeed: live.sunTwinkleSpeed,
       sunTwinkleS: live.sunTwinkleS,
       sunTwinkleL: live.sunTwinkleL,
-      lightning: live.lightning,
+      lightningRate: live.lightningRate,
       colorChannel: live.colorChannel,
       colorDrive: live.colorDrive,
       speedChannel: live.speedChannel,
@@ -322,7 +324,7 @@ export default function useObservanceHook() {
         commit({ sunTwinkleSpeed }),
       setSunTwinkleS: (sunTwinkleS: number) => commit({ sunTwinkleS }),
       setSunTwinkleL: (sunTwinkleL: number) => commit({ sunTwinkleL }),
-      setLightning: (lightning: boolean) => commit({ lightning }),
+      setLightningRate: (lightningRate: number) => commit({ lightningRate }),
       setColorChannel: (colorChannel: ReactiveChannel) =>
         commit({ colorChannel }),
       setColorDrive: (colorDrive: number) => commit({ colorDrive }),

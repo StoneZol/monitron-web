@@ -5,7 +5,7 @@
  * Changes from original:
  * - iTime / iResolution / uCamZ (flight via accumulated cam Z)
  * - Coral-style camera bank flex look (from Observance no-cross fork)
- * - uLightning + uSunColor: optional sharp stripes (not in stock)
+ * - uLightningRate + uSunColor: flashes (0 = off, 1 = stock cadence)
  * - Sun fixed in world (projected into view); matches stock u-.5 when looking ahead
  */
 
@@ -28,11 +28,16 @@ uniform float uCamZ;
 /** Clock for flex look (audio scales rate, not punches). */
 uniform float uSwayT;
 uniform float uCamBank;
-uniform float uLightning;
+/** Flash clock rate (0 = off, 1 = stock cadence, 2 = 2×). */
+uniform float uLightningRate;
 uniform vec3 uSunColor;
 
 vec3 dirFrom(float yaw, float pitch) {
   return vec3(sin(yaw) * cos(pitch), sin(pitch), cos(yaw) * cos(pitch));
+}
+
+float hash11(float n) {
+  return fract(sin(n) * 43758.5453123);
 }
 
 void main() {
@@ -40,7 +45,28 @@ void main() {
   vec2 u = (2.0 * fragCoord - iResolution.xy) / iResolution.y;
 
   float t = iTime;
-  float f = sin(t + sin(t * 10.0 + cos(t * 20.0)));
+  float flashT = t * max(uLightningRate, 0.0);
+  // One flash slot: random attack, always smooth decay to 0 before the next seed.
+  float flashClock = flashT * 1.85;
+  float beat = floor(flashClock);
+  float slot = fract(flashClock);
+  float r0 = hash11(beat + 17.13);
+  float r1 = hash11(beat + 91.7);
+  float r2 = hash11(beat + 53.31);
+  float delay = r0 * 0.38;
+  float life = clamp((slot - delay) / max(1.0 - delay, 1e-3), 0.0, 1.0);
+  float peakAt = 0.08 + r1 * 0.22;
+  float flashEnv = 0.0;
+  if (life > 0.0 && life < 1.0) {
+    if (life < peakAt) {
+      // Randomized snap-in.
+      flashEnv = pow(life / peakAt, 0.25 + r2 * 1.1);
+    } else {
+      // Always smooth cosine fall to silence at slot end.
+      float x = (life - peakAt) / max(1.0 - peakAt, 1e-3);
+      flashEnv = 0.5 + 0.5 * cos(x * 3.14159265);
+    }
+  }
 
   float dens = 0.0;
   float sunAcc = 0.0;
@@ -48,7 +74,7 @@ void main() {
   float s = 0.0;
   vec3 p = vec3(0.0);
 
-  bool lightningOn = uLightning > 0.5;
+  bool lightningOn = uLightningRate > 0.001;
 
   float bank = clamp(uCamBank, 0.0, 2.0);
   float ft = uSwayT;
@@ -108,12 +134,16 @@ void main() {
   );
   col += softSun * uSunColor * 0.35;
 
-  if (lightningOn) {
-    vec3 bolt = pow(
-      abs(vec3(3.0, 2.0, 1.0) / max(ad, 1e-3)),
-      vec3(f)
+  if (lightningOn && flashEnv > 0.001) {
+    // Warp / chroma randomized per flash; intensity follows smooth envelope.
+    float boltDenom = cos(
+      t + p.y * (0.26 + r1 * 0.14) + r0 * 5.1 + u.x * (r2 - 0.5) * 1.1
     );
-    col += bolt * uSunColor;
+    float boltAd = abs(boltDenom);
+    vec3 boltW = vec3(2.4 + r0 * 1.4, 1.6 + r1 * 1.2, 0.7 + r2 * 0.9);
+    float sharp = 0.55 + r2 * 0.9;
+    vec3 bolt = pow(abs(boltW / max(boltAd, 1e-3)), vec3(sharp));
+    col += bolt * uSunColor * flashEnv;
   }
 
   // Stock Dark Terrain tonemap.

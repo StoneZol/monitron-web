@@ -22,7 +22,11 @@ export type PlaceholderCost = "low" | "mid" | "high";
  * Declared card tags. `sourced` and `ai` are injected automatically
  * when `sources` / `ai` are set — do not list them here.
  */
-export type PlaceholderTag = "reactive" | "only-reactive" | (string & {});
+export type PlaceholderTag =
+    | "reactive"
+    | "only-reactive"
+    | "sensitive"
+    | (string & {});
 
 export type PlaceholderAi = {
     /** Model / service name on the credit row (`ai helper — cursor`). */
@@ -56,7 +60,7 @@ export type ResolvedPlaceholderTag = {
     id: string;
     label: string;
     /** Visual tone for the stamp */
-    tone: "signal" | "warn" | "cyan" | "magenta";
+    tone: "signal" | "warn" | "cyan" | "magenta" | "danger";
     title: string;
 };
 
@@ -90,6 +94,11 @@ const TAG_META: Record<
         label: "only reactive",
         tone: "warn",
         title: "Audio-only — idle without mic or plugin",
+    },
+    sensitive: {
+        label: "sensitive",
+        tone: "danger",
+        title: "May unsettle — authors' odd worldviews / heavy mood",
     },
     ai: {
         label: "ai helper",
@@ -329,7 +338,7 @@ export const placeholders: PlaceholderMeta[] = [
         title: "Observance",
         href: "/s/observance",
         previewSrc: "/s/observance.webp",
-        tags: ["reactive"],
+        tags: ["reactive", "sensitive"],
         cost: "mid",
         ai: MONITRON_AI,
         sources: [

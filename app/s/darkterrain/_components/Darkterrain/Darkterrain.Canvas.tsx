@@ -72,7 +72,7 @@ function DarkterrainQuad({
           uCamZ: { value: 0 },
           uSwayT: { value: 0 },
           uCamBank: { value: 0.5 },
-          uLightning: { value: 1 },
+          uLightningRate: { value: 0.2 },
           uSunColor: { value: new THREE.Color("#f2f2f2") },
         },
       }),
@@ -177,7 +177,7 @@ function DarkterrainQuad({
     m.uniforms.uCamZ!.value = camZ.current;
     m.uniforms.uSwayT!.value = swayT.current;
     m.uniforms.uCamBank!.value = live.cameraBank;
-    m.uniforms.uLightning!.value = live.lightning ? 1 : 0;
+    m.uniforms.uLightningRate!.value = live.lightningRate;
     m.uniforms.uSunColor!.value.copy(sunTint);
   });
 

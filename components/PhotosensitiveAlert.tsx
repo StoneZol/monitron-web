@@ -3,7 +3,7 @@
 import { useSyncExternalStore } from "react";
 import { PanelButton } from "@/components/ControlPanel/PanelButton";
 
-const STORAGE_KEY = "monitron:photosensitive-alert:v2";
+const STORAGE_KEY = "monitron:photosensitive-alert:v3";
 
 const listeners = new Set<() => void>();
 const subscribeNoop = () => () => {};
@@ -109,6 +109,11 @@ export function PhotosensitiveAlert() {
           <p>
             Patterns on this site may also trigger anxiety, sensory overload,
             or visual after-images. Proceed only if you know your limits.
+          </p>
+          <p>
+            Some pieces carry the authors&apos; odd worldviews and may unsettle
+            you, leave you uneasy, or just mess with your mood. Screens marked
+            sensitive flag that. Step away if it hits too hard.
           </p>
           <p>
             Some screen configs can push GPU / CPU extremely hard. If you ignore

@@ -18,8 +18,8 @@ export type DarkterrainLive = {
   sunTwinkleSpeed: number;
   sunTwinkleS: number;
   sunTwinkleL: number;
-  /** Draw colored stripe / flash bands (tinted by sun) */
-  lightning: boolean;
+  /** Lightning flash clock rate (0 = off, 1 = stock cadence) */
+  lightningRate: number;
   colorChannel: ReactiveChannel;
   colorDrive: number;
   speedChannel: ReactiveChannel;
@@ -43,7 +43,7 @@ export const DARKTERRAIN_DEFAULTS: DarkterrainLive = {
   sunTwinkleSpeed: 1,
   sunTwinkleS: 100,
   sunTwinkleL: 50,
-  lightning: true,
+  lightningRate: 0.2,
   colorChannel: "bass",
   colorDrive: 1.2,
   speedChannel: "mid",
@@ -57,6 +57,7 @@ export const DARKTERRAIN_DEFAULTS: DarkterrainLive = {
 export const DARKTERRAIN_RANGES = {
   flightSpeed: { min: 0.1, max: 3, step: 0.05 },
   cameraBank: { min: 0, max: 2, step: 0.05 },
+  lightningRate: { min: 0, max: 2, step: 0.05 },
   colorDrive: { min: 0, max: DARKTERRAIN_COLOR_DRIVE_MAX, step: 0.05 },
   speedDrive: { min: 0, max: DARKTERRAIN_DRIVE_MAX, step: 0.1 },
   accelDrive: { min: 0, max: DARKTERRAIN_DRIVE_MAX, step: 0.1 },
