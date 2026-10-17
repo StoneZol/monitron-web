@@ -118,15 +118,38 @@ void main() {
     // Flip = mirror crossbar about stem mid (0.45): default 0.68 ↔ flip 0.22.
     float barY = uCrossesFlip > 0.5 ? 0.22 : 0.68;
     // ~75% of stock height; base still near terrain (q.y≈0) when air off.
-    float g = min(
-      max(max(abs(q.x) - 0.05, abs(q.y - 0.45) - 0.6), abs(q.z) - 0.02),
-      max(max(abs(q.x) - 0.35, abs(q.y - barY) - 0.04), abs(q.z) - 0.02)
-    );
+    float g;
     if (baseLightOn) {
-      // Fixed on the ground in front of the cross (−Z face).
-      vec3 lightQ = vec3(0.0, -lift, -0.57);
-      float bd = length(q - lightQ);
-      baseAcc += 0.035 / (0.02 + bd * bd);
+      // Stock mods one cell — fine for crosses alone. Ground lamps sample q,
+      // so the tile edge through the camera (p.x=0 → screen center) became a
+      // hard glow crease. Neighbors keep SDF + lamp field continuous.
+      g = 1e3;
+      for (float ox = -4.0; ox <= 4.0; ox += 4.0) {
+        for (float oz = -4.0; oz <= 4.0; oz += 4.0) {
+          vec3 qq = q - vec3(ox, 0.0, oz);
+          g = min(
+            g,
+            min(
+              max(
+                max(abs(qq.x) - 0.05, abs(qq.y - 0.45) - 0.6),
+                abs(qq.z) - 0.02
+              ),
+              max(
+                max(abs(qq.x) - 0.35, abs(qq.y - barY) - 0.04),
+                abs(qq.z) - 0.02
+              )
+            )
+          );
+          vec3 lightQ = vec3(ox, -lift, oz - 0.57);
+          float bd = length(q - lightQ);
+          baseAcc += 0.035 / (0.02 + bd * bd);
+        }
+      }
+    } else {
+      g = min(
+        max(max(abs(q.x) - 0.05, abs(q.y - 0.45) - 0.6), abs(q.z) - 0.02),
+        max(max(abs(q.x) - 0.35, abs(q.y - barY) - 0.04), abs(q.z) - 0.02)
+      );
     }
     s = 0.5 * min(min(g, terrain), 0.01 + 0.2 * abs(s));
     d += s;

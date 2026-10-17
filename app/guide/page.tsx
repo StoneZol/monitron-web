@@ -8,7 +8,7 @@ import { getSiteUrl } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
 const GUIDE_DESCRIPTION =
-  "How to drive Monitron with the Chrome plugin or mic, known Chrome tabCapture / GPU decode limits, and monitron preset keys.";
+  "How to drive Monitron with the Chrome plugin or mic, known Chrome GPU decode limits, and monitron preset keys.";
 
 export const metadata: Metadata = {
   title: "Guide",
@@ -156,94 +156,23 @@ export default function GuidePage() {
 
           <section className="space-y-4">
             <h2 className="font-mono text-[11px] uppercase tracking-[0.28em] text-warn">
-              ::3 known limits · chrome
+              ::3 known limits · chrome · multi-monitor
             </h2>
             <p className="text-muted">
-              Two separate Chrome gotchas. Neither is “your GPU is maxed” —
-              Task Manager can look calm while media or capture still falls
-              over.
-            </p>
-
-            <h3 className="font-mono text-[11px] uppercase tracking-[0.22em] text-warn/90">
-              A · tabCapture + Page-Fullscreen
-            </h3>
-            <p className="text-muted">
-              Open bug under multi-window{" "}
-              <span className="text-ink">Page-Fullscreen</span>, tied to the{" "}
-              <span className="text-ink">plugin listening</span> — not to the
-              site’s mic alone. We don’t toggle mute on the tab: Chrome’s{" "}
-              <span className="text-ink">tabCapture</span> always hijacks
-              playback into the extension offscreen doc (we play it back so you
-              still hear it). While that capture is live, stacking Page-Fullscreen
-              windows kills the feed; with the plugin{" "}
-              <span className="text-ink">disconnected</span>, the same fullscreen
-              layout leaves music playing.
-            </p>
-            <ul className="space-y-3 text-muted">
-              <li>
-                <span className="font-mono text-[12px] uppercase tracking-[0.14em] text-warn">
-                  symptom
-                </span>
-                <span className="mx-2 text-muted/40">—</span>
-                plugin connected to a <span className="text-ink">video</span>{" "}
-                tab (YouTube): fine at rest; after Page-Fullscreen on Monitron
-                windows, audio dies in ~1–15s. Switching the site source to{" "}
-                <span className="text-ink">mic</span> while the plugin is still
-                connected also falls over.{" "}
-                <span className="text-ink">Disconnect the plugin</span> → music
-                keeps going under the same fullscreen. Plugin + Spotify-class{" "}
-                <span className="text-ink">audio-only</span> tabs → OK.
-              </li>
-              <li>
-                <span className="font-mono text-[12px] uppercase tracking-[0.14em] text-warn">
-                  not cpu / not mic-alone
-                </span>
-                <span className="mx-2 text-muted/40">—</span>
-                load looks fine. Break tracks{" "}
-                <span className="text-ink">extension tabCapture is on</span>,
-                especially against video tabs — not “Page-Fullscreen always
-                pauses YouTube”.
-              </li>
-              <li>
-                <span className="font-mono text-[12px] uppercase tracking-[0.14em] text-warn">
-                  what we tried
-                </span>
-                <span className="mx-2 text-muted/40">—</span>
-                offscreen <span className="text-ink">USER_MEDIA</span> /{" "}
-                <span className="text-ink">AUDIO_PLAYBACK</span> reasons,{" "}
-                <span className="text-ink">&lt;audio&gt;</span> vs AudioContext
-                playback, keep-alives, audio-only getUserMedia, player iframe +{" "}
-                <span className="text-ink">consumerTabId</span> in the Monitron
-                tab — fragile, rolled back, still open.
-              </li>
-              <li>
-                <span className="font-mono text-[12px] uppercase tracking-[0.14em] text-warn">
-                  workarounds
-                </span>
-                <span className="mx-2 text-muted/40">—</span>
-                plugin + audio-only sources (Spotify Web, etc.); or disconnect
-                the plugin and use <span className="text-ink">mic</span> only;
-                or avoid stacking Page-Fullscreen while capturing a video tab.
-              </li>
-            </ul>
-
-            <h3 className="font-mono text-[11px] uppercase tracking-[0.22em] text-warn/90">
-              B · HW video decode + WebGL / Canvas (multi-monitor)
-            </h3>
-            <p className="text-muted">
-              Separate from tabCapture. A Monitron screen on one monitor + a
-              hardware-decoded video tab (YouTube VP9 via{" "}
+              Dual / multi-monitor setup. Not “your GPU is maxed” — Task Manager
+              can look calm while media still falls over. Run a Monitron screen
+              on one display and a hardware-decoded video tab (YouTube VP9 via{" "}
               <span className="text-ink">D3D11VideoDecoder</span>) on another —
-              even without fullscreen — can stall the video pipeline while GPU
-              utilization stays low. Confirmed in{" "}
+              even without fullscreen. Chrome’s GPU process has to VSync /
+              composite two independent surfaces plus the video decoder through
+              the same ANGLE↔D3D11 path; the queue stalls. Confirmed in{" "}
               <span className="text-ink">chrome://media-internals</span>:{" "}
               <span className="text-ink">DECODER_UNDERFLOW</span> /{" "}
               <span className="text-ink">BUFFERING_HAVE_NOTHING</span> on video
               while Opus audio still reports{" "}
               <span className="text-ink">BUFFERING_HAVE_ENOUGH</span>. Spotify
-              Web (no video decoder) does not trip this. Not every Monitron
-              scene hits it equally — heavier WebGL / Canvas loops compete
-              harder with the shared Chrome GPU process / ANGLE↔D3D11 queue.
+              Web (no video decoder) does not trip this. Heavier WebGL / Canvas
+              scenes hit it more often than light ones.
             </p>
             <ul className="space-y-3 text-muted">
               <li>
@@ -251,14 +180,15 @@ export default function GuidePage() {
                   workaround that fixed it here
                 </span>
                 <span className="mx-2 text-muted/40">—</span>
-                Chrome → <span className="text-ink">chrome://flags</span> → set{" "}
+                Chrome → <span className="text-ink">chrome://flags</span> →
+                search{" "}
                 <span className="text-ink">
-                  #disable-accelerated-video-decode
+                  Hardware-accelerated video decode
                 </span>{" "}
-                to <span className="text-ink">Enabled</span> (forces software
-                decode; CPU handles 1080p fine, GPU stops sharing the D3D11
-                decoder path with WebGL). Relaunch Chrome after changing the
-                flag.
+                → set to <span className="text-ink">Disabled</span> (forces
+                software decode; CPU handles 1080p fine, GPU stops sharing the
+                D3D11 decoder path with WebGL). Relaunch Chrome after changing
+                the flag.
               </li>
               <li>
                 <span className="font-mono text-[12px] uppercase tracking-[0.14em] text-warn">
@@ -272,13 +202,25 @@ export default function GuidePage() {
                 (D3D11 → OpenGL / Vulkan / D3D9) — same layer, different
                 machines.
               </li>
+              <li>
+                <span className="font-mono text-[12px] uppercase tracking-[0.14em] text-warn">
+                  for developers
+                </span>
+                <span className="mx-2 text-muted/40">—</span>
+                throttle or pause{" "}
+                <span className="text-ink">requestAnimationFrame</span> on{" "}
+                <span className="text-ink">visibilitychange</span> when the tab
+                is hidden; consider{" "}
+                <span className="text-ink">OffscreenCanvas</span> / workers for
+                heavy loops. That cuts background load — it does not by itself
+                fix the dual-monitor visible-window case above.
+              </li>
             </ul>
 
             <p className="text-muted">
-              Both repos are open source. If you know how to keep tabCapture
-              alive under multi-window Page-Fullscreen, or how to coexist
-              WebGL/Canvas with Chrome’s D3D11 HW video decode on dual
-              monitors without killing the flag — PRs welcome.
+              Both repos are open source. If you know how to coexist WebGL /
+              Canvas with Chrome’s D3D11 HW video decode on dual monitors
+              without disabling hardware decode — PRs welcome.
             </p>
             <div className="flex flex-wrap gap-2">
               <a
