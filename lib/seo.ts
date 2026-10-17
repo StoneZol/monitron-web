@@ -24,6 +24,8 @@ const SCREEN_BLURBS: Record<string, string> = {
     "Accretion-disk black hole for idle monitors — reactive tint and motion.",
   hexacore:
     "Hexagonal hive tunnel for idle monitors — garland, tint, and flight.",
+  observance:
+    "Observance void flight for idle monitors — crosses, lightning, and reactive tint.",
   warpburst:
     "Goo tunnel fog for idle monitors — speed, color, and peak flicker.",
   fairysmoke:
