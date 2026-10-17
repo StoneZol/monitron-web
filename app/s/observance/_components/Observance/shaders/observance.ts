@@ -157,12 +157,15 @@ void main() {
       }
 
       q += cos(t + q.yzx) * 0.2;
-      q.y = p.y + 2.8 - s * 0.3;
-      float g = min(
-        max(max(abs(q.x) - 0.05, abs(q.y - 0.6) - 0.8), abs(q.z) - 0.02),
-        max(max(abs(q.x) - 0.3, abs(q.y - 1.1) - 0.05), abs(q.z) - 0.02)
-      );
+      // Lower hills = terrain plane at s≈3 (what reads as ground at screen bottom).
+      // s≈0 is the upper canopy/ceiling — planting there hangs crosses in mid-air.
       float terrain = 3.0 - s;
+      q.y = terrain;
+      // ~75% of stock height; base still near terrain (q.y≈0).
+      float g = min(
+        max(max(abs(q.x) - 0.05, abs(q.y - 0.45) - 0.6), abs(q.z) - 0.02),
+        max(max(abs(q.x) - 0.28, abs(q.y - 0.82) - 0.04), abs(q.z) - 0.02)
+      );
       s = 0.5 * min(min(g, terrain), 0.01 + 0.2 * abs(s));
       d += s;
       dens += s;
