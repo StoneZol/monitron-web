@@ -1,15 +1,17 @@
 import { PlaceholderGrid } from "@/components/PlaceholderGrid";
 import { SiteFooter } from "@/components/SiteFooter";
+import { SiteHeader } from "@/components/SiteHeader";
 import { panelButtonClassName } from "@/components/ControlPanel/PanelButton";
 import { PLUGIN_URL } from "@/lib/audioBus";
 import { placeholders } from "@/lib/placeholders";
-import { PLUGIN_VERSION, SITE_VERSION } from "@/lib/versions";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 
 export default function Home() {
     return (
         <div className="atmosphere relative flex min-h-full flex-1 flex-col overflow-x-hidden">
+            <SiteHeader />
+
             <div
                 aria-hidden
                 className="pointer-events-none absolute top-24 -right-4 z-10 hidden rotate-12 select-none sm:block"
@@ -32,16 +34,6 @@ export default function Home() {
                         <span>ch.00</span>
                         <span className="text-muted">/</span>
                         <span className="text-cyan">illegal_idle</span>
-                        <span className="text-muted">/</span>
-                        <span>
-                            <span className="text-signal/80">web</span>{" "}
-                            {SITE_VERSION}
-                        </span>
-                        <span className="text-muted">/</span>
-                        <span>
-                            <span className="text-cyan/80">plugin</span>{" "}
-                            {PLUGIN_VERSION}
-                        </span>
                     </div>
 
                     <h1

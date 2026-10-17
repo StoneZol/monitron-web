@@ -1,7 +1,10 @@
 {
     "name": "monitron-web",
-    "version": "2.0.0",
+    "version": "2.0.1",
     "private": true,
+    "monitron": {
+        "pluginVersion": "1.3.0"
+    },
     "scripts": {
         "dev": "next dev",
         "build": "next build",

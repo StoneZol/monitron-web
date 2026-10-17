@@ -1,10 +1,17 @@
 import packageJson from "../package.json";
 
-/**
- * Chrome extension build this site targets.
- * Bump when the companion plugin release changes.
- */
-export const PLUGIN_VERSION = "1.3.0";
+type MonitronPackageJson = {
+  version: string;
+  monitron?: {
+    /** Chrome extension build this site targets — bump with plugin releases. */
+    pluginVersion?: string;
+  };
+};
 
-/** Web app release — from package.json */
-export const SITE_VERSION = packageJson.version;
+const pkg = packageJson as MonitronPackageJson;
+
+/** Web app release — `package.json` → `version` */
+export const SITE_VERSION = pkg.version;
+
+/** Companion plugin release — `package.json` → `monitron.pluginVersion` */
+export const PLUGIN_VERSION = pkg.monitron?.pluginVersion ?? "0.0.0";

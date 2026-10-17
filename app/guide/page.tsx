@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { SiteFooter } from "@/components/SiteFooter";
+import { SiteHeader } from "@/components/SiteHeader";
 import { panelButtonClassName } from "@/components/ControlPanel/PanelButton";
 import { PLUGIN_URL, WEB_URL } from "@/lib/audioBus";
 import { SITE_NAME } from "@/lib/seo";
@@ -42,6 +43,7 @@ export const metadata: Metadata = {
 export default function GuidePage() {
   return (
     <div className="atmosphere relative flex min-h-full flex-1 flex-col overflow-x-hidden">
+      <SiteHeader />
       <main className="relative z-10 mx-auto w-full max-w-2xl flex-1 px-4 pb-16 pt-10 sm:px-8 sm:pt-14">
         <header className="mb-12 sm:mb-16">
           <div className="mb-5 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[10px] uppercase tracking-[0.24em] text-muted">

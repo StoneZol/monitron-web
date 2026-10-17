@@ -143,6 +143,11 @@ export function resolveCornerTags(
     return resolvePlaceholderTags(meta).filter((t) => t.id !== "ai");
 }
 
+/** True when the card declares the sensitive hazard stamp. */
+export function isSensitivePlaceholder(meta: PlaceholderMeta): boolean {
+    return Boolean(meta.tags?.includes("sensitive"));
+}
+
 /** AI stamp for the credit plaque — null when unset. */
 export function resolveAiTag(
     meta: PlaceholderMeta,
@@ -329,7 +334,7 @@ export const placeholders: PlaceholderMeta[] = [
         title: "Spectrum",
         href: "/s/spectrum",
         previewSrc: "/s/spectrum.webp",
-        tags: ["reactive", "only-reactive"],
+        tags: ["only-reactive"],
         cost: "low",
         ai: MONITRON_AI,
     },
