@@ -15,10 +15,6 @@ export type ObservanceLive = {
   crossSway: number;
   /** Flex look cone when crosses off (coral-style bank) */
   cameraBank: number;
-  /** Eye height: plane offset, or clearance above terrain when follow is on */
-  cameraHeight: number;
-  /** Ride terrain peaks under the camera */
-  cameraFollow: boolean;
   /** Soft chromatic sun tint for lightning stripes */
   sunColor: string;
   sunColorPeak: string;
@@ -49,8 +45,6 @@ export const OBSERVANCE_DEFAULTS: ObservanceLive = {
   crosses: true,
   crossSway: 1,
   cameraBank: 0.5,
-  cameraHeight: 0,
-  cameraFollow: false,
   sunColor: "#ffcc88",
   sunColorPeak: "#ff8844",
   sunTwinkle: false,
@@ -72,8 +66,6 @@ export const OBSERVANCE_RANGES = {
   flightSpeed: { min: 0.1, max: 3, step: 0.05 },
   crossSway: { min: 0, max: 2, step: 0.05 },
   cameraBank: { min: 0, max: 2, step: 0.05 },
-  /** Plane offset or follow clearance (−1…1) */
-  cameraHeight: { min: -1, max: 1, step: 0.05 },
   colorDrive: { min: 0, max: OBSERVANCE_COLOR_DRIVE_MAX, step: 0.05 },
   speedDrive: { min: 0, max: OBSERVANCE_DRIVE_MAX, step: 0.1 },
   accelDrive: { min: 0, max: OBSERVANCE_DRIVE_MAX, step: 0.1 },

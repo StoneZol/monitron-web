@@ -109,16 +109,6 @@ function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
       2,
       STORED_DEFAULTS.cameraBank,
     ),
-    cameraFollow:
-      raw.cameraFollow === undefined
-        ? STORED_DEFAULTS.cameraFollow
-        : Boolean(raw.cameraFollow),
-    cameraHeight: clamp(
-      Number(raw.cameraHeight),
-      -1,
-      1,
-      STORED_DEFAULTS.cameraHeight,
-    ),
     sunColor: asHex(raw.sunColor, STORED_DEFAULTS.sunColor),
     sunColorPeak: asHex(raw.sunColorPeak, STORED_DEFAULTS.sunColorPeak),
     sunTwinkle:
@@ -245,8 +235,6 @@ export default function useObservanceHook() {
       crosses: live.crosses,
       crossSway: live.crossSway,
       cameraBank: live.cameraBank,
-      cameraHeight: live.cameraHeight,
-      cameraFollow: live.cameraFollow,
       sunColor: live.sunColor,
       sunColorPeak: live.sunColorPeak,
       sunTwinkle: live.sunTwinkle,
@@ -270,16 +258,6 @@ export default function useObservanceHook() {
       setCrosses: (crosses: boolean) => commit({ crosses }),
       setCrossSway: (crossSway: number) => commit({ crossSway }),
       setCameraBank: (cameraBank: number) => commit({ cameraBank }),
-      setCameraHeight: (cameraHeight: number) =>
-        commit({
-          cameraHeight: clamp(
-            cameraHeight,
-            -1,
-            1,
-            STORED_DEFAULTS.cameraHeight,
-          ),
-        }),
-      setCameraFollow: (cameraFollow: boolean) => commit({ cameraFollow }),
       setSunColor: (sunColor: string) => commit({ sunColor }),
       setSunColorPeak: (sunColorPeak: string) => commit({ sunColorPeak }),
       setSunTwinkle: (sunTwinkle: boolean) => commit({ sunTwinkle }),

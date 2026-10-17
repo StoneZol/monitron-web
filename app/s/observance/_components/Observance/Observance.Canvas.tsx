@@ -72,8 +72,6 @@ function ObservanceQuad({
           iResolution: { value: new THREE.Vector3(1, 1, 1) },
           iTime: { value: 0 },
           uCamZ: { value: 0 },
-          uCamHeight: { value: 0 },
-          uCamFollow: { value: 0 },
           uSwayT: { value: 0 },
           uCrosses: { value: 1 },
           uCrossSway: { value: 1 },
@@ -183,8 +181,6 @@ function ObservanceQuad({
 
     m.uniforms.iTime!.value = t;
     m.uniforms.uCamZ!.value = camZ.current;
-    m.uniforms.uCamHeight!.value = live.cameraHeight;
-    m.uniforms.uCamFollow!.value = live.cameraFollow ? 1 : 0;
     m.uniforms.uSwayT!.value = swayT.current;
     m.uniforms.uCrosses!.value = live.crosses ? 1 : 0;
     m.uniforms.uCrossSway!.value = live.crossSway;

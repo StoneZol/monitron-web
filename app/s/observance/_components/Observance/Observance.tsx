@@ -37,10 +37,6 @@ const INFO = {
     "When crosses on: scale stock path sway (1 = Shadertoy, 0 = locked, 2 = 2×).",
   cameraBank:
     "When crosses off: coral-style flex look cone (0 = dead ahead, 1 = default wander).",
-  cameraHeight:
-    "Follow off: plane offset (−1…1, 0 = Shadertoy). Follow on: clearance (−1…1); 0 ≈ stock skim ~1.33 below peak.",
-  cameraFollow:
-    "On: eye rides terrain peaks under the camera. Off: height vs flat path plane.",
   sun: "Tint for the chromatic lightning stripes (idle→peak or HSL twinkle).",
   sunPalette:
     "Idle = rest. Peak = color-channel target. Hidden while sun twinkle is on; peak locked when audio is off.",
@@ -126,24 +122,6 @@ const Observance = ({ showOverlay = true }: ObservanceProps) => {
               />
 
               <ControlSubSection label="camera">
-                <Toggle
-                  label="Follow terrain"
-                  checked={controls.cameraFollow}
-                  onChange={controls.setCameraFollow}
-                  info={INFO.cameraFollow}
-                />
-                <Slider
-                  label={
-                    controls.cameraFollow ? "Clearance" : "Camera height"
-                  }
-                  value={controls.cameraHeight}
-                  min={OBSERVANCE_RANGES.cameraHeight.min}
-                  max={OBSERVANCE_RANGES.cameraHeight.max}
-                  step={OBSERVANCE_RANGES.cameraHeight.step}
-                  onChange={controls.setCameraHeight}
-                  format={(v) => v.toFixed(2)}
-                  info={INFO.cameraHeight}
-                />
                 {controls.crosses ? (
                   <Slider
                     label="Cross sway"

@@ -4,7 +4,6 @@
  *
  * Changes from original:
  * - iTime / iResolution / uCamZ (flight via accumulated cam Z)
- * - uCamHeight / uCamFollow: plane offset or clearance above terrain under cam
  * - uCrosses: toggle cross SDF (stock black bodies)
  * - uCrossSway: scale stock path rotation when crosses on (1 = Shadertoy)
  * - uCamBank: coral-style flex look when crosses off
@@ -30,10 +29,6 @@ varying vec2 vUv;
 uniform vec3 iResolution;
 uniform float iTime;
 uniform float uCamZ;
-/** Eye height: plane offset, or clearance above terrain when follow is on. */
-uniform float uCamHeight;
-/** 1 = ride terrain peaks under the camera; 0 = offset from path plane. */
-uniform float uCamFollow;
 /** Clock for cross-path sway / flex look (audio scales rate, not punches). */
 uniform float uSwayT;
 uniform float uCrosses;
@@ -44,40 +39,6 @@ uniform vec3 uSunColor;
 
 vec3 dirFrom(float yaw, float pitch) {
   return vec3(sin(yaw) * cos(pitch), sin(pitch), cos(yaw) * cos(pitch));
-}
-
-/** Heightfield surface Y at path foot (same fbm family as the march). */
-float terrainY(vec3 foot, bool crossesOn, float swayAmt) {
-  vec3 p = foot;
-  if (crossesOn) {
-    vec4 c = cos(
-      p.x * 0.01 +
-        cos(uSwayT * 0.2) * 0.2 * swayAmt +
-        vec4(0.0, 33.0, 11.0, 0.0)
-    );
-    p.xy *= mat2(c.x, c.y, c.z, c.w);
-    // One refine: fbm weakly depends on y.
-    float y = 0.0;
-    for (int k = 0; k < 2; k++) {
-      p.y = y;
-      float sum = 0.0;
-      for (float n = 0.01; n < 0.4; n += n) {
-        sum += abs(dot(sin(0.1 * p / n), vec3(n)));
-      }
-      y = 2.2 - sum;
-    }
-    return y;
-  }
-  float y = 0.0;
-  for (int k = 0; k < 2; k++) {
-    p.y = y;
-    float sum = 0.0;
-    for (float n = 0.01; n < 0.4; n += n) {
-      sum += abs(dot(sin(0.23 * p / n), vec3(n)));
-    }
-    y = 2.2 + cos(p.x * 0.3) * 0.3 - sum;
-  }
-  return y;
 }
 
 void main() {
@@ -96,14 +57,6 @@ void main() {
   bool crossesOn = uCrosses > 0.5;
   bool lightningOn = uLightning > 0.5;
   float swayAmt = clamp(uCrossSway, 0.0, 2.0);
-
-  // Eye Y: plane offset, or terrain under cam + clearance.
-  // Follow: slider 0 sits ~1.33 below the sampled peak (stock skim, a bit lower).
-  float eyeY = uCamHeight;
-  if (uCamFollow > 0.5) {
-    float ground = terrainY(vec3(0.0, 0.0, uCamZ), crossesOn, swayAmt);
-    eyeY = ground + uCamHeight - (1.0 + 1.0 / 3.0);
-  }
 
   // Ray basis: stock D = vec3(u, 1). Without crosses, flex-wander like coral.
   float yaw = 0.0;
@@ -149,8 +102,6 @@ void main() {
           vec4(0.0, 33.0, 11.0, 0.0)
       );
       p.xy *= mat2(c.x, c.y, c.z, c.w);
-      // Altitude after path warp so height stays "up" in local frame.
-      p.y += eyeY;
       s = 2.2 - p.y;
       for (float n = 0.01; n < 0.4; n += n) {
         s -= abs(dot(sin(0.1 * p / n), vec3(n)));
@@ -170,7 +121,6 @@ void main() {
       d += s;
       dens += s;
     } else {
-      p.y += eyeY;
       s = 2.2 - p.y + cos(p.x * 0.3) * 0.3;
       for (float n = 0.01; n < 0.4; n += n) {
         s -= abs(dot(sin(0.23 * p / n), vec3(n)));
