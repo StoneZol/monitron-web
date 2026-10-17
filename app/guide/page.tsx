@@ -8,7 +8,7 @@ import { getSiteUrl } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
 const GUIDE_DESCRIPTION =
-  "How to drive Monitron with the Chrome plugin or mic, known Chrome tabCapture limits, and monitron preset keys.";
+  "How to drive Monitron with the Chrome plugin or mic, known Chrome tabCapture / GPU decode limits, and monitron preset keys.";
 
 export const metadata: Metadata = {
   title: "Guide",
@@ -159,6 +159,15 @@ export default function GuidePage() {
               ::3 known limits · chrome
             </h2>
             <p className="text-muted">
+              Two separate Chrome gotchas. Neither is “your GPU is maxed” —
+              Task Manager can look calm while media or capture still falls
+              over.
+            </p>
+
+            <h3 className="font-mono text-[11px] uppercase tracking-[0.22em] text-warn/90">
+              A · tabCapture + Page-Fullscreen
+            </h3>
+            <p className="text-muted">
               Open bug under multi-window{" "}
               <span className="text-ink">Page-Fullscreen</span>, tied to the{" "}
               <span className="text-ink">plugin listening</span> — not to the
@@ -217,10 +226,59 @@ export default function GuidePage() {
                 or avoid stacking Page-Fullscreen while capturing a video tab.
               </li>
             </ul>
+
+            <h3 className="font-mono text-[11px] uppercase tracking-[0.22em] text-warn/90">
+              B · HW video decode + WebGL / Canvas (multi-monitor)
+            </h3>
+            <p className="text-muted">
+              Separate from tabCapture. A Monitron screen on one monitor + a
+              hardware-decoded video tab (YouTube VP9 via{" "}
+              <span className="text-ink">D3D11VideoDecoder</span>) on another —
+              even without fullscreen — can stall the video pipeline while GPU
+              utilization stays low. Confirmed in{" "}
+              <span className="text-ink">chrome://media-internals</span>:{" "}
+              <span className="text-ink">DECODER_UNDERFLOW</span> /{" "}
+              <span className="text-ink">BUFFERING_HAVE_NOTHING</span> on video
+              while Opus audio still reports{" "}
+              <span className="text-ink">BUFFERING_HAVE_ENOUGH</span>. Spotify
+              Web (no video decoder) does not trip this. Not every Monitron
+              scene hits it equally — heavier WebGL / Canvas loops compete
+              harder with the shared Chrome GPU process / ANGLE↔D3D11 queue.
+            </p>
+            <ul className="space-y-3 text-muted">
+              <li>
+                <span className="font-mono text-[12px] uppercase tracking-[0.14em] text-warn">
+                  workaround that fixed it here
+                </span>
+                <span className="mx-2 text-muted/40">—</span>
+                Chrome → <span className="text-ink">chrome://flags</span> → set{" "}
+                <span className="text-ink">
+                  #disable-accelerated-video-decode
+                </span>{" "}
+                to <span className="text-ink">Enabled</span> (forces software
+                decode; CPU handles 1080p fine, GPU stops sharing the D3D11
+                decoder path with WebGL). Relaunch Chrome after changing the
+                flag.
+              </li>
+              <li>
+                <span className="font-mono text-[12px] uppercase tracking-[0.14em] text-warn">
+                  other things to try
+                </span>
+                <span className="mx-2 text-muted/40">—</span>
+                drop <span className="text-ink">Render scale</span> on heavy
+                screens; play audio-only instead of video next to Monitron; or
+                experiment with{" "}
+                <span className="text-ink">Choose ANGLE graphics backend</span>{" "}
+                (D3D11 → OpenGL / Vulkan / D3D9) — same layer, different
+                machines.
+              </li>
+            </ul>
+
             <p className="text-muted">
               Both repos are open source. If you know how to keep tabCapture
-              from a video tab alive under multi-window Page-Fullscreen — PR
-              welcome.
+              alive under multi-window Page-Fullscreen, or how to coexist
+              WebGL/Canvas with Chrome’s D3D11 HW video decode on dual
+              monitors without killing the flag — PRs welcome.
             </p>
             <div className="flex flex-wrap gap-2">
               <a
