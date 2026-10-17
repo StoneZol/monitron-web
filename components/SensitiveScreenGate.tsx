@@ -5,6 +5,10 @@ import { useSyncExternalStore, type ReactNode } from "react";
 import { panelButtonClassName } from "@/components/ControlPanel/PanelButton";
 import { SensitivePreviewToggle } from "@/components/SensitivePreviewToggle";
 import {
+  SENSITIVE_GATE_ATTR,
+  SENSITIVE_GATE_ID,
+} from "@/lib/sensitiveGate";
+import {
   getSensitivePreviewsEnabled,
   subscribeSensitivePreview,
 } from "@/lib/sensitivePreview";
@@ -117,7 +121,8 @@ export function SensitiveScreenGate({
       role="alertdialog"
       aria-modal="true"
       aria-labelledby="sensitive-gate-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 p-4 backdrop-blur-sm"
+      {...{ [SENSITIVE_GATE_ATTR]: SENSITIVE_GATE_ID }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black p-4"
     >
       <div className="sensitive-frame-glitch relative w-full max-w-lg">
         <GatePlate

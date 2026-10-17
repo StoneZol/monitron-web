@@ -3,6 +3,11 @@
 import { useState, useSyncExternalStore } from "react";
 import { HazardAlert } from "@/components/HazardAlert";
 import {
+  armSensitiveConfirm,
+  disarmSensitiveConfirm,
+  SENSITIVE_CONFIRM_GATE_ID,
+} from "@/lib/sensitiveGate";
+import {
   getSensitivePreviewsEnabled,
   setSensitivePreviewsEnabled,
   subscribeSensitivePreview,
@@ -47,11 +52,17 @@ export function SensitivePreviewToggle({
     );
   }
 
+  const closeConfirm = () => {
+    disarmSensitiveConfirm();
+    setConfirmOpen(false);
+  };
+
   const requestEnable = () => {
     if (enabled) {
       setSensitivePreviewsEnabled(false);
       return;
     }
+    armSensitiveConfirm();
     setConfirmOpen(true);
   };
 
@@ -101,13 +112,15 @@ export function SensitivePreviewToggle({
       {confirmOpen ? (
         <HazardAlert
           tone="danger"
+          consentGate={SENSITIVE_CONFIRM_GATE_ID}
           eyebrow="!FINAL_GATE // LAST_WARNING!"
           title="Really unlock sensitive?"
           maxWidthClass="max-w-md"
-          onDismiss={() => setConfirmOpen(false)}
+          onDismiss={closeConfirm}
           primary={{
             label: "I own it — unlock",
             onClick: () => {
+              disarmSensitiveConfirm();
               setSensitivePreviewsEnabled(true);
               setConfirmOpen(false);
             },
@@ -115,7 +128,7 @@ export function SensitivePreviewToggle({
           }}
           secondary={{
             label: "Keep locked",
-            onClick: () => setConfirmOpen(false),
+            onClick: closeConfirm,
             signal: true,
           }}
         >
