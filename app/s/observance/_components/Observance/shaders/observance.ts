@@ -6,6 +6,7 @@
  * - iTime / iResolution / uCamZ (flight via accumulated cam Z)
  * - uCrosses: toggle cross SDF (stock black bodies)
  * - uCrossesAir / uCrossesFlip: lift off terrain / slide crossbar down
+ * - uCrossBaseLight: sun-tinted glow at each cross base
  * - uCrossSway: scale stock path rotation when crosses on (1 = Shadertoy)
  * - uCamBank: coral-style flex look when crosses off
  * - uLightning: toggle sharp stripe / flash spikes only (sun stays)
@@ -35,6 +36,7 @@ uniform float uSwayT;
 uniform float uCrosses;
 uniform float uCrossesAir;
 uniform float uCrossesFlip;
+uniform float uCrossBaseLight;
 uniform float uCrossSway;
 uniform float uCamBank;
 uniform float uLightning;
@@ -54,11 +56,13 @@ void main() {
   float dens = 0.0;
   float d = 0.0;
   float s = 0.0;
+  float baseAcc = 0.0;
   vec3 p = vec3(0.0);
   vec3 q = vec3(0.0);
 
   bool crossesOn = uCrosses > 0.5;
   bool lightningOn = uLightning > 0.5;
+  bool baseLightOn = crossesOn && uCrossBaseLight > 0.5;
   float swayAmt = clamp(uCrossSway, 0.0, 2.0);
 
   // Ray basis: stock D = vec3(u, 1). Without crosses, flex-wander like coral.
@@ -122,6 +126,11 @@ void main() {
         max(max(abs(q.x) - 0.05, abs(q.y - 0.45) - 0.6), abs(q.z) - 0.02),
         max(max(abs(q.x) - 0.35, abs(q.y - barY) - 0.04), abs(q.z) - 0.02)
       );
+      if (baseLightOn) {
+        // Soft lamp at cross local origin (base).
+        float bd = length(q);
+        baseAcc += 0.035 / (0.02 + bd * bd);
+      }
       s = 0.5 * min(min(g, terrain), 0.01 + 0.2 * abs(s));
       d += s;
       dens += s;
@@ -159,6 +168,15 @@ void main() {
   vec2 sunUV = vec2(dot(sunW, rt), dot(sunW, up)) / sunZ;
   float falloff = length(u - sunUV);
   col = tanh(col / max(falloff, 1e-3) / 20.0);
+
+  // After sun tonemap so base lamps stay visible away from the disc.
+  if (baseLightOn) {
+    vec3 lamp = pow(
+      abs(vec3(3.0, 2.0, 1.0) * baseAcc),
+      vec3(0.5)
+    );
+    col += tanh(lamp * uSunColor * 0.22);
+  }
 
   gl_FragColor = vec4(col, 1.0);
 }

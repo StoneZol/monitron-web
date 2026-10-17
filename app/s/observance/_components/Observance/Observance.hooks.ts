@@ -105,6 +105,10 @@ function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
       raw.crossesFlip === undefined
         ? STORED_DEFAULTS.crossesFlip
         : Boolean(raw.crossesFlip),
+    crossBaseLight:
+      raw.crossBaseLight === undefined
+        ? STORED_DEFAULTS.crossBaseLight
+        : Boolean(raw.crossBaseLight),
     crossSway: clamp(
       Number(raw.crossSway),
       0,
@@ -243,6 +247,7 @@ export default function useObservanceHook() {
       crosses: live.crosses,
       crossesAir: live.crossesAir,
       crossesFlip: live.crossesFlip,
+      crossBaseLight: live.crossBaseLight,
       crossSway: live.crossSway,
       cameraBank: live.cameraBank,
       sunColor: live.sunColor,
@@ -268,6 +273,8 @@ export default function useObservanceHook() {
       setCrosses: (crosses: boolean) => commit({ crosses }),
       setCrossesAir: (crossesAir: boolean) => commit({ crossesAir }),
       setCrossesFlip: (crossesFlip: boolean) => commit({ crossesFlip }),
+      setCrossBaseLight: (crossBaseLight: boolean) =>
+        commit({ crossBaseLight }),
       setCrossSway: (crossSway: number) => commit({ crossSway }),
       setCameraBank: (cameraBank: number) => commit({ cameraBank }),
       setSunColor: (sunColor: string) => commit({ sunColor }),

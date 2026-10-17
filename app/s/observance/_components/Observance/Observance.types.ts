@@ -15,6 +15,8 @@ export type ObservanceLive = {
   crossesAir: boolean;
   /** Slide crossbar down the stem (inverted cross, no rotate) */
   crossesFlip: boolean;
+  /** Sun-tinted glow at each cross base */
+  crossBaseLight: boolean;
   /** Scale stock path sway when crosses on (1 = Shadertoy) */
   crossSway: number;
   /** Flex look cone when crosses off (coral-style bank) */
@@ -49,6 +51,7 @@ export const OBSERVANCE_DEFAULTS: ObservanceLive = {
   crosses: true,
   crossesAir: false,
   crossesFlip: false,
+  crossBaseLight: false,
   crossSway: 1,
   cameraBank: 0.5,
   sunColor: "#ffcc88",

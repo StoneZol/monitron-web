@@ -32,11 +32,14 @@ const REACTIVE_CHANNEL_OPTIONS: { value: ReactiveChannel; label: string }[] = [
 const INFO = {
   look: "Observance flight — black crosses and sun-tinted lightning stripes.",
   flightSpeed: "Base camera advance along the path (1 ≈ Shadertoy default).",
-  crosses: "Draw stock black cross markers (on/off only).",
+  crosses: "Cross markers, plant / air / bar / base lamps, and path sway.",
+  crossesOn: "Draw stock black cross markers (on/off).",
   crossesAir: "Lift crosses off the hills by a fixed height (float in air).",
   crossesFlip: "Slide the crossbar down the stem (inverted cross). No rotation.",
+  crossBaseLight:
+    "Sun-tinted lamps at each cross base (same tint as the sun / twinkle).",
   crossSway:
-    "When crosses on: scale stock path sway (1 = Shadertoy, 0 = locked, 2 = 2×).",
+    "Scale stock path sway (1 = Shadertoy, 0 = locked, 2 = 2×).",
   cameraBank:
     "When crosses off: coral-style flex look cone (0 = dead ahead, 1 = default wander).",
   sun: "Tint for the chromatic lightning stripes (idle→peak or HSL twinkle).",
@@ -109,28 +112,46 @@ const Observance = ({ showOverlay = true }: ObservanceProps) => {
                 info={INFO.flightSpeed}
               />
 
-              <Toggle
-                label="Crosses"
-                checked={controls.crosses}
-                onChange={controls.setCrosses}
-                info={INFO.crosses}
-              />
-              {controls.crosses ? (
-                <>
-                  <Toggle
-                    label="Crosses in air"
-                    checked={controls.crossesAir}
-                    onChange={controls.setCrossesAir}
-                    info={INFO.crossesAir}
-                  />
-                  <Toggle
-                    label="Flip crosses"
-                    checked={controls.crossesFlip}
-                    onChange={controls.setCrossesFlip}
-                    info={INFO.crossesFlip}
-                  />
-                </>
-              ) : null}
+              <ControlSubSection label="crosses" info={INFO.crosses}>
+                <Toggle
+                  label="Crosses"
+                  checked={controls.crosses}
+                  onChange={controls.setCrosses}
+                  info={INFO.crossesOn}
+                />
+                {controls.crosses ? (
+                  <>
+                    <Toggle
+                      label="In air"
+                      checked={controls.crossesAir}
+                      onChange={controls.setCrossesAir}
+                      info={INFO.crossesAir}
+                    />
+                    <Toggle
+                      label="Flip bar"
+                      checked={controls.crossesFlip}
+                      onChange={controls.setCrossesFlip}
+                      info={INFO.crossesFlip}
+                    />
+                    <Toggle
+                      label="Base lights"
+                      checked={controls.crossBaseLight}
+                      onChange={controls.setCrossBaseLight}
+                      info={INFO.crossBaseLight}
+                    />
+                    <Slider
+                      label="Cross sway"
+                      value={controls.crossSway}
+                      min={OBSERVANCE_RANGES.crossSway.min}
+                      max={OBSERVANCE_RANGES.crossSway.max}
+                      step={OBSERVANCE_RANGES.crossSway.step}
+                      onChange={controls.setCrossSway}
+                      format={(v) => `×${v.toFixed(2)}`}
+                      info={INFO.crossSway}
+                    />
+                  </>
+                ) : null}
+              </ControlSubSection>
 
               <Toggle
                 label="Lightning"
@@ -139,19 +160,8 @@ const Observance = ({ showOverlay = true }: ObservanceProps) => {
                 info={INFO.lightning}
               />
 
-              <ControlSubSection label="camera">
-                {controls.crosses ? (
-                  <Slider
-                    label="Cross sway"
-                    value={controls.crossSway}
-                    min={OBSERVANCE_RANGES.crossSway.min}
-                    max={OBSERVANCE_RANGES.crossSway.max}
-                    step={OBSERVANCE_RANGES.crossSway.step}
-                    onChange={controls.setCrossSway}
-                    format={(v) => `×${v.toFixed(2)}`}
-                    info={INFO.crossSway}
-                  />
-                ) : (
+              {!controls.crosses ? (
+                <ControlSubSection label="camera">
                   <Slider
                     label="Camera bank"
                     value={controls.cameraBank}
@@ -162,8 +172,8 @@ const Observance = ({ showOverlay = true }: ObservanceProps) => {
                     format={(v) => `×${v.toFixed(2)}`}
                     info={INFO.cameraBank}
                   />
-                )}
-              </ControlSubSection>
+                </ControlSubSection>
+              ) : null}
 
               <ControlSubSection label="sun" info={INFO.sun}>
                 <TwinkleControls

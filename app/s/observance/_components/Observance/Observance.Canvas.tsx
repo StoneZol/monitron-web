@@ -76,6 +76,7 @@ function ObservanceQuad({
           uCrosses: { value: 1 },
           uCrossesAir: { value: 0 },
           uCrossesFlip: { value: 0 },
+          uCrossBaseLight: { value: 0 },
           uCrossSway: { value: 1 },
           uCamBank: { value: 0.5 },
           uLightning: { value: 1 },
@@ -187,6 +188,7 @@ function ObservanceQuad({
     m.uniforms.uCrosses!.value = live.crosses ? 1 : 0;
     m.uniforms.uCrossesAir!.value = live.crossesAir ? 1 : 0;
     m.uniforms.uCrossesFlip!.value = live.crossesFlip ? 1 : 0;
+    m.uniforms.uCrossBaseLight!.value = live.crossBaseLight ? 1 : 0;
     m.uniforms.uCrossSway!.value = live.crossSway;
     m.uniforms.uCamBank!.value = live.cameraBank;
     m.uniforms.uLightning!.value = live.lightning ? 1 : 0;
