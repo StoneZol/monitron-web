@@ -9,9 +9,19 @@ export type ObservanceProps = {
 /** Base lamp tint: off / follow sun / solid custom / own HSL twinkle */
 export type CrossBaseLightMode = "off" | "sun" | "custom" | "twinkle";
 
+/** stock = Shadertoy ahead; manual = X/Y; flex = Dark Terrain bank wander */
+export type ObservanceCameraMode = "stock" | "manual" | "flex";
+
 export type ObservanceLive = {
   /** Camera advance along the path (1 ≈ Shadertoy default) */
   flightSpeed: number;
+  cameraMode: ObservanceCameraMode;
+  /** Look X in degrees — 0 = along path (manual) */
+  yaw: number;
+  /** Look Y in degrees — 0 = along path (manual) */
+  pitch: number;
+  /** Flex look cone (Dark Terrain style) */
+  cameraBank: number;
   /** Lift crosses off the lower hills into the air */
   crossesAir: boolean;
   /** Slide crossbar down the stem (inverted cross, no rotate) */
@@ -41,7 +51,7 @@ export type ObservanceLive = {
   speedDrive: number;
   accelChannel: ReactiveChannel;
   accelDrive: number;
-  /** Cross sway animation rate — smooth, not flight speed */
+  /** Flex look clock rate — only meaningful when cameraMode !== stock */
   camAccelChannel: ReactiveChannel;
   camAccelDrive: number;
 };
@@ -53,6 +63,10 @@ export const OBSERVANCE_COLOR_DRIVE_MAX = 2;
 
 export const OBSERVANCE_DEFAULTS: ObservanceLive = {
   flightSpeed: 1,
+  cameraMode: "stock",
+  yaw: 0,
+  pitch: 0,
+  cameraBank: 0.5,
   crossesAir: false,
   crossesFlip: false,
   crossBaseLightMode: "off",
@@ -81,6 +95,9 @@ export const OBSERVANCE_DEFAULTS: ObservanceLive = {
 
 export const OBSERVANCE_RANGES = {
   flightSpeed: { min: 0.1, max: 3, step: 0.05 },
+  yaw: { min: -180, max: 180, step: 0.5 },
+  pitch: { min: -80, max: 80, step: 0.5 },
+  cameraBank: { min: 0, max: 2, step: 0.05 },
   crossSway: { min: 0, max: 2, step: 0.05 },
   lightningRate: { min: 0, max: 2, step: 0.05 },
   colorDrive: { min: 0, max: OBSERVANCE_COLOR_DRIVE_MAX, step: 0.05 },

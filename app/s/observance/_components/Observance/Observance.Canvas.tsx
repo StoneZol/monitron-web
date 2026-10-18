@@ -56,7 +56,9 @@ function ObservanceQuad({
   const baseTint = useMemo(() => new THREE.Color("#ffcc88"), []);
   const camZ = useRef(0);
   const swayT = useRef(0);
+  const lookT = useRef(0);
   const lastT = useRef(0);
+  const DEG = Math.PI / 180;
   const colorEnv = useRef(0);
   const colorPrev = useRef(0);
   const sunHue = useRef(0);
@@ -76,6 +78,11 @@ function ObservanceQuad({
           iTime: { value: 0 },
           uCamZ: { value: 0 },
           uSwayT: { value: 0 },
+          uLookT: { value: 0 },
+          uCamMode: { value: 0 },
+          uYaw: { value: 0 },
+          uPitch: { value: 0 },
+          uCamBank: { value: 0.5 },
           uCrossesAir: { value: 0 },
           uCrossesFlip: { value: 0 },
           uCrossBaseLight: { value: 0 },
@@ -100,6 +107,7 @@ function ObservanceQuad({
     return registerRuntimeReset("observance", () => {
       camZ.current = 0;
       swayT.current = 0;
+      lookT.current = 0;
       lastT.current = 0;
       sunHue.current = 0;
       sunPulse.current = createTwinklePulseEnv();
@@ -142,13 +150,22 @@ function ObservanceQuad({
     camZ.current +=
       dt * 1.1 * Math.max(0.05, live.flightSpeed) * flightMul;
 
-    // Look clock: Cam accel scales how fast cross-sway animates.
-    const lookMul = smoothRateMul(
-      reactive && live.camAccelChannel !== "off",
-      camAccelRaw,
-      live.camAccelDrive,
-    );
-    swayT.current += dt * lookMul;
+    // Cross sway always ticks (amount is uCrossSway in the shader).
+    swayT.current += dt;
+
+    // Flex look clock — Cam accel only matters off stock.
+    const flex = live.cameraMode === "flex";
+    const lookMul = flex
+      ? smoothRateMul(
+          reactive && live.camAccelChannel !== "off",
+          camAccelRaw,
+          live.camAccelDrive,
+        )
+      : 1;
+    if (flex) lookT.current += dt * lookMul;
+
+    const camMode =
+      live.cameraMode === "flex" ? 2 : live.cameraMode === "manual" ? 1 : 0;
 
     const colorHit = colorArmed ? Math.min(1, colorPunch) : 0;
     if (risingEdge(colorHit, colorPrev.current, COLOR_EDGE, COLOR_EDGE_MIN)) {
@@ -227,6 +244,11 @@ function ObservanceQuad({
     m.uniforms.iTime!.value = t;
     m.uniforms.uCamZ!.value = camZ.current;
     m.uniforms.uSwayT!.value = swayT.current;
+    m.uniforms.uLookT!.value = lookT.current;
+    m.uniforms.uCamMode!.value = camMode;
+    m.uniforms.uYaw!.value = live.yaw * DEG;
+    m.uniforms.uPitch!.value = live.pitch * DEG;
+    m.uniforms.uCamBank!.value = Math.max(0, live.cameraBank);
     m.uniforms.uCrossesAir!.value = live.crossesAir ? 1 : 0;
     m.uniforms.uCrossesFlip!.value = live.crossesFlip ? 1 : 0;
     m.uniforms.uCrossBaseLight!.value = baseOn ? 1 : 0;
