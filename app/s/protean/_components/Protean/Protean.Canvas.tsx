@@ -17,6 +17,7 @@ import {
   createMotionKickState,
   drivenLevel,
   hexToVec3,
+  lerpHex,
   motionSpeedMul,
 } from "@/lib/visualAudio";
 import { useRenderDpr } from "@/lib/renderScale";
@@ -148,6 +149,7 @@ function ProteanQuad({
     colorEnv.current *= Math.exp(-COLOR_DECAY * dt);
     if (colorEnv.current < 0.004) colorEnv.current = 0;
     colorPrev.current = colorHit;
+    const colorAmt = colorArmed ? colorEnv.current : 0;
 
     const flickerHit = colorArmed ? Math.min(1, colorPunch) : 0;
     if (
@@ -199,20 +201,17 @@ function ProteanQuad({
           live.colorDrive,
           dt,
         );
-        pulseTwinkleLight(tint, pulseAmt, live.colorDrive);
-        peakFlicker = Math.max(peakFlicker, pulseAmt);
+        // Tint carries the beat; soft peakFlicker only (no double wash)
+        pulseTwinkleLight(tint, pulseAmt * 0.75, live.colorDrive);
+        peakFlicker = Math.max(peakFlicker, pulseAmt * 0.45);
       }
     } else if (mode === "solid") {
-      hexToVec3(live.color, tint);
-      if (colorArmed) {
-        const pulseAmt = updateTwinklePulseEnv(
-          twinklePulse.current,
-          colorRaw,
-          live.colorDrive,
-          dt,
-        );
-        pulseTwinkleLight(tint, pulseAmt * 0.5, live.colorDrive);
-        peakFlicker = Math.max(peakFlicker, pulseAmt);
+      // Idle → peak lerp (coral palette-style); peakFlicker soft punch
+      if (colorArmed && colorAmt > 0.001) {
+        lerpHex(live.color, live.colorPeak, colorAmt, tint);
+        peakFlicker = Math.max(peakFlicker, colorAmt);
+      } else {
+        hexToVec3(live.color, tint);
       }
     } else {
       // original — tint unused

@@ -205,14 +205,22 @@ void main() {
   col = iLerp(col.bgr, col.rgb, clamp(1.0 - prm1, 0.05, 1.0));
   col = pow(col, vec3(0.55, 0.65, 0.6)) * vec3(1.0, 0.97, 0.9);
 
-  // solid / twinkle — keep volume luminance, recolor with uTint
+  // solid / twinkle — density-style tint (coral/fairysmoke): no floor, soft gate
   if (mode > 1.5) {
     float lum = max(dot(col, LUMA), 0.0);
-    col = uTint * (0.35 + lum * 1.65);
+    // Beat punch into cloud energy only — not a global wash after remapping
+    lum *= 1.0 + uPeakFlicker * 0.28;
+    // Soft gate: leave void/fog unpainted (old 0.35 floor stained everything)
+    float mask = smoothstep(0.012, 0.11, lum);
+    vec3 tinted = uTint * lum;
+    // Soft knee so bright cores / bass pulses don't blow the frame
+    tinted = tinted / (1.0 + max(tinted - vec3(0.85), 0.0) * 1.4);
+    col = mix(vec3(0.0), tinted, mask);
+  } else {
+    col *= 1.0 + uPeakFlicker * 0.35;
   }
 
   col = satMix(col);
-  col *= 1.0 + uPeakFlicker * 0.35;
 
   col *= pow(16.0 * q.x * q.y * (1.0 - q.x) * (1.0 - q.y), 0.12) * 0.7 + 0.3;
 

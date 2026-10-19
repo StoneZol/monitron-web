@@ -118,6 +118,7 @@ function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
     morph: clamp(Number(raw.morph), -1, 1, STORED_DEFAULTS.morph),
     colorMode: colorMode(raw.colorMode, raw),
     color: asHex(raw.color, STORED_DEFAULTS.color),
+    colorPeak: asHex(raw.colorPeak, STORED_DEFAULTS.colorPeak),
     twinkleSpeed: clamp(
       Number(raw.twinkleSpeed),
       0,
@@ -239,6 +240,7 @@ export default function useProteanHook() {
       morph: live.morph,
       colorMode: live.colorMode,
       color: live.color,
+      colorPeak: live.colorPeak,
       twinkleSpeed: live.twinkleSpeed,
       twinkleS: live.twinkleS,
       twinkleL: live.twinkleL,
@@ -259,6 +261,7 @@ export default function useProteanHook() {
       setMorph: (morph: number) => commit({ morph }),
       setColorMode: (colorMode: ProteanColorMode) => commit({ colorMode }),
       setColor: (color: string) => commit({ color }),
+      setColorPeak: (colorPeak: string) => commit({ colorPeak }),
       setTwinkleSpeed: (twinkleSpeed: number) => commit({ twinkleSpeed }),
       setTwinkleS: (twinkleS: number) => commit({ twinkleS }),
       setTwinkleL: (twinkleL: number) => commit({ twinkleL }),

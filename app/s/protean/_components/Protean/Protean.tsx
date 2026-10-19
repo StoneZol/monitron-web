@@ -3,7 +3,7 @@
 import { ScreensOverlay } from "@/components/ScreensOverlay";
 import { VisualizerSection } from "@/components/VisualizerSection";
 import {
-  ColorField,
+  ColorTable,
   ControlPanel,
   ControlSection,
   ControlSubSection,
@@ -44,7 +44,7 @@ const COLOR_MODE_OPTIONS: {
 }[] = [
   { value: "original", label: "original (nimitz palette)" },
   { value: "paletteTwinkle", label: "palette twinkle (stock walk)" },
-  { value: "solid", label: "solid (one color)" },
+  { value: "solid", label: "solid (idle / peak)" },
   { value: "twinkle", label: "twinkle (solid HSL)" },
 ];
 
@@ -57,8 +57,8 @@ const INFO = {
   pitch: "Look Y + light density morph (original mouse Y).",
   morph: "Bias on the stock prm1 cloud pulse (−1…1).",
   colorMode:
-    "original = stock. palette twinkle = phase-walk, no picker. solid = one tint. twinkle = HSL hue walk.",
-  solidColor: "Single tint — volume luminance keeps shape.",
+    "original = stock. palette twinkle = phase-walk, no picker. solid = idle→peak. twinkle = HSL hue walk.",
+  solidPalette: "Idle / peak tint — audio lerps toward peak.",
   paletteTwinkle:
     "Walks the stock nimitz sin palette phase — same look, shifting hues.",
   twinkle: "Solid HSL hue walk over the cloud luminance.",
@@ -83,6 +83,8 @@ const Protean = ({ showOverlay = true }: ProteanProps) => {
   const { liveRef, vizRef, visualizer, controls } = useProteanHook();
   const camManual = controls.cameraMode === "manual";
   const mode = controls.colorMode;
+  const audioLocked = !visualizer.reactive;
+  const audioStamp = audioLocked ? ({ peak: "audio" } as const) : undefined;
 
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-black select-none">
@@ -197,11 +199,27 @@ const Protean = ({ showOverlay = true }: ProteanProps) => {
                 />
               ) : null}
               {mode === "solid" ? (
-                <ColorField
-                  label="tint"
-                  value={controls.color}
-                  onChange={controls.setColor}
-                  info={INFO.solidColor}
+                <ColorTable
+                  label="solid palette"
+                  info={INFO.solidPalette}
+                  columns={["idle", "peak"]}
+                  lockedColumns={audioLocked ? ["peak"] : []}
+                  columnStamps={audioStamp}
+                  rows={[
+                    {
+                      label: "tint",
+                      cells: [
+                        {
+                          value: controls.color,
+                          onChange: controls.setColor,
+                        },
+                        {
+                          value: controls.colorPeak,
+                          onChange: controls.setColorPeak,
+                        },
+                      ],
+                    },
+                  ]}
                 />
               ) : null}
               <Slider

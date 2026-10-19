@@ -13,7 +13,7 @@ export type ProteanCameraMode = "flex" | "manual";
  * Color like Coral (trimmed):
  * - original — nimitz stock, no picker
  * - paletteTwinkle — stock palette phase walk, no picker
- * - solid — one solid tint
+ * - solid — idle→peak tint
  * - twinkle — solid HSL hue walk
  */
 export type ProteanColorMode =
@@ -32,8 +32,10 @@ export type ProteanLive = {
   /** Volume morph bias (−1…1) on top of stock prm1 pulse */
   morph: number;
   colorMode: ProteanColorMode;
-  /** Solid tint (solid mode) */
+  /** Solid idle tint */
   color: string;
+  /** Solid peak tint (audio punch) */
+  colorPeak: string;
   twinkleSpeed: number;
   twinkleS: number;
   twinkleL: number;
@@ -57,6 +59,7 @@ export const PROTEAN_DEFAULTS: ProteanLive = {
   morph: 0,
   colorMode: "original",
   color: "#7ec8c8",
+  colorPeak: "#e8fff4",
   twinkleSpeed: 1,
   twinkleS: 70,
   twinkleL: 55,
