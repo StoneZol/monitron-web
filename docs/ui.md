@@ -435,12 +435,15 @@ type PlaceholderMeta = {
 
 ## `MediaField`
 
-Background picker: **stock** thumbs (bundled `/placeholders`, prefs store only an id) + **one** custom upload/URL slot in IndexedDB ([`lib/userMedia.ts`](../lib/userMedia.ts)). No growing library — file paths cannot be restored in the browser.
+Shared background picker for all screens:
+
+- **Stock** — bundled `/placeholders` (prefs store only an id).
+- **Library** — up to 20 http(s) URLs ([`lib/userMedia.ts`](../lib/userMedia.ts)). Full image is **not** stored; only a 67×37 preview blob for thumbs. Draw path loads from the URL (CORS).
 
 | Prop        | Type | Default | Notes |
 | ----------- | ---- | ------- | ----- |
 | `label`     | `string` | — | |
-| `value`     | `MediaSelection` | — | `{ kind: "stock", id }` \| `{ kind: "user" }` |
+| `value`     | `MediaSelection` | — | `{ kind: "stock", id }` \| `{ kind: "library", id }` |
 | `onChange`  | `(next: MediaSelection) => void` | — | |
 | `stocks`    | `StockPlaceholder[]` | — | From [`lib/stockPlaceholders.ts`](../lib/stockPlaceholders.ts) |
 | `info`      | `string?` | — | |

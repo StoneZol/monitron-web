@@ -9,7 +9,10 @@ import {
   DEFAULT_STOCK_ID,
   stockPlaceholderSrc,
 } from "@/lib/stockPlaceholders";
-import { getUserBackgroundObjectUrl } from "@/lib/userMedia";
+import {
+  getMediaLibraryEntry,
+  getSessionMediaEntry,
+} from "@/lib/userMedia";
 import type { HeartfeltLive } from "./Heartfelt.types";
 import {
   heartfeltFragmentShader,
@@ -30,9 +33,17 @@ function prepBgTexture(tex: THREE.Texture): THREE.Texture {
   return tex;
 }
 
-function bgKey(live: HeartfeltLive): string {
-  if (live.bgSource === "user") return "user";
-  return `stock:${live.stockId || DEFAULT_STOCK_ID}`;
+function resolveBgUrl(live: HeartfeltLive): { key: string; url: string } {
+  if (live.bgSource === "session" && live.sessionId) {
+    const entry = getSessionMediaEntry(live.sessionId);
+    if (entry) return { key: `sess:${entry.id}`, url: entry.objectUrl };
+  }
+  if (live.bgSource === "library" && live.libraryId) {
+    const entry = getMediaLibraryEntry(live.libraryId);
+    if (entry) return { key: `lib:${entry.id}`, url: entry.url };
+  }
+  const stockId = live.stockId || DEFAULT_STOCK_ID;
+  return { key: `stock:${stockId}`, url: stockPlaceholderSrc(stockId) };
 }
 
 function HeartfeltQuad({ liveRef }: { liveRef: RefObject<HeartfeltLive> }) {
@@ -52,6 +63,7 @@ function HeartfeltQuad({ liveRef }: { liveRef: RefObject<HeartfeltLive> }) {
           iResolution: { value: new THREE.Vector3(1, 1, 1) },
           iTime: { value: 0 },
           iChannel0: { value: null },
+          iChannelResolution: { value: new THREE.Vector2(1, 1) },
           uRainAmount: { value: 0.75 },
           uDropSpeed: { value: 1 },
           uGlass: { value: 0.85 },
@@ -92,30 +104,23 @@ function HeartfeltQuad({ liveRef }: { liveRef: RefObject<HeartfeltLive> }) {
       const prev = channelRef.current;
       channelRef.current = tex;
       matRef.current.uniforms.iChannel0!.value = tex;
+      const img = tex.image as { width?: number; height?: number } | undefined;
+      matRef.current.uniforms.iChannelResolution!.value.set(
+        Math.max(1, img?.width ?? 1),
+        Math.max(1, img?.height ?? 1),
+      );
       loadedKey.current = key;
       inflight = null;
       if (prev && prev !== tex) prev.dispose();
     };
 
-    const tick = async () => {
-      const live = liveRef.current;
-      const key = bgKey(live);
+    const tick = () => {
+      const { key, url } = resolveBgUrl(liveRef.current);
       if (key === loadedKey.current || key === inflight) return;
       inflight = key;
 
-      let url: string | null = null;
-      if (live.bgSource === "user") {
-        url = await getUserBackgroundObjectUrl();
-        if (!url) {
-          // Slot missing — show current stock without rewriting prefs here
-          url = stockPlaceholderSrc(live.stockId || DEFAULT_STOCK_ID);
-        }
-      } else {
-        url = stockPlaceholderSrc(live.stockId || DEFAULT_STOCK_ID);
-      }
-
-      if (cancelled) return;
-
+      // Remote URLs need CORS; stock is same-origin
+      loader.setCrossOrigin("anonymous");
       loader.load(
         url,
         (tex) => {
@@ -129,12 +134,33 @@ function HeartfeltQuad({ liveRef }: { liveRef: RefObject<HeartfeltLive> }) {
         () => {
           if (cancelled) return;
           inflight = null;
+          // Fallback to stock if remote fails
+          if (key.startsWith("lib:")) {
+            const stockId = liveRef.current.stockId || DEFAULT_STOCK_ID;
+            const fbKey = `stock:${stockId}`;
+            const fbUrl = stockPlaceholderSrc(stockId);
+            inflight = fbKey;
+            loader.load(
+              fbUrl,
+              (tex) => {
+                if (cancelled) {
+                  tex.dispose();
+                  return;
+                }
+                applyTex(fbKey, tex);
+              },
+              undefined,
+              () => {
+                inflight = null;
+              },
+            );
+          }
         },
       );
     };
 
-    void tick();
-    const id = window.setInterval(() => void tick(), 350);
+    tick();
+    const id = window.setInterval(tick, 350);
     return () => {
       cancelled = true;
       window.clearInterval(id);

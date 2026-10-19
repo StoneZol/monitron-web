@@ -1,8 +1,10 @@
 /** Cross-tab sync for saver controls (same origin + pathname). */
 
 import { saveScreenPrefs } from "@/lib/screenPrefs";
+import type { SessionMediaSyncItem } from "@/lib/userMedia";
+import { replaceSessionMediaFromSync } from "@/lib/userMedia";
 
-export const TAB_SYNC_VERSION = 4 as const;
+export const TAB_SYNC_VERSION = 5 as const;
 
 /** How far ahead of "now" all tabs aim to hot-apply together. */
 export const TAB_SYNC_LEAD_MS = 1000;
@@ -22,6 +24,8 @@ export type TabSyncMessage = {
   prefs: Record<string, unknown>;
   /** Absolute Date.now() deadline — all tabs hot-apply at/after this. */
   applyAt: number;
+  /** Session-only local images (Blobs) — RAM on each tab after Sync. */
+  sessionMedia: SessionMediaSyncItem[];
 };
 
 let tabSenderId: string | null = null;
@@ -76,12 +80,14 @@ export function subscribeTabSyncApply(
 }
 
 /**
- * Push full prefs + shared apply deadline. Does not touch HUD visibility.
+ * Push full prefs + session media + shared apply deadline.
+ * Does not touch HUD visibility.
  * Returns applyAt so the sender can hot-apply on the same tick.
  */
 export function broadcastTabSync(
   screenId: string,
   prefs: Record<string, unknown>,
+  sessionMedia: SessionMediaSyncItem[] = [],
 ): number {
   const applyAt = Date.now() + TAB_SYNC_LEAD_MS;
   if (typeof window === "undefined" || typeof BroadcastChannel === "undefined") {
@@ -95,6 +101,7 @@ export function broadcastTabSync(
     senderId: getTabSyncSenderId(),
     prefs: { ...prefs },
     applyAt,
+    sessionMedia,
   };
   const ch = new BroadcastChannel(tabSyncChannelName(path));
   ch.postMessage(msg);
@@ -127,15 +134,25 @@ export function subscribeTabSync(
 }
 
 /**
- * Persist prefs, then wait for shared applyAt.
+ * Import session media, persist prefs, then wait for shared applyAt
+ * (or now if import ran past the deadline).
  * Does not change this tab's HUD (open stays open, hidden stays hidden).
  */
 export function applyIncomingTabSync(
   screenId: string,
   msg: TabSyncMessage,
 ): void {
-  saveScreenPrefs(screenId, msg.prefs);
-  scheduleTabSyncApply(msg.applyAt, screenId);
+  void (async () => {
+    try {
+      await replaceSessionMediaFromSync(
+        Array.isArray(msg.sessionMedia) ? msg.sessionMedia : [],
+      );
+    } catch {
+      /* previews may fail; prefs still apply */
+    }
+    saveScreenPrefs(screenId, msg.prefs);
+    scheduleTabSyncApply(Math.max(msg.applyAt, Date.now()), screenId);
+  })();
 }
 
 // ── HUD hide: broadcast to all tabs; show stays local ───────────────

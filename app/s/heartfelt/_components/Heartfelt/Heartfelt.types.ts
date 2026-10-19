@@ -7,21 +7,18 @@ export type HeartfeltProps = {
   showOverlay?: boolean;
 };
 
-export type HeartfeltBgSource = "stock" | "user";
+export type HeartfeltBgSource = "stock" | "library" | "session";
 
 export type HeartfeltLive = {
-  /** Rain density 0…1 (Shadertoy rainAmount) */
   rainAmount: number;
-  /** Drop fall / time scale */
   dropSpeed: number;
-  /** Glass fog — 0 clear, 1 opaque foggy */
   glass: number;
-  /** Lightning flash mix 0…1 */
   lightning: number;
-  /** stock = bundled placeholder; user = single IndexedDB slot */
   bgSource: HeartfeltBgSource;
-  /** Remembered stock id (also used when clearing custom) */
   stockId: StockPlaceholderId;
+  libraryId: string | null;
+  /** Session file id — valid only until refresh */
+  sessionId: string | null;
 };
 
 export const HEARTFELT_DEFAULTS: HeartfeltLive = {
@@ -31,6 +28,8 @@ export const HEARTFELT_DEFAULTS: HeartfeltLive = {
   lightning: 0.35,
   bgSource: "stock",
   stockId: DEFAULT_STOCK_ID,
+  libraryId: null,
+  sessionId: null,
 };
 
 export const HEARTFELT_RANGES = {

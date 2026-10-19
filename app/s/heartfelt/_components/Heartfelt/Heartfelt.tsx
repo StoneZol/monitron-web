@@ -20,7 +20,7 @@ const INFO = {
   glass: "Glass fog — 0 = clear, 1 = opaque frosted blur.",
   lightning: "Occasional lightning flash intensity.",
   background:
-    "Pick a stock still (saved as id only) or one custom upload/URL (single IndexedDB slot — not a library).",
+    "Stock stills, shared URL library (max 20, tiny 67×37 previews), or local files (session only, multi-select up to 20 — cleared on refresh).",
 } as const;
 
 const Heartfelt = ({ showOverlay = true }: HeartfeltProps) => {

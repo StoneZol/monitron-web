@@ -11,7 +11,8 @@ import {
   type StockPlaceholderId,
 } from "@/lib/stockPlaceholders";
 import {
-  hasUserBackground,
+  getMediaLibraryEntry,
+  getSessionMediaEntry,
   invalidateUserMediaCache,
   subscribeUserMedia,
 } from "@/lib/userMedia";
@@ -37,25 +38,40 @@ function asStockId(v: unknown): StockPlaceholderId {
   return isStockPlaceholderId(v) ? v : DEFAULT_STOCK_ID;
 }
 
-function asBgSource(v: unknown, stockId: StockPlaceholderId): HeartfeltBgSource {
-  if (v === "user") return hasUserBackground() ? "user" : "stock";
-  if (v === "stock") return "stock";
-  // Legacy backgroundId migration
-  if (typeof v === "string" && v.length > 0) {
-    return hasUserBackground() ? "user" : "stock";
-  }
-  if (v === null) return "stock";
-  void stockId;
-  return "stock";
-}
-
 function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
   const stockId = asStockId(raw.stockId ?? DEFAULT_STOCK_ID);
-  // Explicit bgSource wins; never auto-force "last user" over a stock pick
-  const bgSource = asBgSource(
-    raw.bgSource !== undefined ? raw.bgSource : raw.backgroundId,
-    stockId,
-  );
+  let libraryId =
+    typeof raw.libraryId === "string" && raw.libraryId
+      ? raw.libraryId
+      : null;
+
+  const rawSource = String(raw.bgSource ?? "");
+
+  // Legacy "user" single-slot → stock
+  if (rawSource === "user") {
+    libraryId = null;
+  }
+
+  const sessionId =
+    typeof raw.sessionId === "string" && raw.sessionId
+      ? raw.sessionId
+      : null;
+
+  // Session files are RAM-only — restore only if still in this tab (or after Sync)
+  let bgSource: HeartfeltBgSource = "stock";
+  if (
+    rawSource === "session" &&
+    sessionId &&
+    getSessionMediaEntry(sessionId)
+  ) {
+    bgSource = "session";
+  } else if (
+    rawSource === "library" &&
+    libraryId &&
+    getMediaLibraryEntry(libraryId)
+  ) {
+    bgSource = "library";
+  }
 
   return {
     rainAmount: clamp(
@@ -79,6 +95,8 @@ function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
     ),
     bgSource,
     stockId,
+    libraryId,
+    sessionId: bgSource === "session" ? sessionId : null,
   };
 }
 
@@ -107,6 +125,7 @@ function readPrefs(): Stored {
 }
 
 function writePrefs(next: Stored) {
+  // Persist sessionId so Sync can push selection; migrate drops it if files gone
   cached = next;
   liveRef.current = cached;
   saveScreenPrefs(SCREEN_ID, cached);
@@ -129,13 +148,29 @@ export default function useHeartfeltHook() {
 
   useEffect(() => onTabSyncApply(SCREEN_ID, rehydrateFromStorage), []);
 
-  // If custom slot wiped elsewhere, fall back to stock (don't invent a new pick)
   useEffect(
     () =>
       subscribeUserMedia(() => {
         const cur = readPrefs();
-        if (cur.bgSource === "user" && !hasUserBackground()) {
-          writePrefs({ ...cur, bgSource: "stock" });
+        if (
+          cur.bgSource === "library" &&
+          (!cur.libraryId || !getMediaLibraryEntry(cur.libraryId))
+        ) {
+          writePrefs({
+            ...cur,
+            bgSource: "stock",
+            libraryId: null,
+            sessionId: null,
+          });
+        } else if (
+          cur.bgSource === "session" &&
+          (!cur.sessionId || !getSessionMediaEntry(cur.sessionId))
+        ) {
+          writePrefs({
+            ...cur,
+            bgSource: "stock",
+            sessionId: null,
+          });
         } else {
           emit();
         }
@@ -148,9 +183,11 @@ export default function useHeartfeltHook() {
   };
 
   const mediaValue: MediaSelection =
-    live.bgSource === "user"
-      ? { kind: "user" }
-      : { kind: "stock", id: live.stockId };
+    live.bgSource === "library" && live.libraryId
+      ? { kind: "library", id: live.libraryId }
+      : live.bgSource === "session" && live.sessionId
+        ? { kind: "session", id: live.sessionId }
+        : { kind: "stock", id: live.stockId };
 
   return {
     liveRef,
@@ -169,14 +206,27 @@ export default function useHeartfeltHook() {
           commit({
             bgSource: "stock",
             stockId: asStockId(sel.id),
+            sessionId: null,
           });
           return;
         }
-        if (!hasUserBackground()) {
-          commit({ bgSource: "stock" });
+        if (sel.kind === "session") {
+          if (!getSessionMediaEntry(sel.id)) {
+            commit({ bgSource: "stock", sessionId: null });
+            return;
+          }
+          commit({ bgSource: "session", sessionId: sel.id });
           return;
         }
-        commit({ bgSource: "user" });
+        if (!getMediaLibraryEntry(sel.id)) {
+          commit({ bgSource: "stock", sessionId: null });
+          return;
+        }
+        commit({
+          bgSource: "library",
+          libraryId: sel.id,
+          sessionId: null,
+        });
       },
       fullscreen: () => void toggleFullscreen(),
       reset: () => {

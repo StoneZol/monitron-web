@@ -1,36 +1,61 @@
 /**
- * Single-slot user background — one blob in IndexedDB, tiny meta in localStorage.
- * Does not grow a library (prefs stay lean). File paths cannot be restored;
- * stock ids (/placeholders) are the durable restore button.
+ * Shared image library for all screens.
+ * - Up to MEDIA_LIBRARY_MAX http(s) URLs (full image loaded live from URL).
+ * - IndexedDB keeps only tiny preview blobs (PREVIEW_W×PREVIEW_H) for URL thumbs.
+ * - Local file picks are SESSION-ONLY (memory) — gone after refresh / new tab.
  */
 
-export type UserMediaSource = "file" | "url";
+export const MEDIA_LIBRARY_MAX = 20;
+export const SESSION_MEDIA_MAX = 20;
+export const PREVIEW_W = 67;
+export const PREVIEW_H = 37;
 
-export type UserBackgroundMeta = {
+export type MediaLibraryEntry = {
+  id: string;
+  url: string;
   name: string;
-  mime: string;
-  size: number;
-  updatedAt: number;
-  source: UserMediaSource;
-  /** Original remote URL when source === "url" (re-fetchable hint only). */
-  url?: string;
+  createdAt: number;
 };
 
-/** Fixed IndexedDB key — always at most one custom image. */
-export const USER_BG_SLOT = "custom";
+/** In-tab only — not written to disk (unless pushed via Sync). */
+export type SessionMediaEntry = {
+  id: string;
+  name: string;
+  createdAt: number;
+  /** Original bytes — kept for cross-tab Sync */
+  blob: Blob;
+  /** Full image object URL for shaders */
+  objectUrl: string;
+  /** Tiny thumb object URL for the picker */
+  previewUrl: string;
+};
 
-const DB_NAME = "monitron-user-media";
+/** Structured-clone payload for BroadcastChannel Sync. */
+export type SessionMediaSyncItem = {
+  id: string;
+  name: string;
+  createdAt: number;
+  blob: Blob;
+};
+
+const DB_NAME = "monitron-media-library";
 const DB_VERSION = 1;
-const STORE = "blobs";
-const META_KEY = "monitron:user-bg:meta:v1";
-/** Legacy multi-library keys — wiped on first touch. */
-const LEGACY_META_KEY = "monitron:user-media:meta:v1";
-const LEGACY_LAST_KEY = "monitron:user-media:last:v1";
+const STORE = "previews";
+const META_KEY = "monitron:media-library:v1";
 const CHANGE_EVENT = "monitron:user-media";
 
+/** Legacy keys from earlier single-slot / multi-blob experiments */
+const LEGACY_KEYS = [
+  "monitron:user-bg:meta:v1",
+  "monitron:user-media:meta:v1",
+  "monitron:user-media:last:v1",
+] as const;
+
 const listeners = new Set<() => void>();
-let objectUrl: string | null = null;
-let metaCache: UserBackgroundMeta | null | undefined;
+const previewObjectUrls = new Map<string, string>();
+
+let listCache: MediaLibraryEntry[] | null = null;
+const EMPTY_LIST: MediaLibraryEntry[] = [];
 let storageHooked = false;
 
 function emit() {
@@ -41,19 +66,26 @@ function emit() {
 }
 
 export function invalidateUserMediaCache(): void {
-  metaCache = undefined;
+  listCache = null;
+}
+
+function wipeLegacy() {
+  try {
+    for (const k of LEGACY_KEYS) window.localStorage.removeItem(k);
+  } catch {
+    /* */
+  }
 }
 
 function ensureStorageHook() {
   if (storageHooked || typeof window === "undefined") return;
   storageHooked = true;
+  wipeLegacy();
   window.addEventListener("storage", (e) => {
     if (e.key !== META_KEY) return;
-    metaCache = undefined;
-    if (objectUrl) {
-      URL.revokeObjectURL(objectUrl);
-      objectUrl = null;
-    }
+    listCache = null;
+    for (const url of previewObjectUrls.values()) URL.revokeObjectURL(url);
+    previewObjectUrls.clear();
     emit();
   });
 }
@@ -66,56 +98,62 @@ export function subscribeUserMedia(listener: () => void): () => void {
   };
 }
 
-function wipeLegacyLibraryKeys() {
-  try {
-    window.localStorage.removeItem(LEGACY_META_KEY);
-    window.localStorage.removeItem(LEGACY_LAST_KEY);
-  } catch {
-    /* */
+function newId(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
   }
+  return `m_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 9)}`;
 }
 
-function readMeta(): UserBackgroundMeta | null {
-  if (typeof window === "undefined") return null;
+function readList(): MediaLibraryEntry[] {
+  if (typeof window === "undefined") return EMPTY_LIST;
   ensureStorageHook();
-  wipeLegacyLibraryKeys();
-  if (metaCache !== undefined) return metaCache;
+  if (listCache) return listCache;
   try {
     const raw = window.localStorage.getItem(META_KEY);
     if (!raw) {
-      metaCache = null;
-      return null;
+      listCache = EMPTY_LIST;
+      return listCache;
     }
-    const parsed = JSON.parse(raw) as UserBackgroundMeta;
-    if (!parsed || typeof parsed.name !== "string") {
-      metaCache = null;
-      return null;
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) {
+      listCache = EMPTY_LIST;
+      return listCache;
     }
-    metaCache = parsed;
-    return metaCache;
+    listCache = parsed.filter(
+      (e): e is MediaLibraryEntry =>
+        Boolean(e) &&
+        typeof e === "object" &&
+        typeof (e as MediaLibraryEntry).id === "string" &&
+        typeof (e as MediaLibraryEntry).url === "string",
+    );
+    return listCache;
   } catch {
-    metaCache = null;
-    return null;
+    listCache = EMPTY_LIST;
+    return listCache;
   }
 }
 
-function writeMeta(meta: UserBackgroundMeta | null) {
-  metaCache = meta;
+function writeList(list: MediaLibraryEntry[]) {
+  listCache = list;
   try {
-    if (meta) window.localStorage.setItem(META_KEY, JSON.stringify(meta));
-    else window.localStorage.removeItem(META_KEY);
+    window.localStorage.setItem(META_KEY, JSON.stringify(list));
   } catch {
     /* quota */
   }
   emit();
 }
 
-export function getUserBackgroundMeta(): UserBackgroundMeta | null {
-  return readMeta();
+export function listMediaLibrary(): MediaLibraryEntry[] {
+  return readList();
 }
 
-export function hasUserBackground(): boolean {
-  return readMeta() != null;
+export function getMediaLibraryEntry(id: string): MediaLibraryEntry | null {
+  return readList().find((e) => e.id === id) ?? null;
+}
+
+export function mediaLibraryCount(): number {
+  return readList().length;
 }
 
 function openDb(): Promise<IDBDatabase> {
@@ -132,14 +170,12 @@ function openDb(): Promise<IDBDatabase> {
   });
 }
 
-async function idbPut(blob: Blob): Promise<void> {
+async function idbPutPreview(id: string, blob: Blob): Promise<void> {
   const db = await openDb();
   try {
     await new Promise<void>((resolve, reject) => {
       const tx = db.transaction(STORE, "readwrite");
-      // Replace single slot; clear any leftover legacy ids
-      tx.objectStore(STORE).clear();
-      tx.objectStore(STORE).put(blob, USER_BG_SLOT);
+      tx.objectStore(STORE).put(blob, id);
       tx.oncomplete = () => resolve();
       tx.onerror = () => reject(tx.error ?? new Error("idb put failed"));
     });
@@ -148,12 +184,12 @@ async function idbPut(blob: Blob): Promise<void> {
   }
 }
 
-async function idbGet(): Promise<Blob | null> {
+async function idbGetPreview(id: string): Promise<Blob | null> {
   const db = await openDb();
   try {
     return await new Promise<Blob | null>((resolve, reject) => {
       const tx = db.transaction(STORE, "readonly");
-      const req = tx.objectStore(STORE).get(USER_BG_SLOT);
+      const req = tx.objectStore(STORE).get(id);
       req.onsuccess = () => resolve((req.result as Blob | undefined) ?? null);
       req.onerror = () => reject(req.error ?? new Error("idb get failed"));
     });
@@ -162,114 +198,303 @@ async function idbGet(): Promise<Blob | null> {
   }
 }
 
-async function idbClear(): Promise<void> {
+async function idbDeletePreview(id: string): Promise<void> {
   const db = await openDb();
   try {
     await new Promise<void>((resolve, reject) => {
       const tx = db.transaction(STORE, "readwrite");
-      tx.objectStore(STORE).clear();
+      tx.objectStore(STORE).delete(id);
       tx.oncomplete = () => resolve();
-      tx.onerror = () => reject(tx.error ?? new Error("idb clear failed"));
+      tx.onerror = () => reject(tx.error ?? new Error("idb delete failed"));
     });
   } finally {
     db.close();
   }
 }
 
-function revokeObjectUrl() {
-  if (objectUrl) {
-    URL.revokeObjectURL(objectUrl);
-    objectUrl = null;
+function revokePreviewUrl(id: string) {
+  const u = previewObjectUrls.get(id);
+  if (u) {
+    URL.revokeObjectURL(u);
+    previewObjectUrls.delete(id);
   }
 }
 
-export async function getUserBackgroundObjectUrl(): Promise<string | null> {
-  if (!readMeta()) return null;
-  if (objectUrl) return objectUrl;
+/** Tiny object URL for picker thumbs (not the full image). */
+export async function getMediaPreviewObjectUrl(
+  id: string,
+): Promise<string | null> {
+  const cached = previewObjectUrls.get(id);
+  if (cached) return cached;
   try {
-    const blob = await idbGet();
+    const blob = await idbGetPreview(id);
     if (!blob) return null;
-    objectUrl = URL.createObjectURL(blob);
-    return objectUrl;
+    const url = URL.createObjectURL(blob);
+    previewObjectUrls.set(id, url);
+    return url;
   } catch {
     return null;
   }
 }
 
-const IMAGE_MIME = /^image\//i;
-
-async function commitUserBackground(
-  blob: Blob,
-  meta: Omit<UserBackgroundMeta, "updatedAt" | "size" | "mime"> & {
-    mime?: string;
-  },
-): Promise<UserBackgroundMeta> {
-  revokeObjectUrl();
-  await idbPut(blob);
-  const entry: UserBackgroundMeta = {
-    name: meta.name,
-    mime: meta.mime || blob.type || "application/octet-stream",
-    size: blob.size,
-    updatedAt: Date.now(),
-    source: meta.source,
-    url: meta.url,
-  };
-  writeMeta(entry);
-  return entry;
-}
-
-export async function setUserBackgroundFromFile(
-  file: File,
-): Promise<UserBackgroundMeta> {
-  if (
-    !IMAGE_MIME.test(file.type) &&
-    !/\.(png|jpe?g|webp|gif|bmp|avif)$/i.test(file.name)
-  ) {
-    throw new Error("Expected an image file");
-  }
-  return commitUserBackground(file, {
-    name: file.name || "image",
-    mime: file.type,
-    source: "file",
+function loadImageFromBlob(blob: Blob): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve(img);
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Image decode failed"));
+    };
+    img.src = url;
   });
 }
 
-export async function setUserBackgroundFromUrl(
+/** Cover-fit into PREVIEW_W×PREVIEW_H webp/jpeg blob. */
+export async function makePreviewBlob(source: Blob): Promise<Blob> {
+  const img = await loadImageFromBlob(source);
+  const canvas = document.createElement("canvas");
+  canvas.width = PREVIEW_W;
+  canvas.height = PREVIEW_H;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("No 2d context");
+
+  const sw = img.naturalWidth || img.width;
+  const sh = img.naturalHeight || img.height;
+  const scale = Math.max(PREVIEW_W / sw, PREVIEW_H / sh);
+  const dw = sw * scale;
+  const dh = sh * scale;
+  const dx = (PREVIEW_W - dw) / 2;
+  const dy = (PREVIEW_H - dh) / 2;
+  ctx.drawImage(img, dx, dy, dw, dh);
+
+  const blob = await new Promise<Blob | null>((resolve) => {
+    canvas.toBlob(
+      (b) => resolve(b),
+      "image/webp",
+      0.72,
+    );
+  });
+  if (blob) return blob;
+
+  const jpeg = await new Promise<Blob | null>((resolve) => {
+    canvas.toBlob((b) => resolve(b), "image/jpeg", 0.72);
+  });
+  if (!jpeg) throw new Error("Preview encode failed");
+  return jpeg;
+}
+
+const IMAGE_MIME = /^image\//;
+
+/**
+ * Fetch URL → tiny preview in IDB + meta in localStorage.
+ * Full image is never stored; screens load from `url` at draw time.
+ */
+export async function addMediaFromUrl(
   rawUrl: string,
-): Promise<UserBackgroundMeta> {
+): Promise<MediaLibraryEntry> {
   const trimmed = rawUrl.trim();
   if (!trimmed) throw new Error("Empty URL");
-  let url: URL;
+  let parsed: URL;
   try {
-    url = new URL(trimmed);
+    parsed = new URL(trimmed);
   } catch {
     throw new Error("Invalid URL");
   }
-  if (url.protocol !== "http:" && url.protocol !== "https:") {
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
     throw new Error("Only http(s) URLs");
   }
-  const res = await fetch(url.toString(), { mode: "cors" });
+
+  const list = readList();
+  const existing = list.find((e) => e.url === parsed.toString());
+  if (existing) return existing;
+
+  if (list.length >= MEDIA_LIBRARY_MAX) {
+    throw new Error(`Library full (${MEDIA_LIBRARY_MAX} URLs max)`);
+  }
+
+  const res = await fetch(parsed.toString(), { mode: "cors" });
   if (!res.ok) throw new Error(`Fetch failed (${res.status})`);
-  const blob = await res.blob();
-  if (!IMAGE_MIME.test(blob.type) && blob.type !== "") {
+  const full = await res.blob();
+  if (full.type && !IMAGE_MIME.test(full.type)) {
     throw new Error("URL did not return an image");
   }
-  const name =
-    url.pathname.split("/").filter(Boolean).pop() || "remote-image";
-  return commitUserBackground(blob, {
-    name,
-    mime: blob.type || "image/jpeg",
-    source: "url",
-    url: url.toString(),
-  });
+
+  const preview = await makePreviewBlob(full);
+  const id = newId();
+  await idbPutPreview(id, preview);
+
+  const entry: MediaLibraryEntry = {
+    id,
+    url: parsed.toString(),
+    name: parsed.pathname.split("/").filter(Boolean).pop() || "image",
+    createdAt: Date.now(),
+  };
+  writeList([entry, ...list]);
+  return entry;
 }
 
-export async function clearUserBackground(): Promise<void> {
-  revokeObjectUrl();
+export async function removeMediaLibraryEntry(id: string): Promise<void> {
+  revokePreviewUrl(id);
   try {
-    await idbClear();
+    await idbDeletePreview(id);
   } catch {
     /* */
   }
-  writeMeta(null);
+  writeList(readList().filter((e) => e.id !== id));
+}
+
+export async function clearMediaLibrary(): Promise<void> {
+  const list = readList();
+  for (const e of list) revokePreviewUrl(e.id);
+  try {
+    const db = await openDb();
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const tx = db.transaction(STORE, "readwrite");
+        tx.objectStore(STORE).clear();
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error ?? new Error("idb clear failed"));
+      });
+    } finally {
+      db.close();
+    }
+  } catch {
+    /* */
+  }
+  writeList([]);
+}
+
+// ── Session-only local files (RAM, shared across screens in this tab) ─
+
+let sessionSnap: SessionMediaEntry[] = [];
+const sessionById = new Map<string, SessionMediaEntry>();
+
+function publishSession() {
+  sessionSnap = [...sessionById.values()].sort(
+    (a, b) => b.createdAt - a.createdAt,
+  );
+  emit();
+}
+
+export function listSessionMedia(): SessionMediaEntry[] {
+  return sessionSnap;
+}
+
+export function getSessionMediaEntry(id: string): SessionMediaEntry | null {
+  return sessionById.get(id) ?? null;
+}
+
+export function sessionMediaCount(): number {
+  return sessionById.size;
+}
+
+function isImageFile(file: File): boolean {
+  return (
+    IMAGE_MIME.test(file.type) ||
+    /\.(png|jpe?g|webp|gif|bmp|avif)$/i.test(file.name)
+  );
+}
+
+export async function addSessionMediaFromFile(
+  file: File,
+): Promise<SessionMediaEntry> {
+  const [entry] = await addSessionMediaFromFiles([file]);
+  if (!entry) throw new Error("Expected an image file");
+  return entry;
+}
+
+/** Add up to remaining session slots. Non-images skipped. Throws if nothing added. */
+export async function addSessionMediaFromFiles(
+  files: Iterable<File>,
+): Promise<SessionMediaEntry[]> {
+  const room = SESSION_MEDIA_MAX - sessionById.size;
+  if (room <= 0) {
+    throw new Error(`Session full (${SESSION_MEDIA_MAX} files max)`);
+  }
+
+  const candidates: File[] = [];
+  for (const file of files) {
+    if (!isImageFile(file)) continue;
+    candidates.push(file);
+    if (candidates.length >= room) break;
+  }
+  if (candidates.length === 0) {
+    throw new Error("Expected image file(s)");
+  }
+
+  const added: SessionMediaEntry[] = [];
+  const base = Date.now();
+  for (let i = 0; i < candidates.length; i++) {
+    const file = candidates[i]!;
+    const preview = await makePreviewBlob(file);
+    const entry: SessionMediaEntry = {
+      id: newId(),
+      name: file.name || "image",
+      createdAt: base + i,
+      blob: file,
+      objectUrl: URL.createObjectURL(file),
+      previewUrl: URL.createObjectURL(preview),
+    };
+    sessionById.set(entry.id, entry);
+    added.push(entry);
+  }
+  publishSession();
+  return added;
+}
+
+export function removeSessionMedia(id: string): void {
+  const e = sessionById.get(id);
+  if (!e) return;
+  URL.revokeObjectURL(e.objectUrl);
+  URL.revokeObjectURL(e.previewUrl);
+  sessionById.delete(id);
+  publishSession();
+}
+
+export function clearSessionMedia(): void {
+  for (const e of sessionById.values()) {
+    URL.revokeObjectURL(e.objectUrl);
+    URL.revokeObjectURL(e.previewUrl);
+  }
+  sessionById.clear();
+  publishSession();
+}
+
+/** Snapshot for Sync — preserves ids so peer prefs.sessionId still resolve. */
+export function exportSessionMediaForSync(): SessionMediaSyncItem[] {
+  return sessionSnap.map((e) => ({
+    id: e.id,
+    name: e.name,
+    createdAt: e.createdAt,
+    blob: e.blob,
+  }));
+}
+
+/**
+ * Replace this tab's session pool with a Sync payload (same ids).
+ * Call before applying prefs that reference sessionId.
+ */
+export async function replaceSessionMediaFromSync(
+  items: SessionMediaSyncItem[],
+): Promise<void> {
+  clearSessionMedia();
+  const capped = items.slice(0, SESSION_MEDIA_MAX);
+  for (const item of capped) {
+    if (!item?.blob || typeof item.id !== "string") continue;
+    const preview = await makePreviewBlob(item.blob);
+    const entry: SessionMediaEntry = {
+      id: item.id,
+      name: item.name || "image",
+      createdAt: Number(item.createdAt) || Date.now(),
+      blob: item.blob,
+      objectUrl: URL.createObjectURL(item.blob),
+      previewUrl: URL.createObjectURL(preview),
+    };
+    sessionById.set(entry.id, entry);
+  }
+  publishSession();
 }

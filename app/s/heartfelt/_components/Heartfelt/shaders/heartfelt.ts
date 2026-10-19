@@ -24,6 +24,8 @@ out vec4 fragColor;
 uniform vec3 iResolution;
 uniform float iTime;
 uniform sampler2D iChannel0;
+/** Background texture size (px) — for object-fit: cover */
+uniform vec2 iChannelResolution;
 uniform float uRainAmount;
 uniform float uDropSpeed;
 /** 0 = clear glass, 1 = foggy / heavy blur */
@@ -32,6 +34,18 @@ uniform float uGlass;
 uniform float uLightning;
 
 #define S(a, b, t) smoothstep(a, b, t)
+
+/** Map screen UV (0…1) → texture UV like CSS object-fit: cover */
+vec2 coverUV(vec2 uv) {
+  float sA = iResolution.x / max(iResolution.y, 1.0);
+  float tA = iChannelResolution.x / max(iChannelResolution.y, 1.0);
+  if (sA > tA) {
+    uv.y = (uv.y - 0.5) * (tA / sA) + 0.5;
+  } else {
+    uv.x = (uv.x - 0.5) * (sA / tA) + 0.5;
+  }
+  return uv;
+}
 
 vec3 N13(float p) {
   vec3 p3 = fract(vec3(p) * vec3(0.1031, 0.11369, 0.13787));
@@ -141,6 +155,8 @@ void main() {
   float zoom = 1.0;
   uv *= 0.7;
   UV = (UV - 0.5) * (0.9 + zoom * 0.1) + 0.5;
+  // Cover after zoom so the still keeps aspect; drops stay screen-aspect
+  UV = coverUV(UV);
 
   float staticDrops = S(-0.5, 1.0, rainAmount) * 2.0;
   float layer1 = S(0.25, 0.75, rainAmount);

@@ -169,7 +169,7 @@ if (viz.enabled) {
 | [`lib/visualAudio.ts`](lib/visualAudio.ts)                 | Default reactive channel + tint helpers (use these)   |
 | [`lib/renderScale.ts`](lib/renderScale.ts)                 | Per-screen GPU buffer scale (R3F `dpr` / 2D canvas)   |
 | [`lib/twinkleHsl.ts`](lib/twinkleHsl.ts)                   | Shared HSL twinkle: hue advance, resolve, audio pulse |
-| [`lib/userMedia.ts`](lib/userMedia.ts)                     | Single custom background slot (IndexedDB)             |
+| [`lib/userMedia.ts`](lib/userMedia.ts)                     | URL library (≤20) + session local files (RAM, ≤20)    |
 | [`lib/stockPlaceholders.ts`](lib/stockPlaceholders.ts)     | Bundled `/placeholders/*.webp` ids for durable restore |
 | [`lib/fullscreen.ts`](lib/fullscreen.ts)                   | `toggleFullscreen()`                                  |
 | [`lib/visualPip.ts`](lib/visualPip.ts)                     | Document PiP (+ video fallback) for the live canvas   |
@@ -377,7 +377,7 @@ type VizBands = {
 - Idle ~6s without mouse → HUD fades (`ScreensOverlay`); move mouse to bring it back.
 - System cursor is left alone (browser won’t redraw `cursor: none` without movement).
 - Fullscreen = ControlPanel **fullscreen** button (`Fullscreen` API), not OS F11 injection.
-- **Sync** (when another tab of the same screen is open) pushes prefs (incl. `audioSource`) over `BroadcastChannel` and hot-applies at a shared deadline — no `location.reload`, so Page Fullscreen survives. Share **paste** still reloads. Details: [`docs/plan-hot-tab-sync.md`](docs/plan-hot-tab-sync.md).
+- **Sync** (when another tab of the same screen is open) pushes prefs (incl. `audioSource`) and session-only local media Blobs over `BroadcastChannel`, then hot-applies at a shared deadline — no `location.reload`, so Page Fullscreen survives. Share **paste** still reloads. Details: [`docs/plan-hot-tab-sync.md`](docs/plan-hot-tab-sync.md).
 - **PiP** = ControlPanel **pip** button ([`lib/visualPip.ts`](lib/visualPip.ts)). Prefers **Document Picture-in-Picture** (moves the live R3F / canvas shell into a floating window and keeps sizing via `_roots.setSize`). Falls back to classic video PiP via `captureStream` when Document PiP isn’t available. Unsupported browsers hide / no-op the control.
 
 ---
