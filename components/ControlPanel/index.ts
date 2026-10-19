@@ -15,5 +15,7 @@ export type { ColorInputProps } from "./ColorInput";
 export { ColorField } from "./ColorField";
 export { ColorTable } from "./ColorTable";
 export type { ColorTableCell, ColorTableRow } from "./ColorTable";
+export { MediaField } from "./MediaField";
+export type { MediaFieldProps, MediaSelection } from "./MediaField";
 export { Meter } from "./Meter";
 export { FieldInfo, FieldLabel } from "./FieldInfo";

@@ -40,6 +40,8 @@ const SCREEN_BLURBS: Record<string, string> = {
     "Plain audio-bus spectrum bars for idle monitors — 32 bands, peak caps, mirror.",
   protean:
     "Protean clouds volume flight for idle monitors — reactive tint and speed.",
+  heartfelt:
+    "Rain on glass for idle monitors — drops, fog, and your own background photo.",
 };
 
 function absoluteOg(path: string): string {

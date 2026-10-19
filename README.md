@@ -169,6 +169,8 @@ if (viz.enabled) {
 | [`lib/visualAudio.ts`](lib/visualAudio.ts)                 | Default reactive channel + tint helpers (use these)   |
 | [`lib/renderScale.ts`](lib/renderScale.ts)                 | Per-screen GPU buffer scale (R3F `dpr` / 2D canvas)   |
 | [`lib/twinkleHsl.ts`](lib/twinkleHsl.ts)                   | Shared HSL twinkle: hue advance, resolve, audio pulse |
+| [`lib/userMedia.ts`](lib/userMedia.ts)                     | Single custom background slot (IndexedDB)             |
+| [`lib/stockPlaceholders.ts`](lib/stockPlaceholders.ts)     | Bundled `/placeholders/*.webp` ids for durable restore |
 | [`lib/fullscreen.ts`](lib/fullscreen.ts)                   | `toggleFullscreen()`                                  |
 | [`lib/visualPip.ts`](lib/visualPip.ts)                     | Document PiP (+ video fallback) for the live canvas   |
 | [`components/ControlPanel`](components/ControlPanel)       | Bootleg AV knobs / meters / buttons                   |

@@ -16,6 +16,7 @@ import {
   ColorTable,
   Select,
   Meter,
+  MediaField,
   TwinkleControls,
 } from "@/components/ControlPanel";
 ```
@@ -428,6 +429,30 @@ type PlaceholderMeta = {
 {placeholders.map((p, i) => (
   <PlaceholderCard key={p.id} placeholder={p} index={i} />
 ))}
+```
+
+---
+
+## `MediaField`
+
+Background picker: **stock** thumbs (bundled `/placeholders`, prefs store only an id) + **one** custom upload/URL slot in IndexedDB ([`lib/userMedia.ts`](../lib/userMedia.ts)). No growing library — file paths cannot be restored in the browser.
+
+| Prop        | Type | Default | Notes |
+| ----------- | ---- | ------- | ----- |
+| `label`     | `string` | — | |
+| `value`     | `MediaSelection` | — | `{ kind: "stock", id }` \| `{ kind: "user" }` |
+| `onChange`  | `(next: MediaSelection) => void` | — | |
+| `stocks`    | `StockPlaceholder[]` | — | From [`lib/stockPlaceholders.ts`](../lib/stockPlaceholders.ts) |
+| `info`      | `string?` | — | |
+| `disabled`  | `boolean?` | `false` | |
+
+```tsx
+<MediaField
+  label="Background"
+  value={controls.mediaValue}
+  onChange={controls.setMedia}
+  stocks={STOCK_PLACEHOLDERS}
+/>
 ```
 
 ---

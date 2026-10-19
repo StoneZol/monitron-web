@@ -385,4 +385,19 @@ export const placeholders: PlaceholderMeta[] = [
             }),
         ],
     },
+    {
+        id: "heartfelt",
+        title: "Heartfelt",
+        href: "/s/heartfelt",
+        tags: [],
+        cost: "low",
+        ai: MONITRON_AI,
+        sources: [
+            withPorter({
+                author: "BigWings",
+                title: "Heartfelt",
+                href: "https://www.shadertoy.com/view/ltffzl",
+            }),
+        ],
+    },
 ];
