@@ -205,6 +205,16 @@ function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
       CORALREEF_DRIVE_MAX,
       STORED_DEFAULTS.accelDrive,
     ),
+    camAccelChannel: channel(
+      raw.camAccelChannel,
+      STORED_DEFAULTS.camAccelChannel,
+    ),
+    camAccelDrive: clamp(
+      Number(raw.camAccelDrive),
+      0,
+      CORALREEF_DRIVE_MAX,
+      STORED_DEFAULTS.camAccelDrive,
+    ),
   };
 }
 
@@ -302,9 +312,12 @@ export default function useCoralreefHook() {
       speedDrive: live.speedDrive,
       accelChannel: live.accelChannel,
       accelDrive: live.accelDrive,
+      camAccelChannel: live.camAccelChannel,
+      camAccelDrive: live.camAccelDrive,
       colorDriveMax: CORALREEF_COLOR_DRIVE_MAX,
       speedDriveMax: CORALREEF_DRIVE_MAX,
       accelDriveMax: CORALREEF_DRIVE_MAX,
+      camAccelDriveMax: CORALREEF_DRIVE_MAX,
       setFlightSpeed: (flightSpeed: number) => commit({ flightSpeed }),
       setCameraMode: (cameraMode: CoralreefCameraMode) =>
         commit({ cameraMode }),
@@ -337,6 +350,9 @@ export default function useCoralreefHook() {
       setAccelChannel: (accelChannel: ReactiveChannel) =>
         commit({ accelChannel }),
       setAccelDrive: (accelDrive: number) => commit({ accelDrive }),
+      setCamAccelChannel: (camAccelChannel: ReactiveChannel) =>
+        commit({ camAccelChannel }),
+      setCamAccelDrive: (camAccelDrive: number) => commit({ camAccelDrive }),
       fullscreen: () => void toggleFullscreen(),
       reset: () => {
         writePrefs({ ...STORED_DEFAULTS });

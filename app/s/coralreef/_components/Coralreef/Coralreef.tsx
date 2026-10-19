@@ -63,7 +63,7 @@ const INFO = {
   look: "Coral Reef volumetric tunnel (Yusef28) — five color modes + freelook.",
   flightSpeed: "Base tunnel clock (1 ≈ Shadertoy iTime).",
   cameraMode:
-    "manual = freelook X/Y (0/0 = down the tunnel). flex = center + bank wander. Flight stays on +Z.",
+    "manual = freelook X/Y (0/0 = down the tunnel). flex = center + bank wander (Cam accel scales look clock). Flight stays on +Z.",
   yaw: "Look X in degrees — 0 = along tunnel. Turns the view, not the path.",
   pitch: "Look Y in degrees — 0 = along tunnel. Turns the view, not the path.",
   cameraBank:
@@ -94,9 +94,12 @@ const INFO = {
   colorChannel: "Band that punches light / color.",
   speedChannel: "Band that lifts cruise flight speed (smooth).",
   accelChannel: "Band that kicks acceleration (rising-edge punches).",
+  camAccelChannel:
+    "Band that drives flex look rate — cruise lift + in-time kicks. Only in flex. Off = 1×.",
   colorDrive: "Color / twinkle pulse boost (0…2).",
   speedDrive: "Cruise lift strength (0…4).",
   accelDrive: "Kick / acceleration strength (0…4).",
+  camAccelDrive: "Flex look clock strength (0…4). Only in flex mode.",
   visualizer: {
     section: "Audio in → bus meters → peak gain for reactive screens.",
     source:
@@ -366,6 +369,15 @@ const Coralreef = ({ showOverlay = true }: CoralreefProps) => {
                       onChange={controls.setAccelChannel}
                       info={INFO.accelChannel}
                     />
+                    {flex ? (
+                      <Select
+                        label="Cam accel"
+                        value={controls.camAccelChannel}
+                        options={[...REACTIVE_CHANNEL_OPTIONS]}
+                        onChange={controls.setCamAccelChannel}
+                        info={INFO.camAccelChannel}
+                      />
+                    ) : null}
                   </ControlSubSection>
                   <ControlSubSection label="drive">
                     <Slider
@@ -398,6 +410,18 @@ const Coralreef = ({ showOverlay = true }: CoralreefProps) => {
                       format={(v) => `×${v.toFixed(1)}`}
                       info={INFO.accelDrive}
                     />
+                    {flex ? (
+                      <Slider
+                        label="Cam accel"
+                        value={controls.camAccelDrive}
+                        min={CORALREEF_RANGES.camAccelDrive.min}
+                        max={controls.camAccelDriveMax}
+                        step={CORALREEF_RANGES.camAccelDrive.step}
+                        onChange={controls.setCamAccelDrive}
+                        format={(v) => `×${v.toFixed(1)}`}
+                        info={INFO.camAccelDrive}
+                      />
+                    ) : null}
                   </ControlSubSection>
                 </>
               ) : null}

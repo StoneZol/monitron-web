@@ -84,11 +84,11 @@ const INFO = {
   speedChannel: "Band that sets continuous cruise flight (avg + hit sustain).",
   accelChannel: "Band that punches flight in time (kick / accel).",
   camAccelChannel:
-    "Band that scales flex look wander rate (cruise only). Only in flex mode. Off = 1×.",
+    "Band that drives flex look rate — cruise lift + in-time kicks. Only in flex. Off = 1×.",
   colorDrive: "Color / twinkle pulse boost (0…2).",
   speedDrive: "Cruise flight strength (0…4).",
   accelDrive: "Kick / accel punch strength (0…4).",
-  camAccelDrive: "Flex look clock rate strength (0…4). Only in flex mode.",
+  camAccelDrive: "Flex look clock strength (0…4). Only in flex mode.",
   visualizer: {
     section: "Audio in → bus meters → peak gain for reactive screens.",
     source:

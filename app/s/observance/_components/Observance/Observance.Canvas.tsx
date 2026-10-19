@@ -148,16 +148,19 @@ function ObservanceQuad({
     // Cross sway always ticks (amount is uCrossSway in the shader).
     swayT.current += dt;
 
-    // Flex look clock — cruise-only (no kick punches on look)
+    // Flex look clock — Cam accel cruise + kick (hotter weights so wander reads)
     const flex = live.cameraMode === "flex";
+    const camArmed = reactive && live.camAccelChannel !== "off";
     const { speedMul: lookMul } = flex
       ? motionSpeedMul({
           cruiseRaw: camAccelRaw,
           cruiseDrive: live.camAccelDrive,
-          cruiseArmed: reactive && live.camAccelChannel !== "off",
-          kickRaw: 0,
-          kickDrive: 0,
-          kickArmed: false,
+          cruiseArmed: camArmed,
+          cruiseWeight: 2.4,
+          kickRaw: camAccelRaw,
+          kickDrive: live.camAccelDrive,
+          kickArmed: camArmed,
+          kickWeight: 1.6,
           kick: lookCruise.current,
           dt,
         })

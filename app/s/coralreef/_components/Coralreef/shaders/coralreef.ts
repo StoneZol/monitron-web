@@ -36,6 +36,8 @@ varying vec2 vUv;
 uniform vec3 iResolution;
 uniform float iTime;
 uniform float uFlyT;
+/** Flex look clock — independent of flight (cam accel) */
+uniform float uLookT;
 uniform float uYaw;
 uniform float uPitch;
 uniform float uCamBank;
@@ -142,14 +144,14 @@ void main() {
   vec2 R = iResolution.xy;
   vec2 uv = (F - 0.5 * R) / R.y;
 
-  float t = uFlyT;
   float bank = clamp(uCamBank, 0.0, 2.0);
   float yaw = uYaw;
   float pitch = uPitch;
 
   if (uCamMode > 0.5) {
     // Flex look: isotropic wander inside a unit disk; bank scales the cone radius.
-    // (No cubic remap — that crushed bank < 1 and snapped hard on the +yaw side.)
+    // Clock is uLookT (cam accel), not flight — same split as Observance.
+    float t = uLookT;
     float ax =
       sin(t * 0.097) * 0.50 +
       sin(t * 0.173 + 2.15) * 0.32 +

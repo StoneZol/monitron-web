@@ -127,13 +127,16 @@ function DarkterrainQuad({
     camZ.current +=
       dt * 1.1 * Math.max(0.05, live.flightSpeed) * flightMul;
 
+    const camArmed = reactive && live.camAccelChannel !== "off";
     const { speedMul: lookMul } = motionSpeedMul({
       cruiseRaw: camAccelRaw,
       cruiseDrive: live.camAccelDrive,
-      cruiseArmed: reactive && live.camAccelChannel !== "off",
-      kickRaw: 0,
-      kickDrive: 0,
-      kickArmed: false,
+      cruiseArmed: camArmed,
+      cruiseWeight: 2.4,
+      kickRaw: camAccelRaw,
+      kickDrive: live.camAccelDrive,
+      kickArmed: camArmed,
+      kickWeight: 1.6,
       kick: lookCruise.current,
       dt,
     });

@@ -70,6 +70,9 @@ export type CoralreefLive = {
   /** Transient kick — rising-edge accel punches */
   accelChannel: ReactiveChannel;
   accelDrive: number;
+  /** Flex look clock — cruise-only (Observance-style) */
+  camAccelChannel: ReactiveChannel;
+  camAccelDrive: number;
 };
 
 export const CORALREEF_DRIVE_MAX = 4;
@@ -111,6 +114,8 @@ export const CORALREEF_DEFAULTS: CoralreefLive = {
   speedDrive: 1,
   accelChannel: "bass",
   accelDrive: 1,
+  camAccelChannel: "bass",
+  camAccelDrive: 1.6,
 };
 
 export const CORALREEF_RANGES = {
@@ -123,4 +128,5 @@ export const CORALREEF_RANGES = {
   colorDrive: { min: 0, max: CORALREEF_COLOR_DRIVE_MAX, step: 0.05 },
   speedDrive: { min: 0, max: CORALREEF_DRIVE_MAX, step: 0.1 },
   accelDrive: { min: 0, max: CORALREEF_DRIVE_MAX, step: 0.1 },
+  camAccelDrive: { min: 0, max: CORALREEF_DRIVE_MAX, step: 0.1 },
 } as const;

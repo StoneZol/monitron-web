@@ -63,12 +63,14 @@ function CoralreefQuad({
   const lightTint = useMemo(() => new THREE.Color("#fff0d6"), []);
   const lightHighlight = useMemo(() => new THREE.Color("#ffffff"), []);
   const flyT = useRef(0);
+  const lookT = useRef(0);
   const lastT = useRef(0);
   const colorEnv = useRef(0);
   const colorPrev = useRef(0);
   const flickerEnv = useRef(0);
   const flickerPrev = useRef(0);
   const motionKick = useRef(createMotionKickState());
+  const lookCruise = useRef(createMotionKickState());
   const twinkleHue = useRef(0);
   const lightTwinkleHue = useRef(0);
   const palettePhase = useRef(0);
@@ -86,6 +88,7 @@ function CoralreefQuad({
           iResolution: { value: new THREE.Vector3(1, 1, 1) },
           iTime: { value: 0 },
           uFlyT: { value: 0 },
+          uLookT: { value: 0 },
           uYaw: { value: 0 },
           uPitch: { value: 0 },
           uCamBank: { value: 0.5 },
@@ -117,7 +120,10 @@ function CoralreefQuad({
   useEffect(() => {
     return registerRuntimeReset("coralreef", () => {
       flyT.current = 0;
+      lookT.current = 0;
       lastT.current = 0;
+      motionKick.current = createMotionKickState();
+      lookCruise.current = createMotionKickState();
       palettePhase.current = 0;
       twinkleHue.current = 0;
       lightTwinkleHue.current = 0;
@@ -138,10 +144,14 @@ function CoralreefQuad({
     const colorRaw = reactive ? channelLevel(viz!, live.colorChannel) : 0;
     const speedRaw = reactive ? channelLevel(viz!, live.speedChannel) : 0;
     const accelRaw = reactive ? channelLevel(viz!, live.accelChannel) : 0;
+    const camAccelRaw = reactive
+      ? channelLevel(viz!, live.camAccelChannel)
+      : 0;
     const colorPunch = drivenLevel(colorRaw, live.colorDrive);
 
     const colorArmed = reactive && live.colorChannel !== "off";
     const mode = live.colorMode;
+    const flex = live.cameraMode === "flex";
 
     const { speedMul } = motionSpeedMul({
       cruiseRaw: speedRaw,
@@ -154,6 +164,25 @@ function CoralreefQuad({
       dt,
     });
     flyT.current += dt * Math.max(0.05, live.flightSpeed) * speedMul;
+
+    // Flex look clock — same band as Cam accel: cruise lift + kick punches
+    // (weights hotter than flight — slow sin wander needs more rate to read)
+    const camArmed = reactive && live.camAccelChannel !== "off";
+    const { speedMul: lookMul } = flex
+      ? motionSpeedMul({
+          cruiseRaw: camAccelRaw,
+          cruiseDrive: live.camAccelDrive,
+          cruiseArmed: camArmed,
+          cruiseWeight: 2.4,
+          kickRaw: camAccelRaw,
+          kickDrive: live.camAccelDrive,
+          kickArmed: camArmed,
+          kickWeight: 1.6,
+          kick: lookCruise.current,
+          dt,
+        })
+      : { speedMul: 1 };
+    if (flex) lookT.current += dt * lookMul;
 
     const colorHit = colorArmed ? Math.min(1, colorPunch) : 0;
     if (risingEdge(colorHit, colorPrev.current, COLOR_EDGE, COLOR_EDGE_MIN)) {
@@ -292,10 +321,11 @@ function CoralreefQuad({
 
     m.uniforms.iTime!.value = t;
     m.uniforms.uFlyT!.value = flyT.current;
+    m.uniforms.uLookT!.value = lookT.current;
     m.uniforms.uYaw!.value = live.yaw * DEG;
     m.uniforms.uPitch!.value = live.pitch * DEG;
     m.uniforms.uCamBank!.value = Math.max(0, live.cameraBank);
-    m.uniforms.uCamMode!.value = live.cameraMode === "flex" ? 1 : 0;
+    m.uniforms.uCamMode!.value = flex ? 1 : 0;
     m.uniforms.uSaturation!.value = Math.max(0, live.saturation);
     m.uniforms.uShadowSmooth!.value = Math.max(0, live.shadowSmooth);
     m.uniforms.uPeakFlicker!.value = peakFlicker;
