@@ -14,9 +14,11 @@ import {
 } from "@/lib/twinkleHsl";
 import {
   channelLevel,
+  createMotionKickState,
   drivenLevel,
   hexToVec3,
   lerpHex,
+  motionSpeedMul,
 } from "@/lib/visualAudio";
 import { useRenderDpr } from "@/lib/renderScale";
 import { registerRuntimeReset } from "@/lib/runtimeReset";
@@ -35,16 +37,6 @@ type ObservanceCanvasProps = {
   vizRef: RefObject<VizBands>;
 };
 
-/** Smooth rate mul only — no rising-edge kicks. */
-function smoothRateMul(
-  armed: boolean,
-  raw: number,
-  drive: number,
-): number {
-  // Weight > 1 so mid drive actually reads on look / flight.
-  return armed ? 1 + drivenLevel(raw, drive, 2) * 1.65 : 1;
-}
-
 function ObservanceQuad({
   liveRef,
   vizRef,
@@ -59,6 +51,8 @@ function ObservanceQuad({
   const lookT = useRef(0);
   const lastT = useRef(0);
   const DEG = Math.PI / 180;
+  const motionKick = useRef(createMotionKickState());
+  const lookCruise = useRef(createMotionKickState());
   const colorEnv = useRef(0);
   const colorPrev = useRef(0);
   const sunHue = useRef(0);
@@ -109,6 +103,8 @@ function ObservanceQuad({
       swayT.current = 0;
       lookT.current = 0;
       lastT.current = 0;
+      motionKick.current = createMotionKickState();
+      lookCruise.current = createMotionKickState();
       sunHue.current = 0;
       sunPulse.current = createTwinklePulseEnv();
       baseHue.current = 0;
@@ -135,33 +131,37 @@ function ObservanceQuad({
 
     const colorArmed = reactive && live.colorChannel !== "off";
 
-    // Flight: smooth rate only (Speed × Accel). No kick triggers.
-    const flightMul =
-      smoothRateMul(
-        reactive && live.speedChannel !== "off",
-        speedRaw,
-        live.speedDrive,
-      ) *
-      smoothRateMul(
-        reactive && live.accelChannel !== "off",
-        accelRaw,
-        live.accelDrive,
-      );
+    // Flight: cruise (Speed) × kick punches (Accel) — shared motionSpeedMul
+    const { speedMul: flightMul } = motionSpeedMul({
+      cruiseRaw: speedRaw,
+      cruiseDrive: live.speedDrive,
+      cruiseArmed: reactive && live.speedChannel !== "off",
+      kickRaw: accelRaw,
+      kickDrive: live.accelDrive,
+      kickArmed: reactive && live.accelChannel !== "off",
+      kick: motionKick.current,
+      dt,
+    });
     camZ.current +=
       dt * 1.1 * Math.max(0.05, live.flightSpeed) * flightMul;
 
     // Cross sway always ticks (amount is uCrossSway in the shader).
     swayT.current += dt;
 
-    // Flex look clock — Cam accel only matters off stock.
+    // Flex look clock — cruise-only (no kick punches on look)
     const flex = live.cameraMode === "flex";
-    const lookMul = flex
-      ? smoothRateMul(
-          reactive && live.camAccelChannel !== "off",
-          camAccelRaw,
-          live.camAccelDrive,
-        )
-      : 1;
+    const { speedMul: lookMul } = flex
+      ? motionSpeedMul({
+          cruiseRaw: camAccelRaw,
+          cruiseDrive: live.camAccelDrive,
+          cruiseArmed: reactive && live.camAccelChannel !== "off",
+          kickRaw: 0,
+          kickDrive: 0,
+          kickArmed: false,
+          kick: lookCruise.current,
+          dt,
+        })
+      : { speedMul: 1 };
     if (flex) lookT.current += dt * lookMul;
 
     const camMode =

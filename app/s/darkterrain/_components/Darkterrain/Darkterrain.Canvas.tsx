@@ -14,9 +14,11 @@ import {
 } from "@/lib/twinkleHsl";
 import {
   channelLevel,
+  createMotionKickState,
   drivenLevel,
   hexToVec3,
   lerpHex,
+  motionSpeedMul,
 } from "@/lib/visualAudio";
 import { useRenderDpr } from "@/lib/renderScale";
 import { registerRuntimeReset } from "@/lib/runtimeReset";
@@ -35,14 +37,6 @@ type DarkterrainCanvasProps = {
   vizRef: RefObject<VizBands>;
 };
 
-function smoothRateMul(
-  armed: boolean,
-  raw: number,
-  drive: number,
-): number {
-  return armed ? 1 + drivenLevel(raw, drive, 2) * 1.65 : 1;
-}
-
 function DarkterrainQuad({
   liveRef,
   vizRef,
@@ -54,6 +48,8 @@ function DarkterrainQuad({
   const camZ = useRef(0);
   const swayT = useRef(0);
   const lastT = useRef(0);
+  const motionKick = useRef(createMotionKickState());
+  const lookCruise = useRef(createMotionKickState());
   const colorEnv = useRef(0);
   const colorPrev = useRef(0);
   const sunHue = useRef(0);
@@ -92,6 +88,8 @@ function DarkterrainQuad({
       camZ.current = 0;
       swayT.current = 0;
       lastT.current = 0;
+      motionKick.current = createMotionKickState();
+      lookCruise.current = createMotionKickState();
       sunHue.current = 0;
       sunPulse.current = createTwinklePulseEnv();
     });
@@ -116,25 +114,29 @@ function DarkterrainQuad({
 
     const colorArmed = reactive && live.colorChannel !== "off";
 
-    const flightMul =
-      smoothRateMul(
-        reactive && live.speedChannel !== "off",
-        speedRaw,
-        live.speedDrive,
-      ) *
-      smoothRateMul(
-        reactive && live.accelChannel !== "off",
-        accelRaw,
-        live.accelDrive,
-      );
+    const { speedMul: flightMul } = motionSpeedMul({
+      cruiseRaw: speedRaw,
+      cruiseDrive: live.speedDrive,
+      cruiseArmed: reactive && live.speedChannel !== "off",
+      kickRaw: accelRaw,
+      kickDrive: live.accelDrive,
+      kickArmed: reactive && live.accelChannel !== "off",
+      kick: motionKick.current,
+      dt,
+    });
     camZ.current +=
       dt * 1.1 * Math.max(0.05, live.flightSpeed) * flightMul;
 
-    const lookMul = smoothRateMul(
-      reactive && live.camAccelChannel !== "off",
-      camAccelRaw,
-      live.camAccelDrive,
-    );
+    const { speedMul: lookMul } = motionSpeedMul({
+      cruiseRaw: camAccelRaw,
+      cruiseDrive: live.camAccelDrive,
+      cruiseArmed: reactive && live.camAccelChannel !== "off",
+      kickRaw: 0,
+      kickDrive: 0,
+      kickArmed: false,
+      kick: lookCruise.current,
+      dt,
+    });
     swayT.current += dt * lookMul;
 
     const colorHit = colorArmed ? Math.min(1, colorPunch) : 0;

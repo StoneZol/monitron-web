@@ -45,14 +45,13 @@ const INFO = {
     "Flash spawn rate (0 = off, 0.2 = default, 1 = stock cadence, 2 = 2×).",
   colorChannel:
     "Band that punches sun color (twinkle: light pulse; off: idle→peak).",
-  speedChannel: "Band that smoothly scales flight speed (no punches).",
-  accelChannel:
-    "Second band that smoothly scales flight speed (stacks with Speed; no punches).",
+  speedChannel: "Band that sets continuous cruise flight (avg + hit sustain).",
+  accelChannel: "Band that punches flight in time (kick / accel).",
   camAccelChannel:
-    "Band that smoothly scales how fast camera bank animates. Off = 1×. No punches.",
+    "Band that scales camera bank animation rate (cruise only). Off = 1×.",
   colorDrive: "Color / twinkle pulse boost (0…2).",
-  speedDrive: "Flight speed scale strength (0…4).",
-  accelDrive: "Extra flight speed scale strength (0…4).",
+  speedDrive: "Cruise flight strength (0…4).",
+  accelDrive: "Kick / accel punch strength (0…4).",
   camAccelDrive: "Camera bank animation rate strength (0…4).",
   visualizer: {
     section: "Audio in → bus meters → peak gain for reactive screens.",

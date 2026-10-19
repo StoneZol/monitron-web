@@ -56,18 +56,61 @@ export function drivenLevel(
   return Math.min(cap, Math.max(0, level) * d);
 }
 
-/** Kick envelope: rising-edge snap + exponential decay. */
-export const MOTION_KICK_DECAY = 13;
+/** Kick envelope: rising-edge snap + exponential decay (in-time punches). */
+export const MOTION_KICK_DECAY = 6.5;
 export const MOTION_KICK_EDGE = 0.08;
 export const MOTION_KICK_EDGE_MIN = 0.1;
 
+/**
+ * Cruise (base speed): average + hit-density sustain.
+ * Rise is quick (~150–200ms) but not a snap; fall ~1s.
+ */
+export const MOTION_CRUISE_AVG_ATTACK = 6.5;
+/** ~1s fall on the average floor (e^-2.3 ≈ 10% left at 1s). */
+export const MOTION_CRUISE_AVG_RELEASE = 2.3;
+/** Sustain mostly gone in ~1s so gaps at dense tempo still plateau. */
+export const MOTION_CRUISE_SUSTAIN_DECAY = 2.3;
+export const MOTION_CRUISE_INJECT = 0.14;
+export const MOTION_CRUISE_PEAK_FRAC = 0.28;
+export const MOTION_CRUISE_AVG_MIX = 0.55;
+export const MOTION_CRUISE_SUSTAIN_MIX = 0.7;
+/** Smooth climb when target rises — responsive, not jerky. */
+export const MOTION_CRUISE_ATTACK = 7;
+/** ~1s settle down (e^-2.3 ≈ 10% left at 1s). */
+export const MOTION_CRUISE_RELEASE = 2.3;
+export const MOTION_CRUISE_EDGE = 0.055;
+export const MOTION_CRUISE_EDGE_MIN = 0.07;
+
 export type MotionKickState = {
+  /** Kick transient envelope */
   env: number;
   prev: number;
+  /** Slow EMA of cruiseRaw */
+  cruiseAvg: number;
+  /** Hit-density energy (edge inject, slow decay) */
+  cruiseSustain: number;
+  /** Smoothed cruise level before drive (0…1) */
+  cruiseSmooth: number;
+  /** Previous cruiseRaw for rising-edge detect */
+  cruisePrev: number;
 };
 
 export function createMotionKickState(): MotionKickState {
-  return { env: 0, prev: 0 };
+  return {
+    env: 0,
+    prev: 0,
+    cruiseAvg: 0,
+    cruiseSustain: 0,
+    cruiseSmooth: 0,
+    cruisePrev: 0,
+  };
+}
+
+function ensureMotionCruiseFields(k: MotionKickState): void {
+  if (!Number.isFinite(k.cruiseAvg)) k.cruiseAvg = 0;
+  if (!Number.isFinite(k.cruiseSustain)) k.cruiseSustain = 0;
+  if (!Number.isFinite(k.cruiseSmooth)) k.cruiseSmooth = 0;
+  if (!Number.isFinite(k.cruisePrev)) k.cruisePrev = 0;
 }
 
 export type MotionSpeedMulInput = {
@@ -79,17 +122,22 @@ export type MotionSpeedMulInput = {
   kickArmed: boolean;
   kick: MotionKickState;
   dt: number;
-  /** Extra weight on cruise punch (default 1). */
+  /** Extra weight on cruise level (default 1). */
   cruiseWeight?: number;
   /** Extra weight on kick env × drive (default 1). */
   kickWeight?: number;
+  /** Kick envelope decay (default MOTION_KICK_DECAY). */
   decay?: number;
   edge?: number;
   edgeMin?: number;
+  /** Cruise sustain decay (default MOTION_CRUISE_SUSTAIN_DECAY). */
+  cruiseDecay?: number;
 };
 
 /**
- * Split motion: smooth cruise mul × transient kick boost.
+ * Split motion: continuous cruise × transient kick.
+ * - Cruise = slow band average + sharpness-weighted hit sustain (no peak chasing).
+ * - Kick = rising-edge punches for accel / in-time jerks.
  * `rate = baseSpeed * speedMul` with
  * `speedMul = cruiseMul * (1 + kickEnv * kickDrive * kickWeight)`.
  */
@@ -109,26 +157,82 @@ export function motionSpeedMul(input: MotionSpeedMulInput): {
   const decay = input.decay ?? MOTION_KICK_DECAY;
   const edge = input.edge ?? MOTION_KICK_EDGE;
   const edgeMin = input.edgeMin ?? MOTION_KICK_EDGE_MIN;
+  const cruiseDecay = input.cruiseDecay ?? MOTION_CRUISE_SUSTAIN_DECAY;
   const dt = Math.max(0, input.dt);
+  const k = input.kick;
+  ensureMotionCruiseFields(k);
 
-  const cruiseMul = input.cruiseArmed
-    ? 1 + drivenLevel(input.cruiseRaw, input.cruiseDrive) * cruiseWeight
-    : 1;
+  let cruiseMul = 1;
+  if (input.cruiseArmed) {
+    const x = Math.min(1, Math.max(0, input.cruiseRaw));
+
+    // Asym average: climb fast when energy jumps, fall ~1s
+    const avgFollow =
+      x > k.cruiseAvg
+        ? MOTION_CRUISE_AVG_ATTACK
+        : MOTION_CRUISE_AVG_RELEASE;
+    k.cruiseAvg += (x - k.cruiseAvg) * (1 - Math.exp(-avgFollow * dt));
+
+    // Rising edge → inject sustain from how sharp the hit is vs the average
+    if (risingEdge(x, k.cruisePrev, MOTION_CRUISE_EDGE, MOTION_CRUISE_EDGE_MIN)) {
+      const over = Math.max(0, x - k.cruiseAvg);
+      const sharpness = Math.min(
+        1,
+        over / Math.max(0.08, 1 - k.cruiseAvg * 0.85),
+      );
+      const hit = Math.min(1, Math.max(sharpness, x * 0.55));
+      k.cruiseSustain = Math.min(
+        1,
+        k.cruiseSustain + hit * MOTION_CRUISE_INJECT,
+      );
+      k.cruiseSustain = Math.max(
+        k.cruiseSustain,
+        hit * MOTION_CRUISE_PEAK_FRAC,
+      );
+    }
+    k.cruisePrev = x;
+
+    k.cruiseSustain *= Math.exp(-cruiseDecay * dt);
+    if (k.cruiseSustain < 0.004) k.cruiseSustain = 0;
+
+    // Dense hits (e.g. 5/s) keep sustain up; gaps don't dig holes in the base
+    const target = Math.min(
+      1,
+      k.cruiseAvg * MOTION_CRUISE_AVG_MIX +
+        k.cruiseSustain * MOTION_CRUISE_SUSTAIN_MIX,
+    );
+
+    const follow =
+      target > k.cruiseSmooth
+        ? MOTION_CRUISE_ATTACK
+        : MOTION_CRUISE_RELEASE;
+    k.cruiseSmooth +=
+      (target - k.cruiseSmooth) * (1 - Math.exp(-follow * dt));
+    if (k.cruiseSmooth < 0.002) k.cruiseSmooth = 0;
+
+    cruiseMul =
+      1 + drivenLevel(k.cruiseSmooth, input.cruiseDrive) * cruiseWeight;
+  } else {
+    k.cruiseAvg = 0;
+    k.cruiseSustain = 0;
+    k.cruiseSmooth = 0;
+    k.cruisePrev = 0;
+  }
 
   const kickSense = input.kickArmed
     ? Math.min(1, Math.max(0, input.kickRaw))
     : 0;
   if (
     input.kickArmed &&
-    risingEdge(kickSense, input.kick.prev, edge, edgeMin)
+    risingEdge(kickSense, k.prev, edge, edgeMin)
   ) {
-    input.kick.env = Math.max(input.kick.env, kickSense);
+    k.env = Math.max(k.env, kickSense);
   }
-  input.kick.env *= Math.exp(-decay * dt);
-  if (input.kick.env < 0.004) input.kick.env = 0;
-  input.kick.prev = kickSense;
+  k.env *= Math.exp(-decay * dt);
+  if (k.env < 0.004) k.env = 0;
+  k.prev = kickSense;
 
-  const kickEnv = input.kickArmed ? input.kick.env : 0;
+  const kickEnv = input.kickArmed ? k.env : 0;
   const kickDrive = Number.isFinite(input.kickDrive)
     ? Math.max(0, input.kickDrive)
     : 1;

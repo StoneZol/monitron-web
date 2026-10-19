@@ -197,7 +197,7 @@ const level = channelLevel(viz, live.colorChannel); // off | bass | mid | high |
 const punch = drivenLevel(level, live.colorDrive);  // optional 3rd arg = ceiling (default 1.5)
 lerpHex(live.color, live.colorPeak, punch, tint);
 
-// Flight / scroll: one shared cruise × kick mul (keep kick state across frames)
+// Flight / scroll: cruise = avg + hit-density sustain; kick = in-time punches
 const kick = createMotionKickState();
 const { speedMul } = motionSpeedMul({
   cruiseRaw: speedRaw,
@@ -212,6 +212,8 @@ const { speedMul } = motionSpeedMul({
 // rate = baseSpeed * speedMul
 ```
 
+Cruise does **not** chase peaks — slow band average + sharpness inject on rising edges, soft sustain so dense hits (e.g. 5/s) plateau instead of gap-jerking. Accel/kick owns the rhythmic punches.
+
 | Export            | Role |
 | ----------------- | ---- |
 | `ReactiveChannel` | `"off" \| "bass" \| "mid" \| "high" \| "beat"` |
@@ -219,7 +221,7 @@ const { speedMul } = motionSpeedMul({
 | `beatRaw`         | Unclipped crest-aware beat (onset detectors) |
 | `softPeak01`      | `tanh` soft-clip into ~0…1 |
 | `drivenLevel`     | `level × drive`, ceiling default `1.5` (pass `1` for strict lerps) |
-| `createMotionKickState` | Mutable kick envelope for `motionSpeedMul` |
+| `createMotionKickState` | Mutable cruise+kick state for `motionSpeedMul` |
 | `motionSpeedMul`  | Unified cruise × kick → `speedMul` (base × mul = motion rate) |
 | `hexToVec3`       | Hex → `THREE.Color` |
 | `lerpHex`         | Idle→peak color lerp |
