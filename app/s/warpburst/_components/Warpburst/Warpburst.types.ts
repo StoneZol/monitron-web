@@ -6,11 +6,19 @@ export type WarpburstProps = {
   showOverlay?: boolean;
 };
 
+/** flex = stock animated bank; manual = fixed look X/Y */
+export type WarpburstCameraMode = "flex" | "manual";
+
 export type WarpburstLive = {
   /** Tunnel flight (1 ≈ Shadertoy BASE_SPEED feel) */
   flightSpeed: number;
-  /** Camera roll/pitch/yaw/sway amount (0 = straight, 1 = default, 2 = 2×) */
+  cameraMode: WarpburstCameraMode;
+  /** Camera roll/pitch/yaw/sway amount — flex only (0 = straight, 1 = default, 2 = 2×) */
   cameraBank: number;
+  /** Fixed look X in degrees — manual */
+  yaw: number;
+  /** Fixed look Y in degrees — manual */
+  pitch: number;
   /** Base goo tint — idle */
   color: string;
   /** Neon highlight / peak tint */
@@ -44,7 +52,10 @@ export const WARPBURST_COLOR_DRIVE_MAX = 2;
 /** Defaults from sealed share preset. */
 export const WARPBURST_DEFAULTS: WarpburstLive = {
   flightSpeed: 1,
+  cameraMode: "flex",
   cameraBank: 0.5,
+  yaw: 0,
+  pitch: 0,
   color: "#c200ff",
   colorPeak: "#8200ff",
   twinkle: false,
@@ -64,6 +75,8 @@ export const WARPBURST_DEFAULTS: WarpburstLive = {
 export const WARPBURST_RANGES = {
   flightSpeed: { min: 0.1, max: 3, step: 0.05 },
   cameraBank: { min: 0, max: 2, step: 0.05 },
+  yaw: { min: -45, max: 45, step: 0.5 },
+  pitch: { min: -45, max: 45, step: 0.5 },
   saturation: { min: 0, max: 2, step: 0.05 },
   fogDetail: { min: 0, max: 4, step: 0.1 },
   colorDrive: { min: 0, max: WARPBURST_COLOR_DRIVE_MAX, step: 0.05 },

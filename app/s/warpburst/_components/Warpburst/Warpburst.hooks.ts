@@ -25,6 +25,7 @@ import {
   WARPBURST_COLOR_DRIVE_MAX,
   WARPBURST_DEFAULTS,
   WARPBURST_DRIVE_MAX,
+  type WarpburstCameraMode,
   type WarpburstLive,
   type ReactiveChannel,
 } from "./Warpburst.types";
@@ -37,6 +38,7 @@ const CHANNELS = new Set<ReactiveChannel>([
   "high",
   "beat",
 ]);
+const CAMERA_MODES = new Set<WarpburstCameraMode>(["flex", "manual"]);
 
 type Stored = WarpburstLive & {
   audioSource: AudioSource;
@@ -73,6 +75,12 @@ function channel(v: unknown, fallback: ReactiveChannel): ReactiveChannel {
     : fallback;
 }
 
+function cameraMode(v: unknown): WarpburstCameraMode {
+  return typeof v === "string" && CAMERA_MODES.has(v as WarpburstCameraMode)
+    ? (v as WarpburstCameraMode)
+    : STORED_DEFAULTS.cameraMode;
+}
+
 function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
   // Old garland* → twinkle* (title "twinkle" keys); drop legacy keys from save blob
   const {
@@ -99,12 +107,15 @@ function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
       3,
       STORED_DEFAULTS.flightSpeed,
     ),
+    cameraMode: cameraMode(raw.cameraMode),
     cameraBank: clamp(
       Number(raw.cameraBank),
       0,
       2,
       STORED_DEFAULTS.cameraBank,
     ),
+    yaw: clamp(Number(raw.yaw), -45, 45, STORED_DEFAULTS.yaw),
+    pitch: clamp(Number(raw.pitch), -45, 45, STORED_DEFAULTS.pitch),
     color: asHex(raw.color, STORED_DEFAULTS.color),
     colorPeak: asHex(raw.colorPeak, STORED_DEFAULTS.colorPeak),
     twinkle:
@@ -233,7 +244,10 @@ export default function useWarpburstHook() {
     visualizer,
     controls: {
       flightSpeed: live.flightSpeed,
+      cameraMode: live.cameraMode,
       cameraBank: live.cameraBank,
+      yaw: live.yaw,
+      pitch: live.pitch,
       color: live.color,
       colorPeak: live.colorPeak,
       twinkle: live.twinkle,
@@ -252,7 +266,11 @@ export default function useWarpburstHook() {
       speedDriveMax: WARPBURST_DRIVE_MAX,
       accelDriveMax: WARPBURST_DRIVE_MAX,
       setFlightSpeed: (flightSpeed: number) => commit({ flightSpeed }),
+      setCameraMode: (cameraMode: WarpburstCameraMode) =>
+        commit({ cameraMode }),
       setCameraBank: (cameraBank: number) => commit({ cameraBank }),
+      setYaw: (yaw: number) => commit({ yaw }),
+      setPitch: (pitch: number) => commit({ pitch }),
       setColor: (color: string) => commit({ color }),
       setColorPeak: (colorPeak: string) => commit({ colorPeak }),
       setTwinkle: (twinkle: boolean) => commit({ twinkle }),
