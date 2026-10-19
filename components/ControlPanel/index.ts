@@ -8,6 +8,8 @@ export {
 } from "./TwinkleControls";
 export type { TwinkleControlsProps } from "./TwinkleControls";
 export { Slider } from "./Slider";
+export { DurationField } from "./DurationField";
+export type { DurationFieldProps } from "./DurationField";
 export { Select } from "./Select";
 export type { SelectOption } from "./Select";
 export { ColorInput } from "./ColorInput";

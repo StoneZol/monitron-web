@@ -24,6 +24,9 @@ type HeartfeltCanvasProps = {
   liveRef: RefObject<HeartfeltLive>;
 };
 
+/** Crossfade duration when the background key changes */
+const CROSSFADE_SEC = 1.15;
+
 function prepBgTexture(tex: THREE.Texture): THREE.Texture {
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
@@ -32,6 +35,14 @@ function prepBgTexture(tex: THREE.Texture): THREE.Texture {
   tex.magFilter = THREE.LinearFilter;
   tex.needsUpdate = true;
   return tex;
+}
+
+function texSize(tex: THREE.Texture): { w: number; h: number } {
+  const img = tex.image as { width?: number; height?: number } | undefined;
+  return {
+    w: Math.max(1, img?.width ?? 1),
+    h: Math.max(1, img?.height ?? 1),
+  };
 }
 
 function resolveBgUrl(live: HeartfeltLive): { key: string; url: string } {
@@ -49,8 +60,13 @@ function resolveBgUrl(live: HeartfeltLive): { key: string; url: string } {
 
 function HeartfeltQuad({ liveRef }: { liveRef: RefObject<HeartfeltLive> }) {
   const loader = useMemo(() => new THREE.TextureLoader(), []);
-  const channelRef = useRef<THREE.Texture | null>(null);
-  const loadedKey = useRef<string | undefined>(undefined);
+  const fromRef = useRef<THREE.Texture | null>(null);
+  const toRef = useRef<THREE.Texture | null>(null);
+  const fromKey = useRef<string | undefined>(undefined);
+  const toKey = useRef<string | undefined>(undefined);
+  const inflightKey = useRef<string | null>(null);
+  const crossfade = useRef(0);
+  const fading = useRef(false);
 
   const mat = useMemo(
     () =>
@@ -64,7 +80,10 @@ function HeartfeltQuad({ liveRef }: { liveRef: RefObject<HeartfeltLive> }) {
           iResolution: { value: new THREE.Vector3(1, 1, 1) },
           iTime: { value: 0 },
           iChannel0: { value: null },
-          iChannelResolution: { value: new THREE.Vector2(1, 1) },
+          iChannel1: { value: null },
+          iChannelResolution0: { value: new THREE.Vector2(1, 1) },
+          iChannelResolution1: { value: new THREE.Vector2(1, 1) },
+          uCrossfade: { value: 0 },
           uBgAlign: { value: new THREE.Vector2(0.5, 0.5) },
           uRainAmount: { value: 0.75 },
           uDropSpeed: { value: 1 },
@@ -79,9 +98,95 @@ function HeartfeltQuad({ liveRef }: { liveRef: RefObject<HeartfeltLive> }) {
 
   const { gl, size } = useThree();
 
+  const bindSlot = (
+    slot: 0 | 1,
+    tex: THREE.Texture | null,
+  ) => {
+    const m = matRef.current;
+    if (slot === 0) {
+      m.uniforms.iChannel0!.value = tex;
+      if (tex) {
+        const { w, h } = texSize(tex);
+        m.uniforms.iChannelResolution0!.value.set(w, h);
+      }
+    } else {
+      m.uniforms.iChannel1!.value = tex;
+      if (tex) {
+        const { w, h } = texSize(tex);
+        m.uniforms.iChannelResolution1!.value.set(w, h);
+      }
+    }
+  };
+
   const publishCrop = () => {
-    const res = matRef.current.uniforms.iChannelResolution!.value;
+    const m = matRef.current;
+    const useTo = fading.current && crossfade.current >= 0.5;
+    const res = useTo
+      ? m.uniforms.iChannelResolution1!.value
+      : m.uniforms.iChannelResolution0!.value;
     setBgCropFromAspects(drawSize.x, drawSize.y, res.x, res.y);
+  };
+
+  const finishCrossfade = () => {
+    const prev = fromRef.current;
+    const next = toRef.current;
+    if (next) {
+      fromRef.current = next;
+      fromKey.current = toKey.current;
+      bindSlot(0, next);
+      bindSlot(1, next);
+    }
+    toRef.current = null;
+    toKey.current = undefined;
+    crossfade.current = 0;
+    fading.current = false;
+    matRef.current.uniforms.uCrossfade!.value = 0;
+    if (prev && prev !== next) prev.dispose();
+    publishCrop();
+  };
+
+  const startCrossfade = (key: string, tex: THREE.Texture) => {
+    prepBgTexture(tex);
+    // First image — no fade
+    if (!fromRef.current) {
+      fromRef.current = tex;
+      fromKey.current = key;
+      bindSlot(0, tex);
+      bindSlot(1, tex);
+      crossfade.current = 0;
+      fading.current = false;
+      matRef.current.uniforms.uCrossfade!.value = 0;
+      inflightKey.current = null;
+      publishCrop();
+      return;
+    }
+    // Already showing this key
+    if (fromKey.current === key && !fading.current) {
+      tex.dispose();
+      inflightKey.current = null;
+      return;
+    }
+    // Interrupt in-progress fade: snap to mid target, then fade to new
+    if (fading.current && toRef.current) {
+      const mid = toRef.current;
+      const old = fromRef.current;
+      fromRef.current = mid;
+      fromKey.current = toKey.current;
+      bindSlot(0, mid);
+      if (old && old !== mid) old.dispose();
+    }
+    const staleTo = toRef.current;
+    toRef.current = tex;
+    toKey.current = key;
+    bindSlot(1, tex);
+    crossfade.current = 0;
+    fading.current = true;
+    matRef.current.uniforms.uCrossfade!.value = 0;
+    inflightKey.current = null;
+    if (staleTo && staleTo !== tex && staleTo !== fromRef.current) {
+      staleTo.dispose();
+    }
+    publishCrop();
   };
 
   useEffect(() => {
@@ -93,49 +198,26 @@ function HeartfeltQuad({ liveRef }: { liveRef: RefObject<HeartfeltLive> }) {
   useEffect(
     () => () => {
       mat.dispose();
-      channelRef.current?.dispose();
+      fromRef.current?.dispose();
+      toRef.current?.dispose();
     },
     [mat],
   );
 
   useEffect(() => {
     return registerRuntimeReset("heartfelt", () => {
-      loadedKey.current = undefined;
+      fromKey.current = undefined;
+      toKey.current = undefined;
+      inflightKey.current = null;
+      fading.current = false;
+      crossfade.current = 0;
     });
   }, []);
 
   useEffect(() => {
     let cancelled = false;
-    let inflight: string | null = null;
 
-    const applyTex = (key: string, tex: THREE.Texture) => {
-      prepBgTexture(tex);
-      const prev = channelRef.current;
-      channelRef.current = tex;
-      matRef.current.uniforms.iChannel0!.value = tex;
-      const img = tex.image as { width?: number; height?: number } | undefined;
-      matRef.current.uniforms.iChannelResolution!.value.set(
-        Math.max(1, img?.width ?? 1),
-        Math.max(1, img?.height ?? 1),
-      );
-      gl.getDrawingBufferSize(drawSize);
-      setBgCropFromAspects(
-        drawSize.x,
-        drawSize.y,
-        Math.max(1, img?.width ?? 1),
-        Math.max(1, img?.height ?? 1),
-      );
-      loadedKey.current = key;
-      inflight = null;
-      if (prev && prev !== tex) prev.dispose();
-    };
-
-    const tick = () => {
-      const { key, url } = resolveBgUrl(liveRef.current);
-      if (key === loadedKey.current || key === inflight) return;
-      inflight = key;
-
-      // Remote URLs need CORS; stock is same-origin
+    const loadKey = (key: string, url: string) => {
       loader.setCrossOrigin("anonymous");
       loader.load(
         url,
@@ -144,35 +226,46 @@ function HeartfeltQuad({ liveRef }: { liveRef: RefObject<HeartfeltLive> }) {
             tex.dispose();
             return;
           }
-          applyTex(key, tex);
+          if (inflightKey.current !== key) {
+            tex.dispose();
+            return;
+          }
+          startCrossfade(key, tex);
         },
         undefined,
         () => {
           if (cancelled) return;
-          inflight = null;
-          // Fallback to stock if remote fails
+          if (inflightKey.current !== key) return;
+          inflightKey.current = null;
           if (key.startsWith("lib:")) {
             const stockId = liveRef.current.stockId || DEFAULT_STOCK_ID;
             const fbKey = `stock:${stockId}`;
             const fbUrl = stockPlaceholderSrc(stockId);
-            inflight = fbKey;
-            loader.load(
-              fbUrl,
-              (tex) => {
-                if (cancelled) {
-                  tex.dispose();
-                  return;
-                }
-                applyTex(fbKey, tex);
-              },
-              undefined,
-              () => {
-                inflight = null;
-              },
-            );
+            if (
+              fbKey === fromKey.current ||
+              fbKey === toKey.current ||
+              fbKey === inflightKey.current
+            ) {
+              return;
+            }
+            inflightKey.current = fbKey;
+            loadKey(fbKey, fbUrl);
           }
         },
       );
+    };
+
+    const tick = () => {
+      const { key, url } = resolveBgUrl(liveRef.current);
+      if (
+        key === fromKey.current ||
+        key === toKey.current ||
+        key === inflightKey.current
+      ) {
+        return;
+      }
+      inflightKey.current = key;
+      loadKey(key, url);
     };
 
     tick();
@@ -183,7 +276,7 @@ function HeartfeltQuad({ liveRef }: { liveRef: RefObject<HeartfeltLive> }) {
     };
   }, [liveRef, loader]);
 
-  useFrame(({ clock, gl: g }) => {
+  useFrame(({ clock, gl: g }, dt) => {
     const m = matRef.current;
     const live = liveRef.current;
     g.getDrawingBufferSize(drawSize);
@@ -194,6 +287,17 @@ function HeartfeltQuad({ liveRef }: { liveRef: RefObject<HeartfeltLive> }) {
     m.uniforms.uGlass!.value = live.glass;
     m.uniforms.uLightning!.value = live.lightning;
     m.uniforms.uBgAlign!.value.set(live.bgAlignX, live.bgAlignY);
+
+    if (fading.current) {
+      const dur = Math.min(
+        CROSSFADE_SEC,
+        Math.max(0.35, live.slideshowIntervalSec * 0.2),
+      );
+      crossfade.current = Math.min(1, crossfade.current + dt / dur);
+      m.uniforms.uCrossfade!.value = crossfade.current;
+      if (crossfade.current >= 1) finishCrossfade();
+    }
+
     publishCrop();
   });
 

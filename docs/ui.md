@@ -17,6 +17,7 @@ import {
   Select,
   Meter,
   MediaField,
+  DurationField,
   TwinkleControls,
 } from "@/components/ControlPanel";
 ```
@@ -139,6 +140,37 @@ Numeric range with **− / +** steppers on the sides (same chrome as Select’s 
   step={0.05}
   onChange={setSpinSpeed}
   format={(v) => v.toFixed(2)}
+/>
+```
+
+---
+
+## `DurationField`
+
+Digital **MM:SS** clock for intervals (slideshow, etc.). Coarse `±m` and fine `±s` steppers; value is whole seconds.
+
+| Prop         | Type                        | Default | Notes             |
+| ------------ | --------------------------- | ------- | ----------------- |
+| `label`      | `string`                    | —       |                   |
+| `value`      | `number`                    | —       | Seconds           |
+| `min`        | `number?`                   | `1`     |                   |
+| `max`        | `number?`                   | `600`   |                   |
+| `step`       | `number?`                   | `1`     | Fine ±s           |
+| `coarseStep` | `number?`                   | `60`    | Coarse ±m         |
+| `onChange`   | `(seconds: number) => void` | —       |                   |
+| `disabled`   | `boolean?`                  | `false` |                   |
+| `info`       | `string?`                   | —       | Optional "?" tip  |
+| `className`  | `string?`                   | —       |                   |
+
+```tsx
+<DurationField
+  label="Interval"
+  value={intervalSec}
+  min={3}
+  max={600}
+  step={1}
+  coarseStep={15}
+  onChange={setIntervalSec}
 />
 ```
 

@@ -17,8 +17,10 @@ import {
   subscribeUserMedia,
 } from "@/lib/userMedia";
 import type { MediaSelection } from "@/components/ControlPanel";
+import { nextSlideshowSelection } from "./Heartfelt.slideshow";
 import {
   HEARTFELT_DEFAULTS,
+  HEARTFELT_RANGES,
   type HeartfeltBgSource,
   type HeartfeltLive,
 } from "./Heartfelt.types";
@@ -36,6 +38,11 @@ function clamp(n: number, min: number, max: number, fallback: number) {
 
 function asStockId(v: unknown): StockPlaceholderId {
   return isStockPlaceholderId(v) ? v : DEFAULT_STOCK_ID;
+}
+
+function asBool(v: unknown, fallback: boolean): boolean {
+  if (typeof v === "boolean") return v;
+  return fallback;
 }
 
 function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
@@ -105,6 +112,22 @@ function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
       1,
       STORED_DEFAULTS.bgAlignY,
     ),
+    slideshow: asBool(raw.slideshow, STORED_DEFAULTS.slideshow),
+    slideshowStock: asBool(raw.slideshowStock, STORED_DEFAULTS.slideshowStock),
+    slideshowLibrary: asBool(
+      raw.slideshowLibrary,
+      STORED_DEFAULTS.slideshowLibrary,
+    ),
+    slideshowSession: asBool(
+      raw.slideshowSession,
+      STORED_DEFAULTS.slideshowSession,
+    ),
+    slideshowIntervalSec: clamp(
+      Number(raw.slideshowIntervalSec),
+      HEARTFELT_RANGES.slideshowIntervalSec.min,
+      HEARTFELT_RANGES.slideshowIntervalSec.max,
+      STORED_DEFAULTS.slideshowIntervalSec,
+    ),
     bgSource,
     stockId,
     libraryId,
@@ -151,6 +174,45 @@ function rehydrateFromStorage() {
   emit();
 }
 
+function applyMediaSelection(sel: MediaSelection): void {
+  const cur = readPrefs();
+  if (sel.kind === "stock") {
+    writePrefs({
+      ...cur,
+      bgSource: "stock",
+      stockId: asStockId(sel.id),
+      sessionId: null,
+    });
+    return;
+  }
+  if (sel.kind === "session") {
+    if (!getSessionMediaEntry(sel.id)) {
+      writePrefs({ ...cur, bgSource: "stock", sessionId: null });
+      return;
+    }
+    writePrefs({ ...cur, bgSource: "session", sessionId: sel.id });
+    return;
+  }
+  if (!getMediaLibraryEntry(sel.id)) {
+    writePrefs({ ...cur, bgSource: "stock", sessionId: null });
+    return;
+  }
+  writePrefs({
+    ...cur,
+    bgSource: "library",
+    libraryId: sel.id,
+    sessionId: null,
+  });
+}
+
+function advanceSlideshow(): void {
+  const cur = readPrefs();
+  if (!cur.slideshow) return;
+  const next = nextSlideshowSelection(cur);
+  if (!next) return;
+  applyMediaSelection(next);
+}
+
 export default function useHeartfeltHook() {
   const live = useSyncExternalStore(
     subscribe,
@@ -190,6 +252,22 @@ export default function useHeartfeltHook() {
     [],
   );
 
+  useEffect(() => {
+    if (!live.slideshow) return;
+    const ms = Math.max(
+      HEARTFELT_RANGES.slideshowIntervalSec.min,
+      live.slideshowIntervalSec,
+    ) * 1000;
+    const id = window.setInterval(advanceSlideshow, ms);
+    return () => window.clearInterval(id);
+  }, [
+    live.slideshow,
+    live.slideshowIntervalSec,
+    live.slideshowStock,
+    live.slideshowLibrary,
+    live.slideshowSession,
+  ]);
+
   const commit = (patch: Partial<Stored>) => {
     writePrefs({ ...readPrefs(), ...patch });
   };
@@ -210,6 +288,11 @@ export default function useHeartfeltHook() {
       lightning: live.lightning,
       bgAlignX: live.bgAlignX,
       bgAlignY: live.bgAlignY,
+      slideshow: live.slideshow,
+      slideshowStock: live.slideshowStock,
+      slideshowLibrary: live.slideshowLibrary,
+      slideshowSession: live.slideshowSession,
+      slideshowIntervalSec: live.slideshowIntervalSec,
       mediaValue,
       setRainAmount: (rainAmount: number) => commit({ rainAmount }),
       setDropSpeed: (dropSpeed: number) => commit({ dropSpeed }),
@@ -217,33 +300,23 @@ export default function useHeartfeltHook() {
       setLightning: (lightning: number) => commit({ lightning }),
       setBgAlignX: (bgAlignX: number) => commit({ bgAlignX }),
       setBgAlignY: (bgAlignY: number) => commit({ bgAlignY }),
-      setMedia: (sel: MediaSelection) => {
-        if (sel.kind === "stock") {
-          commit({
-            bgSource: "stock",
-            stockId: asStockId(sel.id),
-            sessionId: null,
-          });
-          return;
-        }
-        if (sel.kind === "session") {
-          if (!getSessionMediaEntry(sel.id)) {
-            commit({ bgSource: "stock", sessionId: null });
-            return;
-          }
-          commit({ bgSource: "session", sessionId: sel.id });
-          return;
-        }
-        if (!getMediaLibraryEntry(sel.id)) {
-          commit({ bgSource: "stock", sessionId: null });
-          return;
-        }
+      setSlideshow: (slideshow: boolean) => commit({ slideshow }),
+      setSlideshowStock: (slideshowStock: boolean) =>
+        commit({ slideshowStock }),
+      setSlideshowLibrary: (slideshowLibrary: boolean) =>
+        commit({ slideshowLibrary }),
+      setSlideshowSession: (slideshowSession: boolean) =>
+        commit({ slideshowSession }),
+      setSlideshowIntervalSec: (slideshowIntervalSec: number) =>
         commit({
-          bgSource: "library",
-          libraryId: sel.id,
-          sessionId: null,
-        });
-      },
+          slideshowIntervalSec: clamp(
+            slideshowIntervalSec,
+            HEARTFELT_RANGES.slideshowIntervalSec.min,
+            HEARTFELT_RANGES.slideshowIntervalSec.max,
+            STORED_DEFAULTS.slideshowIntervalSec,
+          ),
+        }),
+      setMedia: applyMediaSelection,
       fullscreen: () => void toggleFullscreen(),
       reset: () => {
         writePrefs({ ...STORED_DEFAULTS });

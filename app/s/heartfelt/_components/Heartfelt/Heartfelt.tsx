@@ -5,9 +5,11 @@ import { ScreensOverlay } from "@/components/ScreensOverlay";
 import {
   ControlPanel,
   ControlSection,
+  DurationField,
   MediaField,
   PanelButton,
   Slider,
+  Toggle,
 } from "@/components/ControlPanel";
 import { STOCK_PLACEHOLDERS } from "@/lib/stockPlaceholders";
 import {
@@ -30,6 +32,12 @@ const INFO = {
     "Horizontal crop anchor (cover is cropping left/right). 0 = left, 0.5 = center, 1 = right.",
   bgAlignY:
     "Vertical crop anchor (cover is cropping top/bottom). 0 = top, 0.5 = center, 1 = bottom.",
+  slideshow:
+    "Cycle backgrounds on a timer from the enabled pools (stock / urls / local). Track/tab-change sync is not available yet — the plugin does not send tab titles.",
+  slideshowStock: "Include built-in stock stills in the slideshow pool.",
+  slideshowLibrary: "Include shared URL library entries in the pool.",
+  slideshowSession: "Include session-only local uploads in the pool.",
+  slideshowInterval: "Seconds between slides (MM:SS).",
 } as const;
 
 const Heartfelt = ({ showOverlay = true }: HeartfeltProps) => {
@@ -70,6 +78,46 @@ const Heartfelt = ({ showOverlay = true }: HeartfeltProps) => {
                 stocks={STOCK_PLACEHOLDERS}
                 info={INFO.background}
               />
+              <Toggle
+                label="Slideshow"
+                checked={controls.slideshow}
+                onChange={controls.setSlideshow}
+                info={INFO.slideshow}
+              />
+              {controls.slideshow ? (
+                <>
+                  <Toggle
+                    label="Pool · stock"
+                    checked={controls.slideshowStock}
+                    onChange={controls.setSlideshowStock}
+                    info={INFO.slideshowStock}
+                  />
+                  <Toggle
+                    label="Pool · urls"
+                    checked={controls.slideshowLibrary}
+                    onChange={controls.setSlideshowLibrary}
+                    info={INFO.slideshowLibrary}
+                  />
+                  <Toggle
+                    label="Pool · local"
+                    checked={controls.slideshowSession}
+                    onChange={controls.setSlideshowSession}
+                    info={INFO.slideshowSession}
+                  />
+                  <DurationField
+                    label="Interval"
+                    value={controls.slideshowIntervalSec}
+                    min={HEARTFELT_RANGES.slideshowIntervalSec.min}
+                    max={HEARTFELT_RANGES.slideshowIntervalSec.max}
+                    step={HEARTFELT_RANGES.slideshowIntervalSec.step}
+                    coarseStep={
+                      HEARTFELT_RANGES.slideshowIntervalSec.coarseStep
+                    }
+                    onChange={controls.setSlideshowIntervalSec}
+                    info={INFO.slideshowInterval}
+                  />
+                </>
+              ) : null}
               {cropAxis === "x" ? (
                 <Slider
                   label="Align X"

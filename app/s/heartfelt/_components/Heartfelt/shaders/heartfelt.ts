@@ -24,8 +24,12 @@ out vec4 fragColor;
 uniform vec3 iResolution;
 uniform float iTime;
 uniform sampler2D iChannel0;
-/** Background texture size (px) — for object-fit: cover */
-uniform vec2 iChannelResolution;
+uniform sampler2D iChannel1;
+/** Background texture sizes (px) — for object-fit: cover */
+uniform vec2 iChannelResolution0;
+uniform vec2 iChannelResolution1;
+/** 0 = fully channel0, 1 = fully channel1 (crossfade) */
+uniform float uCrossfade;
 /** Cover object-position: x 0…1 left→right, y 0…1 top→bottom */
 uniform vec2 uBgAlign;
 uniform float uRainAmount;
@@ -41,9 +45,9 @@ uniform float uLightning;
  * object-fit: cover + object-position (uBgAlign).
  * 0.5/0.5 = center; y=0 prefers top when cropping height, etc.
  */
-vec2 coverUV(vec2 uv) {
+vec2 coverUV(vec2 uv, vec2 texRes) {
   float sA = iResolution.x / max(iResolution.y, 1.0);
-  float tA = iChannelResolution.x / max(iChannelResolution.y, 1.0);
+  float tA = texRes.x / max(texRes.y, 1.0);
   vec2 align = clamp(uBgAlign, vec2(0.0), vec2(1.0));
   if (sA > tA) {
     float vis = tA / sA;
@@ -163,8 +167,6 @@ void main() {
   float zoom = 1.0;
   uv *= 0.7;
   UV = (UV - 0.5) * (0.9 + zoom * 0.1) + 0.5;
-  // Cover after zoom so the still keeps aspect; drops stay screen-aspect
-  UV = coverUV(UV);
 
   float staticDrops = S(-0.5, 1.0, rainAmount) * 2.0;
   float layer1 = S(0.25, 0.75, rainAmount);
@@ -179,8 +181,13 @@ void main() {
   vec2 n = vec2(cx - c.x, cy - c.x);
 
   float focus = mix(maxBlur - c.y, minBlur, S(0.1, 0.2, c.x));
-  // Absolute LOD like Shadertoy — trails stay sharp, dry glass stays foggy
-  vec3 col = textureLod(iChannel0, UV + n, focus).rgb;
+  // Cover per texture; crossfade by opacity between slides
+  vec2 uv0 = coverUV(UV, iChannelResolution0) + n;
+  vec2 uv1 = coverUV(UV, iChannelResolution1) + n;
+  vec3 col0 = textureLod(iChannel0, uv0, focus).rgb;
+  vec3 col1 = textureLod(iChannel1, uv1, focus).rgb;
+  float xf = clamp(uCrossfade, 0.0, 1.0);
+  vec3 col = mix(col0, col1, xf);
 
   float dry = 1.0 - S(0.05, 0.35, c.x);
   col = mix(col, col * vec3(0.82, 0.88, 0.98), dry * glass * 0.55);
