@@ -213,6 +213,31 @@ function advanceSlideshow(): void {
   applyMediaSelection(next);
 }
 
+/** Deadline for next slide — drives the DurationField countdown aside. */
+let slideshowDeadlineMs = 0;
+const countdownListeners = new Set<() => void>();
+
+function emitCountdown() {
+  for (const l of countdownListeners) l();
+}
+
+function subscribeCountdown(listener: () => void) {
+  countdownListeners.add(listener);
+  return () => {
+    countdownListeners.delete(listener);
+  };
+}
+
+function getSlideshowRemainSec(): number | null {
+  if (slideshowDeadlineMs <= 0) return null;
+  return Math.max(0, Math.ceil((slideshowDeadlineMs - Date.now()) / 1000));
+}
+
+function setSlideshowDeadline(atMs: number) {
+  slideshowDeadlineMs = atMs;
+  emitCountdown();
+}
+
 export default function useHeartfeltHook() {
   const live = useSyncExternalStore(
     subscribe,
@@ -253,13 +278,24 @@ export default function useHeartfeltHook() {
   );
 
   useEffect(() => {
-    if (!live.slideshow) return;
-    const ms = Math.max(
-      HEARTFELT_RANGES.slideshowIntervalSec.min,
-      live.slideshowIntervalSec,
-    ) * 1000;
-    const id = window.setInterval(advanceSlideshow, ms);
-    return () => window.clearInterval(id);
+    if (!live.slideshow) {
+      setSlideshowDeadline(0);
+      return;
+    }
+    const ms =
+      Math.max(
+        HEARTFELT_RANGES.slideshowIntervalSec.min,
+        live.slideshowIntervalSec,
+      ) * 1000;
+    setSlideshowDeadline(Date.now() + ms);
+    const id = window.setInterval(() => {
+      advanceSlideshow();
+      setSlideshowDeadline(Date.now() + ms);
+    }, ms);
+    return () => {
+      window.clearInterval(id);
+      setSlideshowDeadline(0);
+    };
   }, [
     live.slideshow,
     live.slideshowIntervalSec,
@@ -267,6 +303,19 @@ export default function useHeartfeltHook() {
     live.slideshowLibrary,
     live.slideshowSession,
   ]);
+
+  // Whole-second UI tick for the interval countdown aside
+  useEffect(() => {
+    if (!live.slideshow) return;
+    const id = window.setInterval(() => emitCountdown(), 1000);
+    return () => window.clearInterval(id);
+  }, [live.slideshow]);
+
+  const slideshowRemainSec = useSyncExternalStore(
+    subscribeCountdown,
+    getSlideshowRemainSec,
+    () => null,
+  );
 
   const commit = (patch: Partial<Stored>) => {
     writePrefs({ ...readPrefs(), ...patch });
@@ -293,6 +342,7 @@ export default function useHeartfeltHook() {
       slideshowLibrary: live.slideshowLibrary,
       slideshowSession: live.slideshowSession,
       slideshowIntervalSec: live.slideshowIntervalSec,
+      slideshowRemainSec,
       mediaValue,
       setRainAmount: (rainAmount: number) => commit({ rainAmount }),
       setDropSpeed: (dropSpeed: number) => commit({ dropSpeed }),

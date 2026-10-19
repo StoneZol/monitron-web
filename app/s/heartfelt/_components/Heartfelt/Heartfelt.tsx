@@ -114,6 +114,11 @@ const Heartfelt = ({ showOverlay = true }: HeartfeltProps) => {
                       HEARTFELT_RANGES.slideshowIntervalSec.coarseStep
                     }
                     onChange={controls.setSlideshowIntervalSec}
+                    aside={
+                      controls.slideshowRemainSec != null
+                        ? `${controls.slideshowRemainSec}s`
+                        : undefined
+                    }
                     info={INFO.slideshowInterval}
                   />
                 </>

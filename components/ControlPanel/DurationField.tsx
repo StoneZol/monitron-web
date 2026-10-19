@@ -17,6 +17,11 @@ export type DurationFieldProps = {
   onChange: (seconds: number) => void;
   disabled?: boolean;
   info?: string;
+  /**
+   * Replaces the muted `{value}s` beside the label — e.g. slideshow
+   * countdown (`12s` until next slide).
+   */
+  aside?: string;
   className?: string;
 };
 
@@ -49,6 +54,7 @@ export function DurationField({
   onChange,
   disabled = false,
   info,
+  aside,
   className,
 }: DurationFieldProps) {
   const sec = clampSec(value, min, max);
@@ -73,7 +79,7 @@ export function DurationField({
       <div className={fieldLabelRow}>
         <FieldLabel label={label} info={info} />
         <span className="font-mono text-[9px] normal-case tracking-normal text-muted">
-          {sec}s
+          {aside ?? `${sec}s`}
         </span>
       </div>
 
