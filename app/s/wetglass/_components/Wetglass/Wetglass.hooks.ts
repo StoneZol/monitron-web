@@ -1,9 +1,13 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useSyncExternalStore } from "react";
 import { toggleFullscreen } from "@/lib/fullscreen";
 import { resetFxOverlay } from "@/components/FxOverlay";
-import { loadScreenPrefs, saveScreenPrefs } from "@/lib/screenPrefs";
+import {
+  readScreenPrefsRaw,
+  saveScreenPrefs,
+  screenPrefsKey,
+} from "@/lib/screenPrefs";
 import { onTabSyncApply } from "@/lib/tabSyncHotApply";
 import {
   DEFAULT_STOCK_ID,
@@ -17,19 +21,20 @@ import {
   subscribeUserMedia,
 } from "@/lib/userMedia";
 import type { MediaSelection } from "@/components/ControlPanel";
-import { nextSlideshowSelection } from "./Heartfelt.slideshow";
+import { nextSlideshowSelection } from "./Wetglass.slideshow";
 import {
-  HEARTFELT_DEFAULTS,
-  HEARTFELT_RANGES,
-  type HeartfeltBgSource,
-  type HeartfeltLive,
-} from "./Heartfelt.types";
+  WETGLASS_DEFAULTS,
+  WETGLASS_RANGES,
+  type WetglassBgSource,
+  type WetglassLive,
+} from "./Wetglass.types";
 
-const SCREEN_ID = "heartfelt";
+const SCREEN_ID = "wetglass";
+const LEGACY_SCREEN_ID = "heartfelt";
 
-type Stored = HeartfeltLive;
+type Stored = WetglassLive;
 
-const STORED_DEFAULTS: Stored = { ...HEARTFELT_DEFAULTS };
+const STORED_DEFAULTS: Stored = { ...WETGLASS_DEFAULTS };
 
 function clamp(n: number, min: number, max: number, fallback: number) {
   if (!Number.isFinite(n)) return fallback;
@@ -65,7 +70,7 @@ function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
       : null;
 
   // Session files are RAM-only — restore only if still in this tab (or after Sync)
-  let bgSource: HeartfeltBgSource = "stock";
+  let bgSource: WetglassBgSource = "stock";
   if (
     rawSource === "session" &&
     sessionId &&
@@ -124,8 +129,8 @@ function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
     ),
     slideshowIntervalSec: clamp(
       Number(raw.slideshowIntervalSec),
-      HEARTFELT_RANGES.slideshowIntervalSec.min,
-      HEARTFELT_RANGES.slideshowIntervalSec.max,
+      WETGLASS_RANGES.slideshowIntervalSec.min,
+      WETGLASS_RANGES.slideshowIntervalSec.max,
       STORED_DEFAULTS.slideshowIntervalSec,
     ),
     bgSource,
@@ -147,13 +152,28 @@ function subscribe(listener: () => void) {
 }
 
 let cached: Stored | null = null;
-const liveRef: { current: HeartfeltLive } = { current: HEARTFELT_DEFAULTS };
+const liveRef: { current: WetglassLive } = { current: WETGLASS_DEFAULTS };
 
 function readPrefs(): Stored {
   if (cached) return cached;
+  let raw = readScreenPrefsRaw(SCREEN_ID);
+  // One-shot migrate old /s/heartfelt prefs → wetglass
+  if (Object.keys(raw).length === 0) {
+    const legacy = readScreenPrefsRaw(LEGACY_SCREEN_ID);
+    if (Object.keys(legacy).length > 0) {
+      raw = legacy;
+      saveScreenPrefs(SCREEN_ID, legacy);
+      try {
+        window.localStorage.removeItem(screenPrefsKey(LEGACY_SCREEN_ID));
+      } catch {
+        /* private mode */
+      }
+    }
+  }
   cached = migratePrefs(
-    loadScreenPrefs(SCREEN_ID, { ...STORED_DEFAULTS }) as Stored &
-      Record<string, unknown>,
+    (Object.keys(raw).length > 0
+      ? { ...STORED_DEFAULTS, ...raw }
+      : { ...STORED_DEFAULTS }) as Stored & Record<string, unknown>,
   );
   liveRef.current = cached;
   return cached;
@@ -238,7 +258,7 @@ function setSlideshowDeadline(atMs: number) {
   emitCountdown();
 }
 
-export default function useHeartfeltHook() {
+export default function useWetglassHook() {
   const live = useSyncExternalStore(
     subscribe,
     readPrefs,
@@ -284,7 +304,7 @@ export default function useHeartfeltHook() {
     }
     const ms =
       Math.max(
-        HEARTFELT_RANGES.slideshowIntervalSec.min,
+        WETGLASS_RANGES.slideshowIntervalSec.min,
         live.slideshowIntervalSec,
       ) * 1000;
     setSlideshowDeadline(Date.now() + ms);
@@ -361,8 +381,8 @@ export default function useHeartfeltHook() {
         commit({
           slideshowIntervalSec: clamp(
             slideshowIntervalSec,
-            HEARTFELT_RANGES.slideshowIntervalSec.min,
-            HEARTFELT_RANGES.slideshowIntervalSec.max,
+            WETGLASS_RANGES.slideshowIntervalSec.min,
+            WETGLASS_RANGES.slideshowIntervalSec.max,
             STORED_DEFAULTS.slideshowIntervalSec,
           ),
         }),

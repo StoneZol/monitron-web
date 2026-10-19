@@ -1,15 +1,15 @@
-import {
+﻿import {
   DEFAULT_STOCK_ID,
   type StockPlaceholderId,
 } from "@/lib/stockPlaceholders";
 
-export type HeartfeltProps = {
+export type WetglassProps = {
   showOverlay?: boolean;
 };
 
-export type HeartfeltBgSource = "stock" | "library" | "session";
+export type WetglassBgSource = "stock" | "library" | "session";
 
-export type HeartfeltLive = {
+export type WetglassLive = {
   rainAmount: number;
   dropSpeed: number;
   glass: number;
@@ -25,14 +25,14 @@ export type HeartfeltLive = {
   slideshowSession: boolean;
   /** Seconds between slides */
   slideshowIntervalSec: number;
-  bgSource: HeartfeltBgSource;
+  bgSource: WetglassBgSource;
   stockId: StockPlaceholderId;
   libraryId: string | null;
   /** Session file id — valid only until refresh */
   sessionId: string | null;
 };
 
-export const HEARTFELT_DEFAULTS: HeartfeltLive = {
+export const WETGLASS_DEFAULTS: WetglassLive = {
   rainAmount: 0.75,
   dropSpeed: 1,
   glass: 0.85,
@@ -50,7 +50,7 @@ export const HEARTFELT_DEFAULTS: HeartfeltLive = {
   sessionId: null,
 };
 
-export const HEARTFELT_RANGES = {
+export const WETGLASS_RANGES = {
   rainAmount: { min: 0, max: 1, step: 0.01 },
   dropSpeed: { min: 0.05, max: 3, step: 0.05 },
   glass: { min: 0, max: 1, step: 0.01 },

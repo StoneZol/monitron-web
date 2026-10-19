@@ -70,16 +70,16 @@ function SourceBlock({ source }: { source: PlaceholderSource }) {
     <div className="flex min-w-0 flex-col gap-0.5">
       <CreditLink
         href={source.href}
-        label="original"
+        label="ref"
         name={source.author}
         title={formatSourceCredit(source)}
       />
       {porter ? (
         <CreditLink
           href={porter.href}
-          label="port"
+          label="adapt"
           name={porter.name}
-          title={`ported by ${porter.name}`}
+          title={`adapted by ${porter.name}`}
         />
       ) : null}
     </div>
@@ -108,7 +108,7 @@ function AiBlock({ meta }: { meta: PlaceholderMeta }) {
   );
 }
 
-/** Card / panel credit: original+port stacked, or author when no source; AI under. */
+/** Card / panel credit: ref+adapt stacked, or author when no source; AI under. */
 export function PlaceholderCredit({
   meta,
   className,
@@ -144,7 +144,7 @@ type ScreenCreditBarProps = {
 };
 
 /**
- * Overlay chrome: single `sources (c)` → about modal (credits / originals / AI).
+ * Overlay chrome: single `sources (c)` → about modal (credits / refs / AI).
  */
 export function ScreenCreditBar({ meta, className }: ScreenCreditBarProps) {
   const sources = meta.sources ?? [];

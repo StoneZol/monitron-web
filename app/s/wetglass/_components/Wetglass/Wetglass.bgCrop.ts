@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Which axis object-fit:cover is currently cropping.
  * Updated from the Canvas when screen/texture aspects change.
  */

@@ -87,7 +87,7 @@ export function FxOverlaySection() {
               className="truncate font-mono text-[9px] uppercase tracking-[0.14em] text-cyan/70 transition-colors hover:text-signal"
               title={mod.source.title}
             >
-              original — {mod.source.author}
+              ref — {mod.source.author}
               <span className="ml-1 text-muted/60">↗</span>
             </a>
           ) : null}

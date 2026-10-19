@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useRef, type RefObject } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
@@ -13,15 +13,15 @@ import {
   getMediaLibraryEntry,
   getSessionMediaEntry,
 } from "@/lib/userMedia";
-import { setBgCropFromAspects } from "./Heartfelt.bgCrop";
-import type { HeartfeltLive } from "./Heartfelt.types";
+import { setBgCropFromAspects } from "./Wetglass.bgCrop";
+import type { WetglassLive } from "./Wetglass.types";
 import {
-  heartfeltFragmentShader,
-  heartfeltVertexShader,
-} from "./shaders/heartfelt";
+  wetglassFragmentShader,
+  wetglassVertexShader,
+} from "./shaders/wetglass";
 
-type HeartfeltCanvasProps = {
-  liveRef: RefObject<HeartfeltLive>;
+type WetglassCanvasProps = {
+  liveRef: RefObject<WetglassLive>;
 };
 
 /** Crossfade duration when the background key changes */
@@ -45,7 +45,7 @@ function texSize(tex: THREE.Texture): { w: number; h: number } {
   };
 }
 
-function resolveBgUrl(live: HeartfeltLive): { key: string; url: string } {
+function resolveBgUrl(live: WetglassLive): { key: string; url: string } {
   if (live.bgSource === "session" && live.sessionId) {
     const entry = getSessionMediaEntry(live.sessionId);
     if (entry) return { key: `sess:${entry.id}`, url: entry.objectUrl };
@@ -58,7 +58,7 @@ function resolveBgUrl(live: HeartfeltLive): { key: string; url: string } {
   return { key: `stock:${stockId}`, url: stockPlaceholderSrc(stockId) };
 }
 
-function HeartfeltQuad({ liveRef }: { liveRef: RefObject<HeartfeltLive> }) {
+function WetglassQuad({ liveRef }: { liveRef: RefObject<WetglassLive> }) {
   const loader = useMemo(() => new THREE.TextureLoader(), []);
   const fromRef = useRef<THREE.Texture | null>(null);
   const toRef = useRef<THREE.Texture | null>(null);
@@ -72,8 +72,8 @@ function HeartfeltQuad({ liveRef }: { liveRef: RefObject<HeartfeltLive> }) {
     () =>
       new THREE.ShaderMaterial({
         glslVersion: THREE.GLSL3,
-        vertexShader: heartfeltVertexShader,
-        fragmentShader: heartfeltFragmentShader,
+        vertexShader: wetglassVertexShader,
+        fragmentShader: wetglassFragmentShader,
         depthWrite: false,
         depthTest: false,
         uniforms: {
@@ -205,7 +205,7 @@ function HeartfeltQuad({ liveRef }: { liveRef: RefObject<HeartfeltLive> }) {
   );
 
   useEffect(() => {
-    return registerRuntimeReset("heartfelt", () => {
+    return registerRuntimeReset("wetglass", () => {
       fromKey.current = undefined;
       toKey.current = undefined;
       inflightKey.current = null;
@@ -309,8 +309,8 @@ function HeartfeltQuad({ liveRef }: { liveRef: RefObject<HeartfeltLive> }) {
   );
 }
 
-export default function HeartfeltCanvas({ liveRef }: HeartfeltCanvasProps) {
-  const dpr = useRenderDpr("heartfelt", 1, 2);
+export default function WetglassCanvas({ liveRef }: WetglassCanvasProps) {
+  const dpr = useRenderDpr("wetglass", 1, 2);
   return (
     <Canvas
       className="absolute inset-0 h-full w-full"
@@ -319,7 +319,7 @@ export default function HeartfeltCanvas({ liveRef }: HeartfeltCanvasProps) {
       camera={{ position: [0, 0, 1], near: 0.1, far: 10 }}
       gl={{ antialias: false, powerPreference: "high-performance" }}
     >
-      <HeartfeltQuad liveRef={liveRef} />
+      <WetglassQuad liveRef={liveRef} />
     </Canvas>
   );
 }

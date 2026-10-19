@@ -1,13 +1,12 @@
-/**
- * Port of Shadertoy https://www.shadertoy.com/view/ltffzl
- * “Heartfelt” — BigWings (Martijn Steinrucken)
- * License: CC BY-NC-SA 3.0
+﻿/**
+ * Rain on glass — ref: Shadertoy https://www.shadertoy.com/view/ltffzl
+ * BigWings (Martijn Steinrucken), CC BY-NC-SA 3.0
  *
- * Monitron cut: no HAS_HEART story / zoom-out / fade. Rain on glass + background only.
- * GLSL3 so textureLod matches Shadertoy focus (glass fog vs sharp drops).
+ * Monitron: no heart story; cover bg + slideshow. Drop Y is fall-only (no bounce).
+ * GLSL3 textureLod for glass fog vs sharp drops.
  */
 
-export const heartfeltVertexShader = /* glsl */ `
+export const wetglassVertexShader = /* glsl */ `
 out vec2 vUv;
 void main() {
   vUv = uv;
@@ -15,7 +14,7 @@ void main() {
 }
 `;
 
-export const heartfeltFragmentShader = /* glsl */ `
+export const wetglassFragmentShader = /* glsl */ `
 precision highp float;
 
 in vec2 vUv;
@@ -99,18 +98,22 @@ vec2 DropLayer2(vec2 uv, float t) {
   x += wiggle * (0.5 - abs(x)) * (n.z - 0.5);
   x *= 0.7;
   float ti = fract(t + n.z);
-  y = (Saw(0.85, ti) - 0.5) * 0.9 + 0.5;
+  // Fall only: top → bottom, ease-out (may slow), never rebound upward
+  float fall = 1.0 - pow(max(0.0, 1.0 - smoothstep(0.0, 0.92, ti)), 1.7);
+  y = mix(0.92, 0.12, fall);
   vec2 p = vec2(x, y);
 
   float d = length((st - p) * a.yx);
 
-  float mainDrop = S(0.4, 0.0, d);
+  // Soft birth / soft death so the cell wrap doesn't read as a jump-up
+  float life = S(0.0, 0.06, ti) * S(1.0, 0.88, ti);
+  float mainDrop = S(0.4, 0.0, d) * life;
 
   float r = sqrt(S(1.0, y, st.y));
   float cd = abs(st.x - x);
   float trail = S(0.23 * r, 0.15 * r * r, cd);
   float trailFront = S(-0.02, 0.02, st.y - y);
-  trail *= trailFront * r * r;
+  trail *= trailFront * r * r * life;
 
   y = UV.y;
   float trail2 = S(0.2 * r, 0.0, cd);
@@ -118,7 +121,7 @@ vec2 DropLayer2(vec2 uv, float t) {
   y = fract(y * 10.0) + (st.y - 0.5);
   float dd = length(st - vec2(x, y));
   droplets = S(0.3, 0.0, dd);
-  float m = mainDrop + droplets * r * trailFront;
+  float m = mainDrop + droplets * r * trailFront * life;
 
   return vec2(m, trail);
 }

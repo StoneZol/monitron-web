@@ -91,7 +91,7 @@ const Protean = ({ showOverlay = true }: ProteanProps) => {
       <ProteanCanvas liveRef={liveRef} vizRef={vizRef} />
 
       {showOverlay ? (
-        <ScreensOverlay screenId="protean">
+        <ScreensOverlay screenId="protean_clouds">
           <ControlPanel
             title="protean clouds"
             actions={

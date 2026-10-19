@@ -1,10 +1,10 @@
-import type { MediaSelection } from "@/components/ControlPanel";
+﻿import type { MediaSelection } from "@/components/ControlPanel";
 import { STOCK_PLACEHOLDERS } from "@/lib/stockPlaceholders";
 import { listMediaLibrary, listSessionMedia } from "@/lib/userMedia";
-import type { HeartfeltLive } from "./Heartfelt.types";
+import type { WetglassLive } from "./Wetglass.types";
 
 /** Build ordered pool from enabled slideshow categories. */
-export function buildSlideshowPool(live: HeartfeltLive): MediaSelection[] {
+export function buildSlideshowPool(live: WetglassLive): MediaSelection[] {
   const pool: MediaSelection[] = [];
   if (live.slideshowStock) {
     for (const s of STOCK_PLACEHOLDERS) {
@@ -24,7 +24,7 @@ export function buildSlideshowPool(live: HeartfeltLive): MediaSelection[] {
   return pool;
 }
 
-export function currentMediaSelection(live: HeartfeltLive): MediaSelection {
+export function currentMediaSelection(live: WetglassLive): MediaSelection {
   if (live.bgSource === "library" && live.libraryId) {
     return { kind: "library", id: live.libraryId };
   }
@@ -35,7 +35,7 @@ export function currentMediaSelection(live: HeartfeltLive): MediaSelection {
 }
 
 export function nextSlideshowSelection(
-  live: HeartfeltLive,
+  live: WetglassLive,
 ): MediaSelection | null {
   const pool = buildSlideshowPool(live);
   if (pool.length === 0) return null;

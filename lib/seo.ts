@@ -38,10 +38,10 @@ const SCREEN_BLURBS: Record<string, string> = {
     "Volumetric coral reef tunnel for idle monitors — reactive tint and speed.",
   spectrum:
     "Plain audio-bus spectrum bars for idle monitors — 32 bands, peak caps, mirror.",
-  protean:
+  protean_clouds:
     "Protean clouds volume flight for idle monitors — reactive tint and speed.",
-  heartfelt:
-    "Rain on glass for idle monitors — drops, fog, and your own background photo.",
+  wetglass:
+    "Wet glass for idle monitors — rain streaks, fog, and your own background still.",
 };
 
 function absoluteOg(path: string): string {

@@ -103,7 +103,7 @@ function ProteanQuad({
   useEffect(() => () => mat.dispose(), [mat]);
 
   useEffect(() => {
-    return registerRuntimeReset("protean", () => {
+    return registerRuntimeReset("protean_clouds", () => {
       camZ.current = 0;
       lastT.current = 0;
       twinkleHue.current = 0;
@@ -252,7 +252,7 @@ export default function ProteanCanvas({
   liveRef,
   vizRef,
 }: ProteanCanvasProps) {
-  const dpr = useRenderDpr("protean", 1, 1.25);
+  const dpr = useRenderDpr("protean_clouds", 1, 1.25);
   return (
     <Canvas
       className="absolute inset-0 h-full w-full"

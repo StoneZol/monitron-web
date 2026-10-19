@@ -83,7 +83,7 @@ const TAG_META: Record<
     sourced: {
         label: "sourced",
         tone: "cyan",
-        title: "Based on an external source — credit below",
+        title: "Has an external ref — credit below",
     },
     reactive: {
         label: "reactive",
@@ -197,8 +197,8 @@ export function resolvePlaceholderTags(
 /** Plain-text fallback (titles, clipboard). Prefer `SourceCredit` in UI. */
 export function formatSourceCredit(src: PlaceholderSource): string {
     const porter = resolvePorter(src.portedBy);
-    if (porter) return `original — ${src.author} · port ${porter.name}`;
-    return `original — ${src.author}`;
+    if (porter) return `ref — ${src.author} · adapt ${porter.name}`;
+    return `ref — ${src.author}`;
 }
 
 function withPorter(source: Omit<PlaceholderSource, "portedBy">): PlaceholderSource {
@@ -371,9 +371,9 @@ export const placeholders: PlaceholderMeta[] = [
         ],
     },
     {
-        id: "protean",
+        id: "protean_clouds",
         title: "Protean Clouds",
-        href: "/s/protean",
+        href: "/s/protean_clouds",
         tags: ["reactive"],
         cost: "high",
         ai: MONITRON_AI,
@@ -386,16 +386,16 @@ export const placeholders: PlaceholderMeta[] = [
         ],
     },
     {
-        id: "heartfelt",
-        title: "Heartfelt",
-        href: "/s/heartfelt",
+        id: "wetglass",
+        title: "Wet Glass",
+        href: "/s/wetglass",
         tags: [],
         cost: "low",
         ai: MONITRON_AI,
         sources: [
             withPorter({
                 author: "BigWings",
-                title: "Heartfelt",
+                title: "Heartfelt (rain on glass ref)",
                 href: "https://www.shadertoy.com/view/ltffzl",
             }),
         ],
