@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 import { useScreensOverlay } from "@/components/ScreensOverlay/ScreensOverlay.context";
 import { NavBackButton } from "@/components/NavBackButton";
 import { VisualPipButton } from "@/components/VisualPipButton";
-import { PlaceholderCredit } from "@/components/SourceCredit";
+import { ScreenCreditBar } from "@/components/SourceCredit";
 import { placeholders } from "@/lib/placeholders";
 import {
     readPanelSections,
@@ -201,9 +201,8 @@ export function ControlPanel({
                         </div>
                     ) : null}
                     {placeholder ? (
-                        <PlaceholderCredit
+                        <ScreenCreditBar
                             meta={placeholder}
-                            variant="plain"
                             className={cn(
                                 "max-w-full",
                                 actions || overlay ? "mt-2" : null,
