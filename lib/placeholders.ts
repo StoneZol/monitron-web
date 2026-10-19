@@ -370,4 +370,19 @@ export const placeholders: PlaceholderMeta[] = [
             }),
         ],
     },
+    {
+        id: "protean",
+        title: "Protean Clouds",
+        href: "/s/protean",
+        tags: ["reactive"],
+        cost: "high",
+        ai: MONITRON_AI,
+        sources: [
+            withPorter({
+                author: "nimitz",
+                title: "Protean clouds",
+                href: "https://www.shadertoy.com/view/3l23Rh",
+            }),
+        ],
+    },
 ];
