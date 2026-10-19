@@ -21,6 +21,10 @@ const INFO = {
   lightning: "Occasional lightning flash intensity.",
   background:
     "Stock stills, shared URL library (max 20, tiny 67×37 previews), or local files (session only, multi-select up to 20 — cleared on refresh).",
+  bgAlignX:
+    "Horizontal crop anchor when the image is wider than the screen (cover). 0 = left, 0.5 = center, 1 = right.",
+  bgAlignY:
+    "Vertical crop anchor when the image is taller than the screen (cover). 0 = top, 0.5 = center, 1 = bottom.",
 } as const;
 
 const Heartfelt = ({ showOverlay = true }: HeartfeltProps) => {
@@ -55,6 +59,30 @@ const Heartfelt = ({ showOverlay = true }: HeartfeltProps) => {
                 onChange={controls.setMedia}
                 stocks={STOCK_PLACEHOLDERS}
                 info={INFO.background}
+              />
+              <Slider
+                label="Align X"
+                value={controls.bgAlignX}
+                min={HEARTFELT_RANGES.bgAlignX.min}
+                max={HEARTFELT_RANGES.bgAlignX.max}
+                step={HEARTFELT_RANGES.bgAlignX.step}
+                onChange={controls.setBgAlignX}
+                format={(v) =>
+                  v <= 0.02 ? "left" : v >= 0.98 ? "right" : v.toFixed(2)
+                }
+                info={INFO.bgAlignX}
+              />
+              <Slider
+                label="Align Y"
+                value={controls.bgAlignY}
+                min={HEARTFELT_RANGES.bgAlignY.min}
+                max={HEARTFELT_RANGES.bgAlignY.max}
+                step={HEARTFELT_RANGES.bgAlignY.step}
+                onChange={controls.setBgAlignY}
+                format={(v) =>
+                  v <= 0.02 ? "top" : v >= 0.98 ? "bottom" : v.toFixed(2)
+                }
+                info={INFO.bgAlignY}
               />
               <Slider
                 label="Rain"

@@ -64,6 +64,7 @@ function HeartfeltQuad({ liveRef }: { liveRef: RefObject<HeartfeltLive> }) {
           iTime: { value: 0 },
           iChannel0: { value: null },
           iChannelResolution: { value: new THREE.Vector2(1, 1) },
+          uBgAlign: { value: new THREE.Vector2(0.5, 0.5) },
           uRainAmount: { value: 0.75 },
           uDropSpeed: { value: 1 },
           uGlass: { value: 0.85 },
@@ -177,6 +178,7 @@ function HeartfeltQuad({ liveRef }: { liveRef: RefObject<HeartfeltLive> }) {
     m.uniforms.uDropSpeed!.value = live.dropSpeed;
     m.uniforms.uGlass!.value = live.glass;
     m.uniforms.uLightning!.value = live.lightning;
+    m.uniforms.uBgAlign!.value.set(live.bgAlignX, live.bgAlignY);
   });
 
   return (

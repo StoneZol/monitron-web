@@ -93,6 +93,18 @@ function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
       1,
       STORED_DEFAULTS.lightning,
     ),
+    bgAlignX: clamp(
+      Number(raw.bgAlignX),
+      0,
+      1,
+      STORED_DEFAULTS.bgAlignX,
+    ),
+    bgAlignY: clamp(
+      Number(raw.bgAlignY),
+      0,
+      1,
+      STORED_DEFAULTS.bgAlignY,
+    ),
     bgSource,
     stockId,
     libraryId,
@@ -196,11 +208,15 @@ export default function useHeartfeltHook() {
       dropSpeed: live.dropSpeed,
       glass: live.glass,
       lightning: live.lightning,
+      bgAlignX: live.bgAlignX,
+      bgAlignY: live.bgAlignY,
       mediaValue,
       setRainAmount: (rainAmount: number) => commit({ rainAmount }),
       setDropSpeed: (dropSpeed: number) => commit({ dropSpeed }),
       setGlass: (glass: number) => commit({ glass }),
       setLightning: (lightning: number) => commit({ lightning }),
+      setBgAlignX: (bgAlignX: number) => commit({ bgAlignX }),
+      setBgAlignY: (bgAlignY: number) => commit({ bgAlignY }),
       setMedia: (sel: MediaSelection) => {
         if (sel.kind === "stock") {
           commit({

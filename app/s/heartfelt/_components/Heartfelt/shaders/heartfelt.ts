@@ -26,6 +26,8 @@ uniform float iTime;
 uniform sampler2D iChannel0;
 /** Background texture size (px) — for object-fit: cover */
 uniform vec2 iChannelResolution;
+/** Cover object-position: x 0…1 left→right, y 0…1 top→bottom */
+uniform vec2 uBgAlign;
 uniform float uRainAmount;
 uniform float uDropSpeed;
 /** 0 = clear glass, 1 = foggy / heavy blur */
@@ -35,14 +37,20 @@ uniform float uLightning;
 
 #define S(a, b, t) smoothstep(a, b, t)
 
-/** Map screen UV (0…1) → texture UV like CSS object-fit: cover */
+/**
+ * object-fit: cover + object-position (uBgAlign).
+ * 0.5/0.5 = center; y=0 prefers top when cropping height, etc.
+ */
 vec2 coverUV(vec2 uv) {
   float sA = iResolution.x / max(iResolution.y, 1.0);
   float tA = iChannelResolution.x / max(iChannelResolution.y, 1.0);
+  vec2 align = clamp(uBgAlign, vec2(0.0), vec2(1.0));
   if (sA > tA) {
-    uv.y = (uv.y - 0.5) * (tA / sA) + 0.5;
+    float vis = tA / sA;
+    uv.y = uv.y * vis + align.y * (1.0 - vis);
   } else {
-    uv.x = (uv.x - 0.5) * (sA / tA) + 0.5;
+    float vis = sA / tA;
+    uv.x = uv.x * vis + align.x * (1.0 - vis);
   }
   return uv;
 }
