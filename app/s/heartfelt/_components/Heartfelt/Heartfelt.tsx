@@ -1,5 +1,6 @@
 "use client";
 
+import { useSyncExternalStore } from "react";
 import { ScreensOverlay } from "@/components/ScreensOverlay";
 import {
   ControlPanel,
@@ -9,6 +10,10 @@ import {
   Slider,
 } from "@/components/ControlPanel";
 import { STOCK_PLACEHOLDERS } from "@/lib/stockPlaceholders";
+import {
+  getBgCropAxis,
+  subscribeBgCropAxis,
+} from "./Heartfelt.bgCrop";
 import HeartfeltCanvas from "./Heartfelt.Canvas";
 import useHeartfeltHook from "./Heartfelt.hooks";
 import { HEARTFELT_RANGES, type HeartfeltProps } from "./Heartfelt.types";
@@ -22,13 +27,18 @@ const INFO = {
   background:
     "Stock stills, shared URL library (max 20, tiny 67×37 previews), or local files (session only, multi-select up to 20 — cleared on refresh).",
   bgAlignX:
-    "Horizontal crop anchor when the image is wider than the screen (cover). 0 = left, 0.5 = center, 1 = right.",
+    "Horizontal crop anchor (cover is cropping left/right). 0 = left, 0.5 = center, 1 = right.",
   bgAlignY:
-    "Vertical crop anchor when the image is taller than the screen (cover). 0 = top, 0.5 = center, 1 = bottom.",
+    "Vertical crop anchor (cover is cropping top/bottom). 0 = top, 0.5 = center, 1 = bottom.",
 } as const;
 
 const Heartfelt = ({ showOverlay = true }: HeartfeltProps) => {
   const { liveRef, controls } = useHeartfeltHook();
+  const cropAxis = useSyncExternalStore(
+    subscribeBgCropAxis,
+    getBgCropAxis,
+    () => "none" as const,
+  );
 
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-black select-none">
@@ -60,30 +70,34 @@ const Heartfelt = ({ showOverlay = true }: HeartfeltProps) => {
                 stocks={STOCK_PLACEHOLDERS}
                 info={INFO.background}
               />
-              <Slider
-                label="Align X"
-                value={controls.bgAlignX}
-                min={HEARTFELT_RANGES.bgAlignX.min}
-                max={HEARTFELT_RANGES.bgAlignX.max}
-                step={HEARTFELT_RANGES.bgAlignX.step}
-                onChange={controls.setBgAlignX}
-                format={(v) =>
-                  v <= 0.02 ? "left" : v >= 0.98 ? "right" : v.toFixed(2)
-                }
-                info={INFO.bgAlignX}
-              />
-              <Slider
-                label="Align Y"
-                value={controls.bgAlignY}
-                min={HEARTFELT_RANGES.bgAlignY.min}
-                max={HEARTFELT_RANGES.bgAlignY.max}
-                step={HEARTFELT_RANGES.bgAlignY.step}
-                onChange={controls.setBgAlignY}
-                format={(v) =>
-                  v <= 0.02 ? "top" : v >= 0.98 ? "bottom" : v.toFixed(2)
-                }
-                info={INFO.bgAlignY}
-              />
+              {cropAxis === "x" ? (
+                <Slider
+                  label="Align X"
+                  value={controls.bgAlignX}
+                  min={HEARTFELT_RANGES.bgAlignX.min}
+                  max={HEARTFELT_RANGES.bgAlignX.max}
+                  step={HEARTFELT_RANGES.bgAlignX.step}
+                  onChange={controls.setBgAlignX}
+                  format={(v) =>
+                    v <= 0.02 ? "left" : v >= 0.98 ? "right" : v.toFixed(2)
+                  }
+                  info={INFO.bgAlignX}
+                />
+              ) : null}
+              {cropAxis === "y" ? (
+                <Slider
+                  label="Align Y"
+                  value={controls.bgAlignY}
+                  min={HEARTFELT_RANGES.bgAlignY.min}
+                  max={HEARTFELT_RANGES.bgAlignY.max}
+                  step={HEARTFELT_RANGES.bgAlignY.step}
+                  onChange={controls.setBgAlignY}
+                  format={(v) =>
+                    v <= 0.02 ? "top" : v >= 0.98 ? "bottom" : v.toFixed(2)
+                  }
+                  info={INFO.bgAlignY}
+                />
+              ) : null}
               <Slider
                 label="Rain"
                 value={controls.rainAmount}

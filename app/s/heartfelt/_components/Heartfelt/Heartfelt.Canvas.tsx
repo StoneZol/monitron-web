@@ -13,6 +13,7 @@ import {
   getMediaLibraryEntry,
   getSessionMediaEntry,
 } from "@/lib/userMedia";
+import { setBgCropFromAspects } from "./Heartfelt.bgCrop";
 import type { HeartfeltLive } from "./Heartfelt.types";
 import {
   heartfeltFragmentShader,
@@ -77,9 +78,16 @@ function HeartfeltQuad({ liveRef }: { liveRef: RefObject<HeartfeltLive> }) {
   const drawSize = useMemo(() => new THREE.Vector2(), []);
 
   const { gl, size } = useThree();
+
+  const publishCrop = () => {
+    const res = matRef.current.uniforms.iChannelResolution!.value;
+    setBgCropFromAspects(drawSize.x, drawSize.y, res.x, res.y);
+  };
+
   useEffect(() => {
     gl.getDrawingBufferSize(drawSize);
     matRef.current.uniforms.iResolution!.value.set(drawSize.x, drawSize.y, 1);
+    publishCrop();
   }, [drawSize, gl, size.height, size.width]);
 
   useEffect(
@@ -107,6 +115,13 @@ function HeartfeltQuad({ liveRef }: { liveRef: RefObject<HeartfeltLive> }) {
       matRef.current.uniforms.iChannel0!.value = tex;
       const img = tex.image as { width?: number; height?: number } | undefined;
       matRef.current.uniforms.iChannelResolution!.value.set(
+        Math.max(1, img?.width ?? 1),
+        Math.max(1, img?.height ?? 1),
+      );
+      gl.getDrawingBufferSize(drawSize);
+      setBgCropFromAspects(
+        drawSize.x,
+        drawSize.y,
         Math.max(1, img?.width ?? 1),
         Math.max(1, img?.height ?? 1),
       );
@@ -179,6 +194,7 @@ function HeartfeltQuad({ liveRef }: { liveRef: RefObject<HeartfeltLive> }) {
     m.uniforms.uGlass!.value = live.glass;
     m.uniforms.uLightning!.value = live.lightning;
     m.uniforms.uBgAlign!.value.set(live.bgAlignX, live.bgAlignY);
+    publishCrop();
   });
 
   return (
