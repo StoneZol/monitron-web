@@ -147,7 +147,7 @@ Numeric range with **− / +** steppers on the sides (same chrome as Select’s 
 
 ## `DurationField`
 
-Digital **MM:SS** clock for intervals (slideshow, etc.). Coarse `±m` and fine `±s` steppers; value is whole seconds.
+Digital **MM:SS** clock for intervals (slideshow, etc.). Fine `±s` and coarse `±{coarseStep}s` steppers (e.g. `±15s`); value is whole seconds.
 
 | Prop         | Type                        | Default | Notes             |
 | ------------ | --------------------------- | ------- | ----------------- |
@@ -156,7 +156,7 @@ Digital **MM:SS** clock for intervals (slideshow, etc.). Coarse `±m` and fine `
 | `min`        | `number?`                   | `1`     |                   |
 | `max`        | `number?`                   | `600`   |                   |
 | `step`       | `number?`                   | `1`     | Fine ±s           |
-| `coarseStep` | `number?`                   | `60`    | Coarse ±m         |
+| `coarseStep` | `number?`                   | `60`    | Coarse ±Ns label  |
 | `onChange`   | `(seconds: number) => void` | —       |                   |
 | `disabled`   | `boolean?`                  | `false` |                   |
 | `info`       | `string?`                   | —       | Optional "?" tip  |

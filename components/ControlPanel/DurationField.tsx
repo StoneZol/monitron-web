@@ -12,7 +12,7 @@ export type DurationFieldProps = {
   max?: number;
   /** Fine step (seconds) for ±s */
   step?: number;
-  /** Coarse step (seconds) for ±m — default 60 */
+  /** Coarse step (seconds) — button label shows ±{N}s; default 60 */
   coarseStep?: number;
   onChange: (seconds: number) => void;
   disabled?: boolean;
@@ -55,6 +55,7 @@ export function DurationField({
   const { mm, ss } = formatClock(sec);
   const atMin = sec <= min;
   const atMax = sec >= max;
+  const coarseLabel = `${coarseStep}s`;
 
   const nudge = (delta: number) => {
     if (disabled) return;
@@ -82,9 +83,9 @@ export function DurationField({
           aria-label={`Decrease ${label} by ${coarseStep}s`}
           disabled={disabled || atMin}
           onClick={() => nudge(-coarseStep)}
-          className={cn(fieldStepBtn, "w-8 text-[9px]")}
+          className={cn(fieldStepBtn, "min-w-9 px-1 text-[8px]")}
         >
-          −m
+          −{coarseLabel}
         </button>
         <button
           type="button"
@@ -125,9 +126,9 @@ export function DurationField({
           aria-label={`Increase ${label} by ${coarseStep}s`}
           disabled={disabled || atMax}
           onClick={() => nudge(coarseStep)}
-          className={cn(fieldStepBtn, "w-8 text-[9px]")}
+          className={cn(fieldStepBtn, "min-w-9 px-1 text-[8px]")}
         >
-          +m
+          +{coarseLabel}
         </button>
       </div>
     </div>
