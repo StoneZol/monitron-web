@@ -186,14 +186,30 @@ Do **not** copy `channelLevel` / `beatRaw` / `lerpHex` into a per-screen `*.audi
 import type { ReactiveChannel } from "@/lib/visualAudio";
 import {
   channelLevel,
+  createMotionKickState,
   drivenLevel,
   hexToVec3,
   lerpHex,
+  motionSpeedMul,
 } from "@/lib/visualAudio";
 
 const level = channelLevel(viz, live.colorChannel); // off | bass | mid | high | beat
 const punch = drivenLevel(level, live.colorDrive);  // optional 3rd arg = ceiling (default 1.5)
 lerpHex(live.color, live.colorPeak, punch, tint);
+
+// Flight / scroll: one shared cruise × kick mul (keep kick state across frames)
+const kick = createMotionKickState();
+const { speedMul } = motionSpeedMul({
+  cruiseRaw: speedRaw,
+  cruiseDrive: live.speedDrive,
+  cruiseArmed: reactive && live.speedChannel !== "off",
+  kickRaw: accelRaw,
+  kickDrive: live.accelDrive,
+  kickArmed: reactive && live.accelChannel !== "off",
+  kick,
+  dt,
+});
+// rate = baseSpeed * speedMul
 ```
 
 | Export            | Role |
@@ -203,6 +219,8 @@ lerpHex(live.color, live.colorPeak, punch, tint);
 | `beatRaw`         | Unclipped crest-aware beat (onset detectors) |
 | `softPeak01`      | `tanh` soft-clip into ~0…1 |
 | `drivenLevel`     | `level × drive`, ceiling default `1.5` (pass `1` for strict lerps) |
+| `createMotionKickState` | Mutable kick envelope for `motionSpeedMul` |
+| `motionSpeedMul`  | Unified cruise × kick → `speedMul` (base × mul = motion rate) |
 | `hexToVec3`       | Hex → `THREE.Color` |
 | `lerpHex`         | Idle→peak color lerp |
 | `hueWalkHex`      | Legacy hue offset from a base hex |
@@ -246,6 +264,14 @@ ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 | `getRenderScale` / `setRenderScale` | Imperative read/write + persist |
 
 Also stamp a subjective `cost: "low" \| "mid" \| "high"` on the home catalog entry in [`lib/placeholders.ts`](lib/placeholders.ts) so users know which channels start hungry.
+
+---
+
+## Sensitive content API
+
+Channels tagged `sensitive` stay censored / locked until the user opts in via **sensitive previews**. Tripwires kill the page if DevTools removes a hard gate.
+
+Full surface (tag, gate wrap, prefs, confirm arm, lockdown): [`docs/sensitive.md`](docs/sensitive.md).
 
 ---
 
