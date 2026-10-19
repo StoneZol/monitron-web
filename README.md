@@ -64,16 +64,26 @@ Without the extension the site still works — visualizer UI stays dormant, scre
 
 ## Contributing a placeholder
 
+### Screen id / URL slug
+
+`id`, route folder `app/s/<id>`, `href`, and prefs key must match.
+
+- **Spaces in the title → underscores in the slug.**  
+  Example: title `Fairy Smoke` → id / path `/s/fairy_smoke` (not `fairysmoke`).
+- Single-word titles stay one token (`matrix`, `synthwave`, `blackhole`).
+- Component file names may stay PascalCase (`Fairysmoke.tsx`); only the **route folder** and **public id** need the `_` form.
+- When renaming a slug, migrate prefs with `readScreenPrefsMigrating(newId, [oldId, …])` from [`lib/screenPrefs.ts`](lib/screenPrefs.ts).
+
 ### 1. Register in the catalog
 
 [`lib/placeholders.ts`](lib/placeholders.ts):
 
 ```ts
 {
-  id: "waves",
-  title: "Waves",
-  href: "/s/waves",
-  previewSrc: "/s/waves.webp", // home card — from npm run convert
+  id: "fairy_smoke", // underscores for multi-word titles
+  title: "Fairy Smoke",
+  href: "/s/fairy_smoke",
+  previewSrc: "/s/fairy_smoke.webp", // home card — from npm run convert
 }
 ```
 
@@ -82,7 +92,7 @@ Card + Open Graph images: see **Preview + Open Graph** below (don’t hand-drop 
 ### 2. Create the screen
 
 ```
-app/s/<id>/
+app/s/<id>/                 # same underscore slug as placeholders.id
   page.tsx
   _components/<Name>/
     index.ts
@@ -396,7 +406,7 @@ Both are **1200×630** (`cover` / center).
 ### Steps
 
 1. Capture a still of the screen (fullscreen, HUD hidden if you can).
-2. Drop it into [`public/original/`](public/original/) as **`<screenId>.png`** (or `.jpg` / `.jpeg` / `.tiff`) — same id as in `placeholders` / `/s/<id>` (e.g. `fairysmoke.png`, `hexagons_place.png`).
+2. Drop it into [`public/original/`](public/original/) as **`<screenId>.png`** (or `.jpg` / `.jpeg` / `.tiff`) — same id as in `placeholders` / `/s/<id>` (e.g. `fairy_smoke.png`, `hexagons_place.png`).
 3. Run:
 
 ```bash

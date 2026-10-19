@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useSyncExternalStore } from "react";
 import {
@@ -14,11 +14,7 @@ import {
 } from "@/hooks/useAudioReactive";
 import { toggleFullscreen } from "@/lib/fullscreen";
 import { resetFxOverlay } from "@/components/FxOverlay";
-import {
-  readScreenPrefsRaw,
-  saveScreenPrefs,
-  screenPrefsKey,
-} from "@/lib/screenPrefs";
+import { readScreenPrefsMigrating, saveScreenPrefs } from "@/lib/screenPrefs";
 import { onTabSyncApply } from "@/lib/tabSyncHotApply";
 import {
   TWINKLE_DEFAULT_L,
@@ -36,7 +32,6 @@ import {
 } from "./Protean.types";
 
 const SCREEN_ID = "protean_clouds";
-const LEGACY_SCREEN_ID = "protean";
 const CHANNELS = new Set<ReactiveChannel>([
   "off",
   "bass",
@@ -188,25 +183,10 @@ const liveRef: { current: ProteanLive } = { current: PROTEAN_DEFAULTS };
 
 function readPrefs(): Stored {
   if (cached) return cached;
-  let raw = readScreenPrefsRaw(SCREEN_ID);
-  // One-shot migrate old /s/protean prefs → protean_clouds
-  if (Object.keys(raw).length === 0) {
-    const legacy = readScreenPrefsRaw(LEGACY_SCREEN_ID);
-    if (Object.keys(legacy).length > 0) {
-      raw = legacy;
-      saveScreenPrefs(SCREEN_ID, legacy);
-      try {
-        window.localStorage.removeItem(screenPrefsKey(LEGACY_SCREEN_ID));
-      } catch {
-        /* private mode */
-      }
-    }
-  }
-  cached = migratePrefs(
-    (Object.keys(raw).length > 0
-      ? { ...STORED_DEFAULTS, ...raw }
-      : { ...STORED_DEFAULTS }) as Stored & Record<string, unknown>,
-  );
+  cached = migratePrefs({
+    ...STORED_DEFAULTS,
+    ...readScreenPrefsMigrating(SCREEN_ID, ["protean"]),
+  } as Stored & Record<string, unknown>);
   liveRef.current = cached;
   return cached;
 }

@@ -51,6 +51,32 @@ export function readScreenPrefsRaw(screenId: string): Record<string, unknown> {
   }
 }
 
+/**
+ * Prefs for `screenId`, with one-shot copy from the first non-empty legacy id
+ * (then that legacy key is removed). Use when renaming `/s/<slug>` routes.
+ */
+export function readScreenPrefsMigrating(
+  screenId: string,
+  legacyIds: readonly string[] = [],
+): Record<string, unknown> {
+  const current = readScreenPrefsRaw(screenId);
+  if (Object.keys(current).length > 0) return current;
+  if (typeof window === "undefined") return {};
+  for (const legacy of legacyIds) {
+    if (!legacy || legacy === screenId) continue;
+    const raw = readScreenPrefsRaw(legacy);
+    if (Object.keys(raw).length === 0) continue;
+    saveScreenPrefs(screenId, raw);
+    try {
+      window.localStorage.removeItem(screenPrefsKey(legacy));
+    } catch {
+      /* private mode */
+    }
+    return raw;
+  }
+  return {};
+}
+
 export function readPanelSections(screenId: string): PanelSectionsMap {
   const raw = readScreenPrefsRaw(screenId)[PANEL_SECTIONS_KEY];
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};

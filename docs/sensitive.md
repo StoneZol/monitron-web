@@ -8,7 +8,7 @@ Opt-in unlock for channels tagged `sensitive`, plus tamper tripwires that nuke t
 
 ## Mark a screen
 
-In [`lib/placeholders.ts`](../lib/placeholders.ts):
+In [`lib/placeholders.ts`](../lib/placeholders.ts) — `id` / `/s/<id>` use underscores for multi-word titles (see README **Screen id / URL slug**):
 
 ```ts
 {

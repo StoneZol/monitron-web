@@ -470,6 +470,8 @@ type PlaceholderMeta = {
 Shared background picker for all screens:
 
 - **Stock** — bundled `/placeholders` (prefs store only an id).
+
+Screen route ids: multi-word titles use underscores (`/s/coral_reef`, not `/s/coralreef`). See README **Screen id / URL slug**.
 - **Library** — up to 20 http(s) URLs ([`lib/userMedia.ts`](../lib/userMedia.ts)). Full image is **not** stored; only a 67×37 preview blob for thumbs. Draw path loads from the URL (CORS).
 
 | Prop        | Type | Default | Notes |

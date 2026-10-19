@@ -26,21 +26,21 @@ const SCREEN_BLURBS: Record<string, string> = {
     "Hexagonal hive tunnel for idle monitors — garland, tint, and flight.",
   observance:
     "Observance void flight for idle monitors — crosses, lightning, and reactive tint.",
-  darkterrain:
+  dark_terrain:
     "Dark Terrain hill flight for idle monitors — flex look, lightning, and reactive tint.",
   warpburst:
     "Goo tunnel fog for idle monitors — speed, color, and peak flicker.",
-  fairysmoke:
+  fairy_smoke:
     "Volumetric fairy smoke shell for idle monitors — reactive tint and speed.",
-  kalistarnest:
+  kali_star_nest:
     "Kali Star Nest free flight for idle monitors — reactive stars, fog, and speed.",
-  coralreef:
+  coral_reef:
     "Volumetric coral reef tunnel for idle monitors — reactive tint and speed.",
   spectrum:
     "Plain audio-bus spectrum bars for idle monitors — 32 bands, peak caps, mirror.",
   protean_clouds:
     "Protean clouds volume flight for idle monitors — reactive tint and speed.",
-  wetglass:
+  wet_glass:
     "Wet glass for idle monitors — rain streaks, fog, and your own background still.",
 };
 
