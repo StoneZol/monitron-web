@@ -402,4 +402,20 @@ export const placeholders: PlaceholderMeta[] = [
             }),
         ],
     },
+    {
+        id: "music_visual_bar",
+        title: "Music Visual Bar",
+        href: "/s/music_visual_bar",
+        previewSrc: "/s/music_visual_bar.webp",
+        tags: ["reactive"],
+        cost: "low",
+        ai: MONITRON_AI,
+        sources: [
+            withPorter({
+                author: "beetom",
+                title: "Music Visual Bar",
+                href: "https://www.shadertoy.com/view/sXtSDS",
+            }),
+        ],
+    },
 ];

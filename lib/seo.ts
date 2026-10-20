@@ -42,6 +42,8 @@ const SCREEN_BLURBS: Record<string, string> = {
     "Protean clouds volume flight for idle monitors — reactive tint and speed.",
   wet_glass:
     "Wet glass for idle monitors — rain streaks, fog, and your own background still.",
+  music_visual_bar:
+    "Cyber neon spectrum ring for idle monitors — frost lens, bloom, reactive hue and speed.",
 };
 
 function absoluteOg(path: string): string {
