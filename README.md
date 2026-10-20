@@ -41,7 +41,7 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ```
 ┌─────────────────────┐         window.postMessage            ┌──────────────────────┐
-│  Chrome extension   │  hello / audio-frame (bands[32], rms, peak)│  Monitron page       │
+│  Chrome extension   │  hello / audio-frame / tab-title           │  Monitron page       │
 │  tabCapture → FFT   │ ─────────────────────────────────────────► │  subscribeAudioBus   │
 │  (raw spectrum)     │ ◄───────────────────────────────────────── │  visualizer-toggle   │
 └─────────────────────┘                                            └──────────┬───────────┘
@@ -64,16 +64,26 @@ Without the extension the site still works — visualizer UI stays dormant, scre
 
 ## Contributing a placeholder
 
+### Screen id / URL slug
+
+`id`, route folder `app/s/<id>`, `href`, and prefs key must match.
+
+- **Spaces in the title → underscores in the slug.**  
+  Example: title `Fairy Smoke` → id / path `/s/fairy_smoke` (not `fairysmoke`).
+- Single-word titles stay one token (`matrix`, `synthwave`, `blackhole`).
+- Component file names may stay PascalCase (`Fairysmoke.tsx`); only the **route folder** and **public id** need the `_` form.
+- When renaming a slug, migrate prefs with `readScreenPrefsMigrating(newId, [oldId, …])` from [`lib/screenPrefs.ts`](lib/screenPrefs.ts).
+
 ### 1. Register in the catalog
 
 [`lib/placeholders.ts`](lib/placeholders.ts):
 
 ```ts
 {
-  id: "waves",
-  title: "Waves",
-  href: "/s/waves",
-  previewSrc: "/s/waves.webp", // home card — from npm run convert
+  id: "fairy_smoke", // underscores for multi-word titles
+  title: "Fairy Smoke",
+  href: "/s/fairy_smoke",
+  previewSrc: "/s/fairy_smoke.webp", // home card — from npm run convert
 }
 ```
 
@@ -82,7 +92,7 @@ Card + Open Graph images: see **Preview + Open Graph** below (don’t hand-drop 
 ### 2. Create the screen
 
 ```
-app/s/<id>/
+app/s/<id>/                 # same underscore slug as placeholders.id
   page.tsx
   _components/<Name>/
     index.ts
@@ -169,6 +179,8 @@ if (viz.enabled) {
 | [`lib/visualAudio.ts`](lib/visualAudio.ts)                 | Default reactive channel + tint helpers (use these)   |
 | [`lib/renderScale.ts`](lib/renderScale.ts)                 | Per-screen GPU buffer scale (R3F `dpr` / 2D canvas)   |
 | [`lib/twinkleHsl.ts`](lib/twinkleHsl.ts)                   | Shared HSL twinkle: hue advance, resolve, audio pulse |
+| [`lib/userMedia.ts`](lib/userMedia.ts)                     | URL library (≤20) + session local files (RAM, ≤20)    |
+| [`lib/stockPlaceholders.ts`](lib/stockPlaceholders.ts)     | Bundled `/placeholders/*.webp` ids for durable restore |
 | [`lib/fullscreen.ts`](lib/fullscreen.ts)                   | `toggleFullscreen()`                                  |
 | [`lib/visualPip.ts`](lib/visualPip.ts)                     | Document PiP (+ video fallback) for the live canvas   |
 | [`components/ControlPanel`](components/ControlPanel)       | Bootleg AV knobs / meters / buttons                   |
@@ -186,15 +198,33 @@ Do **not** copy `channelLevel` / `beatRaw` / `lerpHex` into a per-screen `*.audi
 import type { ReactiveChannel } from "@/lib/visualAudio";
 import {
   channelLevel,
+  createMotionKickState,
   drivenLevel,
   hexToVec3,
   lerpHex,
+  motionSpeedMul,
 } from "@/lib/visualAudio";
 
 const level = channelLevel(viz, live.colorChannel); // off | bass | mid | high | beat
 const punch = drivenLevel(level, live.colorDrive);  // optional 3rd arg = ceiling (default 1.5)
 lerpHex(live.color, live.colorPeak, punch, tint);
+
+// Flight / scroll: cruise = avg + hit-density sustain; kick = in-time punches
+const kick = createMotionKickState();
+const { speedMul } = motionSpeedMul({
+  cruiseRaw: speedRaw,
+  cruiseDrive: live.speedDrive,
+  cruiseArmed: reactive && live.speedChannel !== "off",
+  kickRaw: accelRaw,
+  kickDrive: live.accelDrive,
+  kickArmed: reactive && live.accelChannel !== "off",
+  kick,
+  dt,
+});
+// rate = baseSpeed * speedMul
 ```
+
+Cruise does **not** chase peaks — slow band average + sharpness inject on rising edges, soft sustain so dense hits (e.g. 5/s) plateau instead of gap-jerking. Accel/kick owns the rhythmic punches.
 
 | Export            | Role |
 | ----------------- | ---- |
@@ -203,6 +233,8 @@ lerpHex(live.color, live.colorPeak, punch, tint);
 | `beatRaw`         | Unclipped crest-aware beat (onset detectors) |
 | `softPeak01`      | `tanh` soft-clip into ~0…1 |
 | `drivenLevel`     | `level × drive`, ceiling default `1.5` (pass `1` for strict lerps) |
+| `createMotionKickState` | Mutable cruise+kick state for `motionSpeedMul` |
+| `motionSpeedMul`  | Unified cruise × kick → `speedMul` (base × mul = motion rate) |
 | `hexToVec3`       | Hex → `THREE.Color` |
 | `lerpHex`         | Idle→peak color lerp |
 | `hueWalkHex`      | Legacy hue offset from a base hex |
@@ -249,6 +281,14 @@ Also stamp a subjective `cost: "low" \| "mid" \| "high"` on the home catalog ent
 
 ---
 
+## Sensitive content API
+
+Channels tagged `sensitive` stay censored / locked until the user opts in via **sensitive previews**. Tripwires kill the page if DevTools removes a hard gate.
+
+Full surface (tag, gate wrap, prefs, confirm arm, lockdown): [`docs/sensitive.md`](docs/sensitive.md).
+
+---
+
 ## Audio bus API
 
 Authoritative types live in [`lib/audioBus.ts`](lib/audioBus.ts). Screens derive meaning with [`lib/audioDerive.ts`](lib/audioDerive.ts) helpers — the plugin only ships raw spectrum.
@@ -278,6 +318,19 @@ Shows the ControlPanel visualizer section (sets **extension** = true).
 ```
 
 A frame also implies the extension is present. Screens slice `bands[]` (and use `rms` / `peak`) locally — no named EQ on the bus.
+
+**Tab title** (low-rate, parallel to frames — plugin ≈1 Hz or on change; do **not** attach to `audio-frame`)
+
+```ts
+{
+  source: "monitron-extension",
+  type: "tab-title",
+  title: string,   // chrome.tabs title / now-playing label
+  t: number,       // capture timestamp ms
+}
+```
+
+Page stores this in [`lib/pluginTabTitle.ts`](lib/pluginTabTitle.ts) / [`hooks/usePluginTabTitle.ts`](hooks/usePluginTabTitle.ts). Screens dedupe `title` vs previous for track/tab-change triggers (not wired yet).
 
 ### Page → extension
 
@@ -325,6 +378,16 @@ postMessage(
   },
   "*",
 );
+
+postMessage(
+  {
+    source: "monitron-extension",
+    type: "tab-title",
+    title: "Artist – Track · YouTube Music",
+    t: performance.now(),
+  },
+  "*",
+);
 ```
 
 Then enable **reactive** under **visualizer** on `/s/matrix` — rain should react (columns follow spectrum left→lows / right→highs).
@@ -347,7 +410,7 @@ type VizBands = {
 - Idle ~6s without mouse → HUD fades (`ScreensOverlay`); move mouse to bring it back.
 - System cursor is left alone (browser won’t redraw `cursor: none` without movement).
 - Fullscreen = ControlPanel **fullscreen** button (`Fullscreen` API), not OS F11 injection.
-- **Sync** (when another tab of the same screen is open) pushes prefs (incl. `audioSource`) over `BroadcastChannel` and hot-applies at a shared deadline — no `location.reload`, so Page Fullscreen survives. Share **paste** still reloads. Details: [`docs/plan-hot-tab-sync.md`](docs/plan-hot-tab-sync.md).
+- **Sync** (when another tab of the same screen is open) pushes prefs (incl. `audioSource`) and session-only local media Blobs over `BroadcastChannel`, then hot-applies at a shared deadline — no `location.reload`, so Page Fullscreen survives. Share **paste** still reloads. Details: [`docs/plan-hot-tab-sync.md`](docs/plan-hot-tab-sync.md).
 - **PiP** = ControlPanel **pip** button ([`lib/visualPip.ts`](lib/visualPip.ts)). Prefers **Document Picture-in-Picture** (moves the live R3F / canvas shell into a floating window and keeps sizing via `_roots.setSize`). Falls back to classic video PiP via `captureStream` when Document PiP isn’t available. Unsupported browsers hide / no-op the control.
 
 ---
@@ -366,7 +429,7 @@ Both are **1200×630** (`cover` / center).
 ### Steps
 
 1. Capture a still of the screen (fullscreen, HUD hidden if you can).
-2. Drop it into [`public/original/`](public/original/) as **`<screenId>.png`** (or `.jpg` / `.jpeg` / `.tiff`) — same id as in `placeholders` / `/s/<id>` (e.g. `fairysmoke.png`, `hexagons_place.png`).
+2. Drop it into [`public/original/`](public/original/) as **`<screenId>.png`** (or `.jpg` / `.jpeg` / `.tiff`) — same id as in `placeholders` / `/s/<id>` (e.g. `fairy_smoke.png`, `hexagons_place.png`).
 3. Run:
 
 ```bash

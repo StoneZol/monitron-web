@@ -4,6 +4,7 @@
  *
  * Changes from original:
  * - iTime / iResolution / uCamZ (flight via accumulated cam Z)
+ * - Camera: stock (ahead) / manual X/Y / flex bank (Dark Terrain look)
  * - Crosses always on (no-cross fork lives in Dark Terrain)
  * - uCrossesAir / uCrossesFlip: lift off terrain / slide crossbar down
  * - uCrossBaseLight / uCrossBaseColor: ground lamp in front of each cross
@@ -28,8 +29,15 @@ varying vec2 vUv;
 uniform vec3 iResolution;
 uniform float iTime;
 uniform float uCamZ;
-/** Clock for cross-path sway (audio scales rate, not punches). */
+/** Cross-path sway clock (always runs; amount = uCrossSway). */
 uniform float uSwayT;
+/** Flex look clock (Cam accel scales rate). */
+uniform float uLookT;
+/** 0 = stock ahead, 1 = manual X/Y, 2 = flex bank */
+uniform float uCamMode;
+uniform float uYaw;
+uniform float uPitch;
+uniform float uCamBank;
 uniform float uCrossesAir;
 uniform float uCrossesFlip;
 uniform float uCrossBaseLight;
@@ -86,9 +94,37 @@ void main() {
   bool baseLightOn = uCrossBaseLight > 0.5;
   float swayAmt = clamp(uCrossSway, 0.0, 2.0);
 
-  // Stock look: D = vec3(u, 1)
   float yaw = 0.0;
   float pitch = 0.0;
+  if (uCamMode > 1.5) {
+    // Flex — Dark Terrain bank wander
+    float bank = clamp(uCamBank, 0.0, 2.0);
+    float ft = uLookT;
+    float ax =
+      sin(ft * 0.097) * 0.50 +
+      sin(ft * 0.173 + 2.15) * 0.32 +
+      sin(ft * 0.281 + 5.10) * 0.22 +
+      sin(ft * 0.041 + 1.30) * 0.18;
+    float ay =
+      cos(ft * 0.113) * 0.50 +
+      sin(ft * 0.197 + 0.90) * 0.32 +
+      cos(ft * 0.251 + 3.70) * 0.22 +
+      cos(ft * 0.053 + 4.40) * 0.18;
+    vec2 look = vec2(ax, ay);
+    float lr = max(length(look), 1e-5);
+    float diskR = lr / sqrt(1.0 + lr * lr);
+    look *= diskR / lr;
+    float breath = 0.78 + 0.22 * (0.5 + 0.5 * sin(ft * 0.037));
+    float cone = 0.62 * bank * breath;
+    yaw = look.x * cone;
+    pitch = clamp(look.y * cone, -1.45, 1.45);
+  } else if (uCamMode > 0.5) {
+    // Manual X/Y (radians from CPU)
+    yaw = uYaw;
+    pitch = clamp(uPitch, -1.45, 1.45);
+  }
+  // else stock: yaw/pitch stay 0 — Shadertoy ahead
+
   vec3 fwd = dirFrom(yaw, pitch);
   vec3 rt = vec3(cos(yaw), 0.0, -sin(yaw));
   vec3 up = cross(fwd, rt);

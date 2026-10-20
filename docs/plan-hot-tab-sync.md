@@ -17,7 +17,7 @@ Cross-tab barrier (`BroadcastChannel` + shared `applyAt` ~`TAB_SYNC_LEAD_MS`). A
 
 ## Implementation
 
-- [`lib/tabBroadcast.ts`](../lib/tabBroadcast.ts) — `TAB_SYNC_VERSION` 4, `applyAt`, `scheduleTabSyncApply` / `subscribeTabSyncApply`
+- [`lib/tabBroadcast.ts`](../lib/tabBroadcast.ts) — `TAB_SYNC_VERSION` 5, `applyAt`, session media Blobs, `scheduleTabSyncApply` / `subscribeTabSyncApply`
 - [`lib/runtimeReset.ts`](../lib/runtimeReset.ts) — registry + helpers
 - [`lib/tabSyncHotApply.ts`](../lib/tabSyncHotApply.ts) — rehydrate hook helper (`onTabSyncApply`)
 - Per-screen hooks rehydrate; Canvas/loops register cold-boot slots

@@ -6,8 +6,8 @@ import type { ScreensOverlayProps } from "./ScreensOverlay.types";
 import { FxOverlayLayer } from "@/components/FxOverlay";
 
 /**
- * HUD shell for every saver. Hide / cross-tab sync live here — screens only
- * pass screenId and render ControlPanel; no per-screen sync wiring.
+ * HUD shell for every saver. Hide / cross-tab sync (prefs + session media)
+ * live here — screens only pass screenId and render ControlPanel.
  * Tap empty screen to wake when HUD is hidden.
  * Fx overlay layer paints over the scene on every screen.
  */

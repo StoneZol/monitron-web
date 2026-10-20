@@ -1,0 +1,286 @@
+﻿"use client";
+
+import { useEffect, useSyncExternalStore } from "react";
+import {
+  MIC_GAIN_DEFAULT,
+  MIC_GATE_DEFAULT,
+  migrateAudioSource,
+  normalizeMicGain,
+  normalizeMicGate,
+  normalizePeakGain,
+  PEAK_GAIN_DEFAULT,
+  useAudioReactive,
+  type AudioSource,
+} from "@/hooks/useAudioReactive";
+import { toggleFullscreen } from "@/lib/fullscreen";
+import { resetFxOverlay } from "@/components/FxOverlay";
+import { readScreenPrefsMigrating, saveScreenPrefs } from "@/lib/screenPrefs";
+import { onTabSyncApply } from "@/lib/tabSyncHotApply";
+import {
+  TWINKLE_DEFAULT_L,
+  TWINKLE_DEFAULT_S,
+  TWINKLE_DEFAULT_SPEED,
+} from "@/lib/twinkleHsl";
+import {
+  PROTEAN_COLOR_DRIVE_MAX,
+  PROTEAN_DEFAULTS,
+  PROTEAN_DRIVE_MAX,
+  type ProteanCameraMode,
+  type ProteanColorMode,
+  type ProteanLive,
+  type ReactiveChannel,
+} from "./Protean.types";
+
+const SCREEN_ID = "protean_clouds";
+const CHANNELS = new Set<ReactiveChannel>([
+  "off",
+  "bass",
+  "mid",
+  "high",
+  "beat",
+]);
+const CAMERA_MODES = new Set<ProteanCameraMode>(["flex", "manual"]);
+const COLOR_MODES = new Set<ProteanColorMode>([
+  "original",
+  "paletteTwinkle",
+  "solid",
+  "twinkle",
+]);
+
+type Stored = ProteanLive & {
+  audioSource: AudioSource;
+  micGate: number;
+  micGain: number;
+  peakGain: number;
+};
+
+const STORED_DEFAULTS: Stored = {
+  ...PROTEAN_DEFAULTS,
+  audioSource: "plugin",
+  micGate: MIC_GATE_DEFAULT,
+  micGain: MIC_GAIN_DEFAULT,
+  peakGain: PEAK_GAIN_DEFAULT,
+};
+
+function clamp(n: number, min: number, max: number, fallback: number) {
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(max, Math.max(min, n));
+}
+
+function isHex(v: unknown): v is string {
+  return typeof v === "string" && /^#?[0-9a-fA-F]{6}$/.test(v);
+}
+
+function asHex(v: unknown, fallback: string): string {
+  if (!isHex(v)) return fallback;
+  return v.startsWith("#") ? v : `#${v}`;
+}
+
+function channel(v: unknown, fallback: ReactiveChannel): ReactiveChannel {
+  return typeof v === "string" && CHANNELS.has(v as ReactiveChannel)
+    ? (v as ReactiveChannel)
+    : fallback;
+}
+
+function cameraMode(v: unknown): ProteanCameraMode {
+  return typeof v === "string" && CAMERA_MODES.has(v as ProteanCameraMode)
+    ? (v as ProteanCameraMode)
+    : STORED_DEFAULTS.cameraMode;
+}
+
+function colorMode(v: unknown, raw: Record<string, unknown>): ProteanColorMode {
+  if (typeof v === "string" && COLOR_MODES.has(v as ProteanColorMode)) {
+    return v as ProteanColorMode;
+  }
+  // Migrate old boolean twinkle / dual palette prefs
+  if (raw.twinkle === true) return "twinkle";
+  if (raw.colorPeak !== undefined && raw.color !== undefined) return "solid";
+  return STORED_DEFAULTS.colorMode;
+}
+
+function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
+  return {
+    ...STORED_DEFAULTS,
+    ...raw,
+    audioSource: migrateAudioSource(raw),
+    micGate: normalizeMicGate(raw.micGate),
+    micGain: normalizeMicGain(raw.micGain),
+    peakGain: normalizePeakGain(raw.peakGain),
+    flightSpeed: clamp(
+      Number(raw.flightSpeed),
+      0.1,
+      3,
+      STORED_DEFAULTS.flightSpeed,
+    ),
+    cameraMode: cameraMode(raw.cameraMode),
+    yaw: clamp(Number(raw.yaw), -45, 45, STORED_DEFAULTS.yaw),
+    pitch: clamp(Number(raw.pitch), -45, 45, STORED_DEFAULTS.pitch),
+    morph: clamp(Number(raw.morph), -1, 1, STORED_DEFAULTS.morph),
+    colorMode: colorMode(raw.colorMode, raw),
+    color: asHex(raw.color, STORED_DEFAULTS.color),
+    colorPeak: asHex(raw.colorPeak, STORED_DEFAULTS.colorPeak),
+    twinkleSpeed: clamp(
+      Number(raw.twinkleSpeed),
+      0,
+      4,
+      STORED_DEFAULTS.twinkleSpeed ?? TWINKLE_DEFAULT_SPEED,
+    ),
+    twinkleS: clamp(
+      Number(raw.twinkleS),
+      0,
+      100,
+      STORED_DEFAULTS.twinkleS ?? TWINKLE_DEFAULT_S,
+    ),
+    twinkleL: clamp(
+      Number(raw.twinkleL),
+      0,
+      100,
+      STORED_DEFAULTS.twinkleL ?? TWINKLE_DEFAULT_L,
+    ),
+    saturation: clamp(
+      Number(raw.saturation),
+      0,
+      2,
+      STORED_DEFAULTS.saturation,
+    ),
+    colorChannel: channel(raw.colorChannel, STORED_DEFAULTS.colorChannel),
+    colorDrive: clamp(
+      Number(raw.colorDrive),
+      0,
+      PROTEAN_COLOR_DRIVE_MAX,
+      STORED_DEFAULTS.colorDrive,
+    ),
+    speedChannel: channel(raw.speedChannel, STORED_DEFAULTS.speedChannel),
+    speedDrive: clamp(
+      Number(raw.speedDrive),
+      0,
+      PROTEAN_DRIVE_MAX,
+      STORED_DEFAULTS.speedDrive,
+    ),
+    accelChannel: channel(raw.accelChannel, STORED_DEFAULTS.accelChannel),
+    accelDrive: clamp(
+      Number(raw.accelDrive),
+      0,
+      PROTEAN_DRIVE_MAX,
+      STORED_DEFAULTS.accelDrive,
+    ),
+  };
+}
+
+const listeners = new Set<() => void>();
+function emit() {
+  for (const listener of listeners) listener();
+}
+function subscribe(listener: () => void) {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+let cached: Stored | null = null;
+const liveRef: { current: ProteanLive } = { current: PROTEAN_DEFAULTS };
+
+function readPrefs(): Stored {
+  if (cached) return cached;
+  cached = migratePrefs({
+    ...STORED_DEFAULTS,
+    ...readScreenPrefsMigrating(SCREEN_ID, ["protean"]),
+  } as Stored & Record<string, unknown>);
+  liveRef.current = cached;
+  return cached;
+}
+
+function writePrefs(next: Stored) {
+  cached = next;
+  liveRef.current = cached;
+  saveScreenPrefs(SCREEN_ID, cached);
+  emit();
+}
+
+function rehydrateFromStorage() {
+  cached = null;
+  readPrefs();
+  emit();
+}
+
+export default function useProteanHook() {
+  const live = useSyncExternalStore(
+    subscribe,
+    readPrefs,
+    () => STORED_DEFAULTS,
+  );
+
+  useEffect(() => onTabSyncApply(SCREEN_ID, rehydrateFromStorage), []);
+
+  const commit = (patch: Partial<Stored>) => {
+    writePrefs({ ...readPrefs(), ...patch });
+  };
+
+  const visualizer = useAudioReactive({
+    preferredSource: live.audioSource,
+    preferredMicGate: live.micGate,
+    preferredMicGain: live.micGain,
+    preferredPeakGain: live.peakGain,
+    onSourceChange: (audioSource) => commit({ audioSource }),
+    onMicGateChange: (micGate) => commit({ micGate }),
+    onMicGainChange: (micGain) => commit({ micGain }),
+    onPeakGainChange: (peakGain) => commit({ peakGain }),
+  });
+
+  return {
+    liveRef,
+    vizRef: visualizer.vizRef,
+    visualizer,
+    controls: {
+      flightSpeed: live.flightSpeed,
+      cameraMode: live.cameraMode,
+      yaw: live.yaw,
+      pitch: live.pitch,
+      morph: live.morph,
+      colorMode: live.colorMode,
+      color: live.color,
+      colorPeak: live.colorPeak,
+      twinkleSpeed: live.twinkleSpeed,
+      twinkleS: live.twinkleS,
+      twinkleL: live.twinkleL,
+      saturation: live.saturation,
+      colorChannel: live.colorChannel,
+      colorDrive: live.colorDrive,
+      speedChannel: live.speedChannel,
+      speedDrive: live.speedDrive,
+      accelChannel: live.accelChannel,
+      accelDrive: live.accelDrive,
+      colorDriveMax: PROTEAN_COLOR_DRIVE_MAX,
+      speedDriveMax: PROTEAN_DRIVE_MAX,
+      accelDriveMax: PROTEAN_DRIVE_MAX,
+      setFlightSpeed: (flightSpeed: number) => commit({ flightSpeed }),
+      setCameraMode: (cameraMode: ProteanCameraMode) => commit({ cameraMode }),
+      setYaw: (yaw: number) => commit({ yaw }),
+      setPitch: (pitch: number) => commit({ pitch }),
+      setMorph: (morph: number) => commit({ morph }),
+      setColorMode: (colorMode: ProteanColorMode) => commit({ colorMode }),
+      setColor: (color: string) => commit({ color }),
+      setColorPeak: (colorPeak: string) => commit({ colorPeak }),
+      setTwinkleSpeed: (twinkleSpeed: number) => commit({ twinkleSpeed }),
+      setTwinkleS: (twinkleS: number) => commit({ twinkleS }),
+      setTwinkleL: (twinkleL: number) => commit({ twinkleL }),
+      setSaturation: (saturation: number) => commit({ saturation }),
+      setColorChannel: (colorChannel: ReactiveChannel) =>
+        commit({ colorChannel }),
+      setColorDrive: (colorDrive: number) => commit({ colorDrive }),
+      setSpeedChannel: (speedChannel: ReactiveChannel) =>
+        commit({ speedChannel }),
+      setSpeedDrive: (speedDrive: number) => commit({ speedDrive }),
+      setAccelChannel: (accelChannel: ReactiveChannel) =>
+        commit({ accelChannel }),
+      setAccelDrive: (accelDrive: number) => commit({ accelDrive }),
+      fullscreen: () => void toggleFullscreen(),
+      reset: () => {
+        writePrefs({ ...STORED_DEFAULTS });
+        resetFxOverlay(SCREEN_ID);
+        window.location.reload();
+      },
+    },
+  };
+}

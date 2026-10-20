@@ -7,6 +7,7 @@ import {
   SENSITIVE_GATE_SELECTOR,
   subscribeSensitiveConfirm,
 } from "@/lib/sensitiveGate";
+import { clearPhotosensitiveAccepted } from "@/lib/photosensitiveConsent";
 import {
   getSensitivePreviewsEnabled,
   subscribeSensitivePreview,
@@ -65,7 +66,9 @@ export function SensitiveTripwire() {
         observer.disconnect();
         unsubPreview();
         unsubConfirm();
-        lockdown("sensitive");
+        // Caught on sensitive — wipe main hazard accept; reload = first gate again
+        clearPhotosensitiveAccepted();
+        lockdown();
       }, DEBOUNCE_MS);
     };
 

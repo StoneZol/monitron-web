@@ -26,6 +26,7 @@ import {
   OBSERVANCE_DEFAULTS,
   OBSERVANCE_DRIVE_MAX,
   type CrossBaseLightMode,
+  type ObservanceCameraMode,
   type ObservanceLive,
   type ReactiveChannel,
 } from "./Observance.types";
@@ -37,6 +38,11 @@ const CHANNELS = new Set<ReactiveChannel>([
   "mid",
   "high",
   "beat",
+]);
+const CAMERA_MODES = new Set<ObservanceCameraMode>([
+  "stock",
+  "manual",
+  "flex",
 ]);
 const BASE_LIGHT_MODES = new Set<CrossBaseLightMode>([
   "off",
@@ -80,6 +86,12 @@ function channel(v: unknown, fallback: ReactiveChannel): ReactiveChannel {
     : fallback;
 }
 
+function cameraMode(v: unknown): ObservanceCameraMode {
+  return typeof v === "string" && CAMERA_MODES.has(v as ObservanceCameraMode)
+    ? (v as ObservanceCameraMode)
+    : STORED_DEFAULTS.cameraMode;
+}
+
 function baseLightMode(
   raw: Record<string, unknown>,
   fallback: CrossBaseLightMode,
@@ -115,6 +127,15 @@ function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
       0.1,
       3,
       STORED_DEFAULTS.flightSpeed,
+    ),
+    cameraMode: cameraMode(raw.cameraMode),
+    yaw: clamp(Number(raw.yaw), -180, 180, STORED_DEFAULTS.yaw),
+    pitch: clamp(Number(raw.pitch), -80, 80, STORED_DEFAULTS.pitch),
+    cameraBank: clamp(
+      Number(raw.cameraBank),
+      0,
+      2,
+      STORED_DEFAULTS.cameraBank,
     ),
     crossesAir:
       raw.crossesAir === undefined
@@ -273,6 +294,10 @@ export default function useObservanceHook() {
     visualizer,
     controls: {
       flightSpeed: live.flightSpeed,
+      cameraMode: live.cameraMode,
+      yaw: live.yaw,
+      pitch: live.pitch,
+      cameraBank: live.cameraBank,
       crossesAir: live.crossesAir,
       crossesFlip: live.crossesFlip,
       crossBaseLightMode: live.crossBaseLightMode,
@@ -302,6 +327,11 @@ export default function useObservanceHook() {
       accelDriveMax: OBSERVANCE_DRIVE_MAX,
       camAccelDriveMax: OBSERVANCE_DRIVE_MAX,
       setFlightSpeed: (flightSpeed: number) => commit({ flightSpeed }),
+      setCameraMode: (cameraMode: ObservanceCameraMode) =>
+        commit({ cameraMode }),
+      setYaw: (yaw: number) => commit({ yaw }),
+      setPitch: (pitch: number) => commit({ pitch }),
+      setCameraBank: (cameraBank: number) => commit({ cameraBank }),
       setCrossesAir: (crossesAir: boolean) => commit({ crossesAir }),
       setCrossesFlip: (crossesFlip: boolean) => commit({ crossesFlip }),
       setCrossBaseLightMode: (crossBaseLightMode: CrossBaseLightMode) =>

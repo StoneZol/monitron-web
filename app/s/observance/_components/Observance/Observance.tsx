@@ -18,6 +18,7 @@ import useObservanceHook from "./Observance.hooks";
 import {
   OBSERVANCE_RANGES,
   type CrossBaseLightMode,
+  type ObservanceCameraMode,
   type ObservanceProps,
   type ReactiveChannel,
 } from "./Observance.types";
@@ -30,6 +31,15 @@ const REACTIVE_CHANNEL_OPTIONS: { value: ReactiveChannel; label: string }[] = [
   { value: "beat", label: "beat (peak punches)" },
 ];
 
+const CAMERA_MODE_OPTIONS: {
+  value: ObservanceCameraMode;
+  label: string;
+}[] = [
+  { value: "stock", label: "stock (ahead)" },
+  { value: "manual", label: "manual (X / Y)" },
+  { value: "flex", label: "flex (center + scatter)" },
+];
+
 const BASE_LIGHT_OPTIONS: { value: CrossBaseLightMode; label: string }[] = [
   { value: "off", label: "off" },
   { value: "sun", label: "sun color" },
@@ -40,6 +50,12 @@ const BASE_LIGHT_OPTIONS: { value: CrossBaseLightMode; label: string }[] = [
 const INFO = {
   look: "Observance flight — black crosses and sun-tinted lightning stripes.",
   flightSpeed: "Base camera advance along the path (1 ≈ Shadertoy default).",
+  cameraMode:
+    "stock = Shadertoy ahead. manual = freelook X/Y. flex = Dark Terrain bank wander. Path stays fixed.",
+  yaw: "Look yaw relative to flight (deg). 0 = along the path.",
+  pitch: "Look pitch relative to flight (deg). 0 = along the path.",
+  cameraBank:
+    "Flex look cone radius. Wander stays inside a circle; bank scales how wide that circle gets.",
   crosses: "Cross markers, plant / air / bar / base lamps, and path sway.",
   crossesAir: "Lift crosses off the hills by a fixed height (float in air).",
   crossesFlip: "Slide the crossbar down the stem (inverted cross). No rotation.",
@@ -65,15 +81,14 @@ const INFO = {
     "Flash spawn rate (0 = off, 0.2 = default, 1 = Shadertoy cadence, 2 = 2×).",
   colorChannel:
     "Band that punches sun color (twinkle: light pulse; off: idle→peak).",
-  speedChannel: "Band that smoothly scales flight speed (no punches).",
-  accelChannel:
-    "Second band that smoothly scales flight speed (stacks with Speed; no punches).",
+  speedChannel: "Band that sets continuous cruise flight (avg + hit sustain).",
+  accelChannel: "Band that punches flight in time (kick / accel).",
   camAccelChannel:
-    "Band that smoothly scales how fast cross-sway animates. Off = 1×. No punches.",
+    "Band that drives flex look rate — cruise lift + in-time kicks. Only in flex. Off = 1×.",
   colorDrive: "Color / twinkle pulse boost (0…2).",
-  speedDrive: "Flight speed scale strength (0…4).",
-  accelDrive: "Extra flight speed scale strength (0…4).",
-  camAccelDrive: "Cross-sway animation rate strength (0…4).",
+  speedDrive: "Cruise flight strength (0…4).",
+  accelDrive: "Kick / accel punch strength (0…4).",
+  camAccelDrive: "Flex look clock strength (0…4). Only in flex mode.",
   visualizer: {
     section: "Audio in → bus meters → peak gain for reactive screens.",
     source:
@@ -88,6 +103,8 @@ const Observance = ({ showOverlay = true }: ObservanceProps) => {
   const { liveRef, vizRef, visualizer, controls } = useObservanceHook();
   const audioLocked = !visualizer.reactive;
   const audioStamp = audioLocked ? ({ peak: "audio" } as const) : undefined;
+  const camFlex = controls.cameraMode === "flex";
+  const camManual = controls.cameraMode === "manual";
 
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-black select-none">
@@ -122,6 +139,49 @@ const Observance = ({ showOverlay = true }: ObservanceProps) => {
                 format={(v) => `×${v.toFixed(2)}`}
                 info={INFO.flightSpeed}
               />
+              <Select
+                label="Camera"
+                value={controls.cameraMode}
+                options={CAMERA_MODE_OPTIONS}
+                onChange={controls.setCameraMode}
+                info={INFO.cameraMode}
+              />
+              {camFlex ? (
+                <Slider
+                  label="Camera bank"
+                  value={controls.cameraBank}
+                  min={OBSERVANCE_RANGES.cameraBank.min}
+                  max={OBSERVANCE_RANGES.cameraBank.max}
+                  step={OBSERVANCE_RANGES.cameraBank.step}
+                  onChange={controls.setCameraBank}
+                  format={(v) => `×${v.toFixed(2)}`}
+                  info={INFO.cameraBank}
+                />
+              ) : null}
+              {camManual ? (
+                <>
+                  <Slider
+                    label="X"
+                    value={controls.yaw}
+                    min={OBSERVANCE_RANGES.yaw.min}
+                    max={OBSERVANCE_RANGES.yaw.max}
+                    step={OBSERVANCE_RANGES.yaw.step}
+                    onChange={controls.setYaw}
+                    format={(v) => `${v.toFixed(1)}°`}
+                    info={INFO.yaw}
+                  />
+                  <Slider
+                    label="Y"
+                    value={controls.pitch}
+                    min={OBSERVANCE_RANGES.pitch.min}
+                    max={OBSERVANCE_RANGES.pitch.max}
+                    step={OBSERVANCE_RANGES.pitch.step}
+                    onChange={controls.setPitch}
+                    format={(v) => `${v.toFixed(1)}°`}
+                    info={INFO.pitch}
+                  />
+                </>
+              ) : null}
 
               <ControlSubSection label="crosses" info={INFO.crosses}>
                 <Toggle
@@ -280,13 +340,15 @@ const Observance = ({ showOverlay = true }: ObservanceProps) => {
                       onChange={controls.setAccelChannel}
                       info={INFO.accelChannel}
                     />
-                    <Select
-                      label="Cam accel"
-                      value={controls.camAccelChannel}
-                      options={REACTIVE_CHANNEL_OPTIONS}
-                      onChange={controls.setCamAccelChannel}
-                      info={INFO.camAccelChannel}
-                    />
+                    {camFlex ? (
+                      <Select
+                        label="Cam accel"
+                        value={controls.camAccelChannel}
+                        options={REACTIVE_CHANNEL_OPTIONS}
+                        onChange={controls.setCamAccelChannel}
+                        info={INFO.camAccelChannel}
+                      />
+                    ) : null}
                   </ControlSubSection>
                   <ControlSubSection label="drive">
                     <Slider
@@ -319,16 +381,18 @@ const Observance = ({ showOverlay = true }: ObservanceProps) => {
                       format={(v) => `×${v.toFixed(1)}`}
                       info={INFO.accelDrive}
                     />
-                    <Slider
-                      label="Cam accel"
-                      value={controls.camAccelDrive}
-                      min={OBSERVANCE_RANGES.camAccelDrive.min}
-                      max={controls.camAccelDriveMax}
-                      step={OBSERVANCE_RANGES.camAccelDrive.step}
-                      onChange={controls.setCamAccelDrive}
-                      format={(v) => `×${v.toFixed(1)}`}
-                      info={INFO.camAccelDrive}
-                    />
+                    {camFlex ? (
+                      <Slider
+                        label="Cam accel"
+                        value={controls.camAccelDrive}
+                        min={OBSERVANCE_RANGES.camAccelDrive.min}
+                        max={controls.camAccelDriveMax}
+                        step={OBSERVANCE_RANGES.camAccelDrive.step}
+                        onChange={controls.setCamAccelDrive}
+                        format={(v) => `×${v.toFixed(1)}`}
+                        info={INFO.camAccelDrive}
+                      />
+                    ) : null}
                   </ControlSubSection>
                 </>
               ) : null}

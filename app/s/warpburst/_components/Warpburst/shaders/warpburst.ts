@@ -7,7 +7,9 @@
  * - Extra FBM octaves + fine wisp layer for more fog detail
  * - iTime / iResolution as uniforms
  * - uCamZ: accumulated flight (dt × flightSpeed)
- * - uCamBank: roll/pitch/yaw/sway amplitude (0 = straight, 1 = default, 2 = 2×)
+ * - uCamMode: 0 = flex bank (stock), 1 = manual fixed X/Y
+ * - uCamBank: roll/pitch/yaw/sway amplitude in flex (0 = straight, 1 = default, 2 = 2×)
+ * - uYaw / uPitch: fixed look offsets in manual (radians)
  * - uColor / uHighlight: CPU tint (idle→peak or HSL twinkle hex)
  * - uTwinkle: HSL twinkle mode (CPU drives uColor); no fixed shader palette
  * - uSaturation: look chroma
@@ -31,7 +33,11 @@ varying vec2 vUv;
 uniform vec3 iResolution;
 uniform float iTime;
 uniform float uCamZ;
+/** 0 = flex (animated bank), 1 = manual (fixed X/Y) */
+uniform float uCamMode;
 uniform float uCamBank;
+uniform float uYaw;
+uniform float uPitch;
 uniform vec3 uColor;
 uniform vec3 uHighlight;
 uniform float uTwinkle;
@@ -111,10 +117,25 @@ void main() {
     // Flight clock from accumulated cam Z (1 ≈ Shadertoy BASE_SPEED path)
     float time = uCamZ;
 
-    float bank = clamp(uCamBank, 0.0, 2.0);
-    float roll  = sin(time * 0.25) * 0.7 * bank;
-    float pitch = cos(time * 0.15) * 0.15 * bank;
-    float yaw   = sin(time * 0.10) * 0.15 * bank;
+    float roll = 0.0;
+    float pitch = 0.0;
+    float yaw = 0.0;
+    float swayX = 0.0;
+    float swayY = 0.0;
+
+    if (uCamMode < 0.5) {
+      // Flex — stock animated bank
+      float bank = clamp(uCamBank, 0.0, 2.0);
+      roll  = sin(time * 0.25) * 0.7 * bank;
+      pitch = cos(time * 0.15) * 0.15 * bank;
+      yaw   = sin(time * 0.10) * 0.15 * bank;
+      swayX = sin(time * 0.3) * 0.08 * bank;
+      swayY = cos(time * 0.2) * 0.05 * bank;
+    } else {
+      // Manual — fixed look X/Y (no roll / sway)
+      yaw = uYaw;
+      pitch = uPitch;
+    }
 
     float cr = cos(roll), sr = sin(roll);
     vec2 uvTunnel = vec2(
@@ -124,9 +145,6 @@ void main() {
 
     vec3 ro = vec3(0.0, 0.0, time * 2.5);
     vec3 rd = normalize(vec3(uvTunnel + vec2(yaw, pitch), 1.2));
-
-    float swayX = sin(time * 0.3) * 0.08 * bank;
-    float swayY = cos(time * 0.2) * 0.05 * bank;
     rd.x += swayX;
     rd.y += swayY;
 

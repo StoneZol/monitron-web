@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useSyncExternalStore } from "react";
 import { bindFullscreenEscape } from "@/lib/fullscreen";
-import { readScreenPrefsRaw } from "@/lib/screenPrefs";
+import { snapshotScreenPrefsForSync } from "@/lib/screenLivePrefs";
 import {
   applyIncomingTabSync,
   broadcastHudHide,
@@ -15,6 +15,7 @@ import {
   subscribeTabPresence,
   subscribeTabSync,
 } from "@/lib/tabBroadcast";
+import { exportSessionMediaForSync } from "@/lib/userMedia";
 
 const listeners = new Map<string, Set<() => void>>();
 
@@ -115,7 +116,7 @@ const useScreensOverlayHook = (screenId: string) => {
     return subscribeHudHide(screenId, () => writeHiddenLocal(screenId, true));
   }, [screenId]);
 
-  // Cross-tab sync — prefs only; does not force-hide.
+  // Cross-tab sync — prefs + session local media; does not force-hide.
   useEffect(() => {
     return subscribeTabSync(screenId, (msg) => {
       if (msg.senderId === getTabSyncSenderId()) return;
@@ -125,7 +126,13 @@ const useScreensOverlayHook = (screenId: string) => {
 
   const sync = () => {
     if (!getTabHasPeers(screenId)) return;
-    const applyAt = broadcastTabSync(screenId, readScreenPrefsRaw(screenId));
+    const sessionMedia = exportSessionMediaForSync();
+    // Prefer this tab's in-memory prefs when registered (wet glass bg, etc.)
+    const applyAt = broadcastTabSync(
+      screenId,
+      snapshotScreenPrefsForSync(screenId),
+      sessionMedia,
+    );
     scheduleTabSyncApply(applyAt, screenId);
   };
 

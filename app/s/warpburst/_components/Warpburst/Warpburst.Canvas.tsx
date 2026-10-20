@@ -73,7 +73,10 @@ function WarpburstQuad({
           iResolution: { value: new THREE.Vector3(1, 1, 1) },
           iTime: { value: 0 },
           uCamZ: { value: 0 },
+          uCamMode: { value: 0 },
           uCamBank: { value: 0.5 },
+          uYaw: { value: 0 },
+          uPitch: { value: 0 },
           uColor: { value: new THREE.Color("#c200ff") },
           uHighlight: { value: new THREE.Color("#8200ff") },
           uTwinkle: { value: 0 },
@@ -199,9 +202,13 @@ function WarpburstQuad({
       hexToVec3(live.colorPeak, highlight);
     }
 
+    const DEG = Math.PI / 180;
     m.uniforms.iTime!.value = t;
     m.uniforms.uCamZ!.value = camZ.current;
+    m.uniforms.uCamMode!.value = live.cameraMode === "manual" ? 1 : 0;
     m.uniforms.uCamBank!.value = Math.max(0, live.cameraBank);
+    m.uniforms.uYaw!.value = live.yaw * DEG;
+    m.uniforms.uPitch!.value = live.pitch * DEG;
     m.uniforms.uTwinkle!.value = live.twinkle ? 1 : 0;
     m.uniforms.uSaturation!.value = Math.max(0, live.saturation);
     m.uniforms.uDetail!.value = Math.max(0, live.fogDetail);

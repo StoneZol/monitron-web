@@ -16,6 +16,7 @@ import WarpburstCanvas from "./Warpburst.Canvas";
 import useWarpburstHook from "./Warpburst.hooks";
 import {
   WARPBURST_RANGES,
+  type WarpburstCameraMode,
   type WarpburstProps,
   type ReactiveChannel,
 } from "./Warpburst.types";
@@ -28,11 +29,23 @@ const REACTIVE_CHANNEL_OPTIONS: { value: ReactiveChannel; label: string }[] = [
   { value: "beat", label: "beat (peak punches)" },
 ];
 
+const CAMERA_MODE_OPTIONS: {
+  value: WarpburstCameraMode;
+  label: string;
+}[] = [
+  { value: "flex", label: "flex (bank wander)" },
+  { value: "manual", label: "manual (X / Y)" },
+];
+
 const INFO = {
   look: "Goo tunnel fog from Warpburst 2 — no stars. Tint, HSL twinkle, peak flicker.",
   flightSpeed: "Base tunnel advance (1 ≈ Shadertoy BASE_SPEED).",
+  cameraMode:
+    "flex = stock roll/pitch/yaw/sway. manual = fixed look X/Y, no bank wander.",
   cameraBank:
-    "Camera roll / pitch / yaw / sway spread — 0 = dead straight, 1 = default, 2 = double.",
+    "Flex only — roll / pitch / yaw / sway spread. 0 = dead straight, 1 = default, 2 = double.",
+  yaw: "Fixed look X (deg). 0 = along the tube.",
+  pitch: "Fixed look Y (deg). 0 = along the tube.",
   colorPalette:
     "Idle = base goo. Peak = neon highlight. Hidden while twinkle is on; peak locked when audio is off.",
   twinkle:
@@ -64,6 +77,8 @@ const Warpburst = ({ showOverlay = true }: WarpburstProps) => {
   const { liveRef, vizRef, visualizer, controls } = useWarpburstHook();
   const audioLocked = !visualizer.reactive;
   const audioStamp = audioLocked ? ({ peak: "audio" } as const) : undefined;
+  const camFlex = controls.cameraMode === "flex";
+  const camManual = controls.cameraMode === "manual";
 
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-black select-none">
@@ -98,16 +113,49 @@ const Warpburst = ({ showOverlay = true }: WarpburstProps) => {
                 format={(v) => `×${v.toFixed(2)}`}
                 info={INFO.flightSpeed}
               />
-              <Slider
-                label="Camera bank"
-                value={controls.cameraBank}
-                min={WARPBURST_RANGES.cameraBank.min}
-                max={WARPBURST_RANGES.cameraBank.max}
-                step={WARPBURST_RANGES.cameraBank.step}
-                onChange={controls.setCameraBank}
-                format={(v) => `×${v.toFixed(2)}`}
-                info={INFO.cameraBank}
+              <Select
+                label="Camera"
+                value={controls.cameraMode}
+                options={CAMERA_MODE_OPTIONS}
+                onChange={controls.setCameraMode}
+                info={INFO.cameraMode}
               />
+              {camFlex ? (
+                <Slider
+                  label="Camera bank"
+                  value={controls.cameraBank}
+                  min={WARPBURST_RANGES.cameraBank.min}
+                  max={WARPBURST_RANGES.cameraBank.max}
+                  step={WARPBURST_RANGES.cameraBank.step}
+                  onChange={controls.setCameraBank}
+                  format={(v) => `×${v.toFixed(2)}`}
+                  info={INFO.cameraBank}
+                />
+              ) : null}
+              {camManual ? (
+                <>
+                  <Slider
+                    label="X"
+                    value={controls.yaw}
+                    min={WARPBURST_RANGES.yaw.min}
+                    max={WARPBURST_RANGES.yaw.max}
+                    step={WARPBURST_RANGES.yaw.step}
+                    onChange={controls.setYaw}
+                    format={(v) => `${v.toFixed(1)}°`}
+                    info={INFO.yaw}
+                  />
+                  <Slider
+                    label="Y"
+                    value={controls.pitch}
+                    min={WARPBURST_RANGES.pitch.min}
+                    max={WARPBURST_RANGES.pitch.max}
+                    step={WARPBURST_RANGES.pitch.step}
+                    onChange={controls.setPitch}
+                    format={(v) => `${v.toFixed(1)}°`}
+                    info={INFO.pitch}
+                  />
+                </>
+              ) : null}
               <TwinkleControls
                 title="twinkle"
                 checked={controls.twinkle}

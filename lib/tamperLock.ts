@@ -3,8 +3,9 @@
 import { clearPhotosensitiveAccepted } from "@/lib/photosensitiveConsent";
 
 export const TAMPER_LOCK_ID = "monitron-consent-lock";
+export const TAMPER_STRIKE_KEY = "monitron:tamper-strikes:v1";
 
-export type TamperLockKind = "hazard" | "sensitive";
+export type TamperLockKind = "first" | "repeat";
 
 declare global {
   interface Window {
@@ -12,20 +13,17 @@ declare global {
   }
 }
 
-let activeKind: TamperLockKind = "hazard";
+let activeKind: TamperLockKind = "first";
 
-const COPY: Record<
-  TamperLockKind,
-  { title: string; body: string[] }
-> = {
-  hazard: {
+const COPY: Record<TamperLockKind, { title: string; body: string[] }> = {
+  first: {
     title: "“To prevent the fight is the highest mastery.” — Sun Tzu",
     body: [
       "You thought deleting DOM nodes would make you free? The popup was only an illusion — shielding you from the raw code. Destroying it triggered a cascading simulation failure.",
       "This is your last chance. After this, there is no turning back. You take the blue pill — the story ends, you wake up on Google and believe whatever you want to believe. You take the red pill — you reload the simulation and play by the rules.",
     ],
   },
-  sensitive: {
+  repeat: {
     title:
       "“Insanity is doing the same thing over and over and expecting different results.”",
     body: [
@@ -34,6 +32,24 @@ const COPY: Record<
     ],
   },
 };
+
+function readStrikes(): number {
+  try {
+    const raw = window.localStorage.getItem(TAMPER_STRIKE_KEY);
+    const n = raw ? Number.parseInt(raw, 10) : 0;
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  } catch {
+    return 0;
+  }
+}
+
+function writeStrikes(n: number): void {
+  try {
+    window.localStorage.setItem(TAMPER_STRIKE_KEY, String(n));
+  } catch {
+    /* private mode */
+  }
+}
 
 export function isTamperLocked(): boolean {
   return Boolean(
@@ -104,11 +120,17 @@ function enforceLock(): void {
   }
 }
 
-/** Nuke the page into a vanilla DOM lock — only Leave / Reload exit. */
-export function lockdown(kind: TamperLockKind = "hazard"): void {
+/**
+ * Nuke the page into a vanilla DOM lock.
+ * Strike 0 → Sun Tzu. Strike 1+ → insanity. Any gate, any page.
+ */
+export function lockdown(): void {
   if (typeof window === "undefined" || window.__monitronConsentLock) return;
   window.__monitronConsentLock = true;
-  activeKind = kind;
+
+  const strikes = readStrikes();
+  activeKind = strikes === 0 ? "first" : "repeat";
+  writeStrikes(strikes + 1);
 
   document.documentElement.style.overflow = "hidden";
   document.body.style.overflow = "hidden";

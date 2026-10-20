@@ -83,7 +83,7 @@ const TAG_META: Record<
     sourced: {
         label: "sourced",
         tone: "cyan",
-        title: "Based on an external source — credit below",
+        title: "Has an external ref — credit below",
     },
     reactive: {
         label: "reactive",
@@ -94,6 +94,12 @@ const TAG_META: Record<
         label: "only reactive",
         tone: "warn",
         title: "Audio-only — idle without mic or plugin",
+    },
+    "track-sync": {
+        label: "track sync",
+        tone: "cyan",
+        title:
+            "Plugin tab-title hooks (e.g. change still on new track) - not full audio reactive",
     },
     sensitive: {
         label: "sensitive",
@@ -197,8 +203,8 @@ export function resolvePlaceholderTags(
 /** Plain-text fallback (titles, clipboard). Prefer `SourceCredit` in UI. */
 export function formatSourceCredit(src: PlaceholderSource): string {
     const porter = resolvePorter(src.portedBy);
-    if (porter) return `original — ${src.author} · port ${porter.name}`;
-    return `original — ${src.author}`;
+    if (porter) return `ref — ${src.author} · adapt ${porter.name}`;
+    return `ref — ${src.author}`;
 }
 
 function withPorter(source: Omit<PlaceholderSource, "portedBy">): PlaceholderSource {
@@ -282,10 +288,10 @@ export const placeholders: PlaceholderMeta[] = [
         ],
     },
     {
-        id: "fairysmoke",
+        id: "fairy_smoke",
         title: "Fairy Smoke",
-        href: "/s/fairysmoke",
-        previewSrc: "/s/fairysmoke.webp",
+        href: "/s/fairy_smoke",
+        previewSrc: "/s/fairy_smoke.webp",
         tags: ["reactive"],
         cost: "high",
         ai: MONITRON_AI,
@@ -298,10 +304,10 @@ export const placeholders: PlaceholderMeta[] = [
         ],
     },
     {
-        id: "kalistarnest",
+        id: "kali_star_nest",
         title: "Kali Star Nest",
-        href: "/s/kalistarnest",
-        previewSrc: "/s/kalistarnest.webp",
+        href: "/s/kali_star_nest",
+        previewSrc: "/s/kali_star_nest.webp",
         tags: ["reactive"],
         cost: "low",
         ai: MONITRON_AI,
@@ -314,10 +320,10 @@ export const placeholders: PlaceholderMeta[] = [
         ],
     },
     {
-        id: "coralreef",
+        id: "coral_reef",
         title: "Coral Reef",
-        href: "/s/coralreef",
-        previewSrc: "/s/coralreef.webp",
+        href: "/s/coral_reef",
+        previewSrc: "/s/coral_reef.webp",
         tags: ["reactive"],
         cost: "high",
         ai: MONITRON_AI,
@@ -355,10 +361,10 @@ export const placeholders: PlaceholderMeta[] = [
         ],
     },
     {
-        id: "darkterrain",
+        id: "dark_terrain",
         title: "Dark Terrain",
-        href: "/s/darkterrain",
-        previewSrc: "/s/darkterrain.webp",
+        href: "/s/dark_terrain",
+        previewSrc: "/s/dark_terrain.webp",
         tags: ["reactive"],
         cost: "mid",
         ai: MONITRON_AI,
@@ -367,6 +373,70 @@ export const placeholders: PlaceholderMeta[] = [
                 author: "diatribes",
                 title: "Dark Terrain",
                 href: "https://www.shadertoy.com/view/WcccRl",
+            }),
+        ],
+    },
+    {
+        id: "protean_clouds",
+        title: "Protean Clouds",
+        href: "/s/protean_clouds",
+        previewSrc: "/s/protean_clouds.webp",
+        tags: ["reactive"],
+        cost: "high",
+        ai: MONITRON_AI,
+        sources: [
+            withPorter({
+                author: "nimitz",
+                title: "Protean clouds",
+                href: "https://www.shadertoy.com/view/3l23Rh",
+            }),
+        ],
+    },
+    {
+        id: "wet_glass",
+        title: "Wet Glass",
+        href: "/s/wet_glass",
+        previewSrc: "/s/wet_glass.webp",
+        tags: ["track-sync"],
+        cost: "low",
+        ai: MONITRON_AI,
+        sources: [
+            withPorter({
+                author: "BigWings",
+                title: "Heartfelt (rain on glass ref)",
+                href: "https://www.shadertoy.com/view/ltffzl",
+            }),
+        ],
+    },
+    {
+        id: "music_visual_bar",
+        title: "Music Visual Bar",
+        href: "/s/music_visual_bar",
+        previewSrc: "/s/music_visual_bar.webp",
+        tags: ["reactive"],
+        cost: "low",
+        ai: MONITRON_AI,
+        sources: [
+            withPorter({
+                author: "beetom",
+                title: "Music Visual Bar",
+                href: "https://www.shadertoy.com/view/sXtSDS",
+            }),
+        ],
+    },
+    {
+        id: "rainbow_crystal",
+        title: "Rainbow Crystal",
+        href: "/s/rainbow_crystal",
+        previewSrc: "/s/rainbow_crystal.webp",
+        tags: ["reactive"],
+        cost: "mid",
+        ai: MONITRON_AI,
+        sources: [
+            withPorter({
+                author: "OldEclipse",
+                title: "Rainbow Crystal",
+                href: "https://www.shadertoy.com/view/sXtSzB",
             }),
         ],
     },

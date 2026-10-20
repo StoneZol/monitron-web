@@ -97,7 +97,7 @@ export function useRenderScale(screenId: string | null | undefined) {
   };
 }
 
-/** R3F Canvas: `dpr={useRenderDpr("coralreef", 1, 1.25)}` */
+/** R3F Canvas: `dpr={useRenderDpr("coral_reef", 1, 1.25)}` */
 export function useRenderDpr(
   screenId: string,
   min = 1,

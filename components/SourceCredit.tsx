@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import {
   formatSourceCredit,
   MONITRON_PORTER,
@@ -7,6 +10,8 @@ import {
   type PlaceholderSource,
 } from "@/lib/placeholders";
 import { cn } from "@/lib/utils";
+import { PanelButton } from "@/components/ControlPanel/PanelButton";
+import { ScreenAbout } from "@/components/ScreenAbout";
 
 type PlaceholderCreditProps = {
   meta: PlaceholderMeta;
@@ -65,31 +70,51 @@ function SourceBlock({ source }: { source: PlaceholderSource }) {
     <div className="flex min-w-0 flex-col gap-0.5">
       <CreditLink
         href={source.href}
-        label="original"
+        label="ref"
         name={source.author}
         title={formatSourceCredit(source)}
       />
       {porter ? (
         <CreditLink
           href={porter.href}
-          label="port"
+          label="adapt"
           name={porter.name}
-          title={`ported by ${porter.name}`}
+          title={`adapted by ${porter.name}`}
         />
       ) : null}
     </div>
   );
 }
 
-/** Card / panel credit: original+port stacked, or author when no source; AI under. */
+function AuthorBlock({ meta }: { meta: PlaceholderMeta }) {
+  const porter =
+    resolvePorter(meta.author ?? MONITRON_PORTER) ?? MONITRON_PORTER;
+  return (
+    <CreditLink href={porter.href} label="author" name={porter.name} />
+  );
+}
+
+function AiBlock({ meta }: { meta: PlaceholderMeta }) {
+  const ai = resolveAiTag(meta);
+  if (!ai) return null;
+  const via = meta.ai?.via?.trim();
+  return (
+    <CreditLink
+      href={meta.ai?.href}
+      label="ai helper"
+      name={via || "yes"}
+      title={ai.title}
+    />
+  );
+}
+
+/** Card / panel credit: ref+adapt stacked, or author when no source; AI under. */
 export function PlaceholderCredit({
   meta,
   className,
   variant = "plain",
 }: PlaceholderCreditProps) {
   const sources = meta.sources;
-  const ai = resolveAiTag(meta);
-  const via = meta.ai?.via?.trim();
 
   return (
     <div
@@ -106,26 +131,55 @@ export function PlaceholderCredit({
       {sources?.length ? (
         sources.map((src) => <SourceBlock key={src.href} source={src} />)
       ) : (
-        <CreditLink
-          href={
-            resolvePorter(meta.author ?? MONITRON_PORTER)?.href ??
-            MONITRON_PORTER.href
-          }
-          label="author"
-          name={
-            resolvePorter(meta.author ?? MONITRON_PORTER)?.name ??
-            MONITRON_PORTER.name
-          }
-        />
+        <AuthorBlock meta={meta} />
       )}
+      <AiBlock meta={meta} />
+    </div>
+  );
+}
 
-      {ai ? (
-        <CreditLink
-          href={meta.ai?.href}
-          label="ai helper"
-          name={via || "yes"}
-          title={ai.title}
-        />
+type ScreenCreditBarProps = {
+  meta: PlaceholderMeta;
+  className?: string;
+};
+
+/**
+ * Overlay chrome: single `sources (c)` → about modal (credits / refs / AI).
+ */
+export function ScreenCreditBar({ meta, className }: ScreenCreditBarProps) {
+  const sources = meta.sources ?? [];
+  const hasSources = sources.length > 0;
+  const [aboutOpen, setAboutOpen] = useState(false);
+
+  return (
+    <div className={cn("flex max-w-full", className)}>
+      <PanelButton
+        onClick={() => setAboutOpen(true)}
+        className="px-2 py-1 shadow-none"
+        title="About / sources / credits"
+      >
+        {hasSources ? "sources (c)" : "(c)"}
+      </PanelButton>
+
+      {aboutOpen ? (
+        <ScreenAbout
+          title={meta.title}
+          onClose={() => setAboutOpen(false)}
+        >
+          <p className="text-muted normal-case tracking-normal">
+            Monitron screen — generative fullscreen saver.
+          </p>
+          <div className="flex flex-col gap-1 border-t border-line/50 pt-2 font-mono text-[9px] uppercase tracking-[0.14em]">
+            {hasSources ? (
+              sources.map((src) => (
+                <SourceBlock key={src.href} source={src} />
+              ))
+            ) : (
+              <AuthorBlock meta={meta} />
+            )}
+            <AiBlock meta={meta} />
+          </div>
+        </ScreenAbout>
       ) : null}
     </div>
   );

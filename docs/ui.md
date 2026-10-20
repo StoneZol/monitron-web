@@ -16,6 +16,8 @@ import {
   ColorTable,
   Select,
   Meter,
+  MediaField,
+  DurationField,
   TwinkleControls,
 } from "@/components/ControlPanel";
 ```
@@ -138,6 +140,37 @@ Numeric range with **− / +** steppers on the sides (same chrome as Select’s 
   step={0.05}
   onChange={setSpinSpeed}
   format={(v) => v.toFixed(2)}
+/>
+```
+
+---
+
+## `DurationField`
+
+Digital **MM:SS** clock for intervals (slideshow, etc.). Fine `±s` and coarse `±{coarseStep}s` steppers (e.g. `±15s`); value is whole seconds.
+
+| Prop         | Type                        | Default | Notes             |
+| ------------ | --------------------------- | ------- | ----------------- |
+| `label`      | `string`                    | —       |                   |
+| `value`      | `number`                    | —       | Seconds           |
+| `min`        | `number?`                   | `1`     |                   |
+| `max`        | `number?`                   | `600`   |                   |
+| `step`       | `number?`                   | `1`     | Fine ±s           |
+| `coarseStep` | `number?`                   | `60`    | Coarse ±Ns label  |
+| `onChange`   | `(seconds: number) => void` | —       |                   |
+| `disabled`   | `boolean?`                  | `false` |                   |
+| `info`       | `string?`                   | —       | Optional "?" tip  |
+| `className`  | `string?`                   | —       |                   |
+
+```tsx
+<DurationField
+  label="Interval"
+  value={intervalSec}
+  min={3}
+  max={600}
+  step={1}
+  coarseStep={15}
+  onChange={setIntervalSec}
 />
 ```
 
@@ -428,6 +461,35 @@ type PlaceholderMeta = {
 {placeholders.map((p, i) => (
   <PlaceholderCard key={p.id} placeholder={p} index={i} />
 ))}
+```
+
+---
+
+## `MediaField`
+
+Shared background picker for all screens:
+
+- **Stock** — bundled `/placeholders` (prefs store only an id).
+
+Screen route ids: multi-word titles use underscores (`/s/coral_reef`, not `/s/coralreef`). See README **Screen id / URL slug**.
+- **Library** — up to 20 http(s) URLs ([`lib/userMedia.ts`](../lib/userMedia.ts)). Full image is **not** stored; only a 67×37 preview blob for thumbs. Draw path loads from the URL (CORS).
+
+| Prop        | Type | Default | Notes |
+| ----------- | ---- | ------- | ----- |
+| `label`     | `string` | — | |
+| `value`     | `MediaSelection` | — | `{ kind: "stock", id }` \| `{ kind: "library", id }` |
+| `onChange`  | `(next: MediaSelection) => void` | — | |
+| `stocks`    | `StockPlaceholder[]` | — | From [`lib/stockPlaceholders.ts`](../lib/stockPlaceholders.ts) |
+| `info`      | `string?` | — | |
+| `disabled`  | `boolean?` | `false` | |
+
+```tsx
+<MediaField
+  label="Background"
+  value={controls.mediaValue}
+  onChange={controls.setMedia}
+  stocks={STOCK_PLACEHOLDERS}
+/>
 ```
 
 ---

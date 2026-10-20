@@ -56,7 +56,7 @@ export function ConsentTripwire() {
         stopped = true;
         observer.disconnect();
         unsubBoot();
-        lockdown("hazard");
+        lockdown();
       }, DEBOUNCE_MS);
     };
 
