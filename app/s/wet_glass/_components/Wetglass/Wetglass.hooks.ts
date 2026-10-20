@@ -18,6 +18,11 @@ import {
   subscribeUserMedia,
 } from "@/lib/userMedia";
 import type { MediaSelection } from "@/components/ControlPanel";
+import { getTabHasPeers } from "@/lib/tabBroadcast";
+import {
+  getPluginTabTitleState,
+  subscribePluginTabTitle,
+} from "@/lib/pluginTabTitle";
 import { nextSlideshowSelection } from "./Wetglass.slideshow";
 import {
   WETGLASS_DEFAULTS,
@@ -114,6 +119,12 @@ function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
       STORED_DEFAULTS.bgAlignY,
     ),
     slideshow: asBool(raw.slideshow, STORED_DEFAULTS.slideshow),
+    // Mutual exclusion - drop trackChange if slideshow won
+    trackChange: (() => {
+      const slideshow = asBool(raw.slideshow, STORED_DEFAULTS.slideshow);
+      const trackChange = asBool(raw.trackChange, STORED_DEFAULTS.trackChange);
+      return trackChange && !slideshow;
+    })(),
     slideshowStock: asBool(raw.slideshowStock, STORED_DEFAULTS.slideshowStock),
     slideshowLibrary: asBool(
       raw.slideshowLibrary,
@@ -206,9 +217,21 @@ function applyMediaSelection(sel: MediaSelection): void {
   });
 }
 
-function advanceSlideshow(): void {
+/**
+ * Next image from the shared pool (timer slideshow or track-change).
+ * @param from - slideshow timer skips when sibling tabs are open (shared
+ *   localStorage + Sync should coordinate). Track-change still advances:
+ *   only the tab that hears plugin tab-title should react, and peers were
+ *   falsely blocking single-user setups (preview + browser, etc.).
+ */
+function advanceBgPool(from: "slideshow" | "track"): void {
   const cur = readPrefs();
-  if (!cur.slideshow) return;
+  if (from === "slideshow") {
+    if (!cur.slideshow) return;
+    if (getTabHasPeers(SCREEN_ID)) return;
+  } else if (!cur.trackChange) {
+    return;
+  }
   const next = nextSlideshowSelection(cur);
   if (!next) return;
   applyMediaSelection(next);
@@ -299,7 +322,7 @@ export default function useWetglassHook() {
       ) * 1000;
     setSlideshowDeadline(Date.now() + ms);
     const id = window.setInterval(() => {
-      advanceSlideshow();
+      advanceBgPool("slideshow");
       setSlideshowDeadline(Date.now() + ms);
     }, ms);
     return () => {
@@ -320,6 +343,33 @@ export default function useWetglassHook() {
     const id = window.setInterval(() => emitCountdown(), 1000);
     return () => window.clearInterval(id);
   }, [live.slideshow]);
+
+  // Keep tab-title store warm so enabling trackChange does not treat the
+  // current track as a "change".
+  useEffect(() => subscribePluginTabTitle(() => {}), []);
+
+  // Plugin tab-title -> next bg (only while trackChange is on)
+  useEffect(() => {
+    if (!live.trackChange) return;
+    // Prime from whatever is already known - first snapshot is not a "change"
+    const norm = (t: string) => t.trim();
+    let lastTitle = norm(getPluginTabTitleState().title);
+    let primed = Boolean(lastTitle);
+    return subscribePluginTabTitle(() => {
+      if (!readPrefs().trackChange) return;
+      const s = getPluginTabTitleState();
+      const title = norm(s.title);
+      if (!title) return;
+      if (!primed) {
+        primed = true;
+        lastTitle = title;
+        return;
+      }
+      if (title === lastTitle) return;
+      lastTitle = title;
+      advanceBgPool("track");
+    });
+  }, [live.trackChange]);
 
   const slideshowRemainSec = useSyncExternalStore(
     subscribeCountdown,
@@ -348,6 +398,7 @@ export default function useWetglassHook() {
       bgAlignX: live.bgAlignX,
       bgAlignY: live.bgAlignY,
       slideshow: live.slideshow,
+      trackChange: live.trackChange,
       slideshowStock: live.slideshowStock,
       slideshowLibrary: live.slideshowLibrary,
       slideshowSession: live.slideshowSession,
@@ -360,7 +411,18 @@ export default function useWetglassHook() {
       setLightning: (lightning: number) => commit({ lightning }),
       setBgAlignX: (bgAlignX: number) => commit({ bgAlignX }),
       setBgAlignY: (bgAlignY: number) => commit({ bgAlignY }),
-      setSlideshow: (slideshow: boolean) => commit({ slideshow }),
+      setSlideshow: (slideshow: boolean) =>
+        commit(
+          slideshow
+            ? { slideshow: true, trackChange: false }
+            : { slideshow: false },
+        ),
+      setTrackChange: (trackChange: boolean) =>
+        commit(
+          trackChange
+            ? { trackChange: true, slideshow: false }
+            : { trackChange: false },
+        ),
       setSlideshowStock: (slideshowStock: boolean) =>
         commit({ slideshowStock }),
       setSlideshowLibrary: (slideshowLibrary: boolean) =>

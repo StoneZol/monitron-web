@@ -39,8 +39,10 @@ function emit() {
 }
 
 function applyTabTitle(msg: AudioTabTitle) {
-  const nextTitle = msg.title;
+  const nextTitle = msg.title.trim();
   const changed = nextTitle !== state.title;
+  // Ignore empty / whitespace-only titles from the plugin
+  if (!nextTitle) return;
   state = {
     title: nextTitle,
     prevTitle: changed ? state.title : state.prevTitle,

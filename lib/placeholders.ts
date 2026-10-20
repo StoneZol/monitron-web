@@ -95,6 +95,12 @@ const TAG_META: Record<
         tone: "warn",
         title: "Audio-only — idle without mic or plugin",
     },
+    "track-sync": {
+        label: "track sync",
+        tone: "cyan",
+        title:
+            "Plugin tab-title hooks (e.g. change still on new track) - not full audio reactive",
+    },
     sensitive: {
         label: "sensitive",
         tone: "danger",
@@ -391,7 +397,7 @@ export const placeholders: PlaceholderMeta[] = [
         title: "Wet Glass",
         href: "/s/wet_glass",
         previewSrc: "/s/wet_glass.webp",
-        tags: [],
+        tags: ["track-sync"],
         cost: "low",
         ai: MONITRON_AI,
         sources: [

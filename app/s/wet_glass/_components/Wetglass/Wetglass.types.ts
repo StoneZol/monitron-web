@@ -18,12 +18,18 @@ export type WetglassLive = {
   bgAlignX: number;
   /** Cover crop anchor Y: 0 top → 1 bottom (0.5 center) */
   bgAlignY: number;
-  /** Cycle backgrounds on a timer */
+  /** Cycle backgrounds on a timer (mutex with trackChange) */
   slideshow: boolean;
+  /**
+   * Advance background when plugin tab-title changes
+   * (mutex with slideshow). Shares pool flags below.
+   */
+  trackChange: boolean;
+  /** Shared pool: stock / urls / local (slideshow + track-change) */
   slideshowStock: boolean;
   slideshowLibrary: boolean;
   slideshowSession: boolean;
-  /** Seconds between slides */
+  /** Seconds between slides (slideshow only) */
   slideshowIntervalSec: number;
   bgSource: WetglassBgSource;
   stockId: StockPlaceholderId;
@@ -40,6 +46,7 @@ export const WETGLASS_DEFAULTS: WetglassLive = {
   bgAlignX: 0.5,
   bgAlignY: 0.5,
   slideshow: false,
+  trackChange: false,
   slideshowStock: true,
   slideshowLibrary: true,
   slideshowSession: true,

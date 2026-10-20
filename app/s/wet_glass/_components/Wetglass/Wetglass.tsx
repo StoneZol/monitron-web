@@ -11,6 +11,7 @@ import {
   Slider,
   Toggle,
 } from "@/components/ControlPanel";
+import { usePluginPresent } from "@/hooks/usePluginPresent";
 import { STOCK_PLACEHOLDERS } from "@/lib/stockPlaceholders";
 import {
   getBgCropAxis,
@@ -21,32 +22,39 @@ import useWetglassHook from "./Wetglass.hooks";
 import { WETGLASS_RANGES, type WetglassProps } from "./Wetglass.types";
 
 const INFO = {
-  look: "Wet glass — rain streaks, fog, still background. Ref: BigWings Heartfelt (CC BY-NC-SA 3.0). Raise Render scale for sharper drops.",
+  look: "Wet glass - rain streaks, fog, still background. Ref: BigWings Heartfelt (CC BY-NC-SA 3.0). Raise Render scale for sharper drops.",
   rainAmount: "How heavy the rain is (static drops + layers).",
   dropSpeed: "How fast drops fall / trails advance.",
-  glass: "Glass fog — 0 = clear, 1 = opaque frosted blur.",
+  glass: "Glass fog - 0 = clear, 1 = opaque frosted blur.",
   lightning: "Occasional lightning flash intensity.",
   background:
-    "Stock stills, shared URL library (max 20, tiny 67×37 previews), or local files (session only, multi-select up to 20 — cleared on refresh).",
+    "Stock stills, shared URL library (max 20, tiny 67x37 previews), or local files (session only, multi-select up to 20 - cleared on refresh).",
   bgAlignX:
     "Horizontal crop anchor (cover is cropping left/right). 0 = left, 0.5 = center, 1 = right.",
   bgAlignY:
     "Vertical crop anchor (cover is cropping top/bottom). 0 = top, 0.5 = center, 1 = bottom.",
   slideshow:
-    "Cycle backgrounds on a timer from the enabled pools (stock / urls / local). Plugin 1.4.0 can send tab titles; track-change slideshow triggers are not wired yet.",
-  slideshowStock: "Include built-in stock stills in the slideshow pool.",
-  slideshowLibrary: "Include shared URL library entries in the pool.",
-  slideshowSession: "Include session-only local uploads in the pool.",
-  slideshowInterval: "Seconds between slides (MM:SS).",
+    "Cycle backgrounds on a timer from the pool. Turns off On track change. Timer pauses while other wet glass tabs are open - use Sync to match them.",
+  trackChange:
+    "Next background when the plugin tab title changes (new track / tab). Turns off Slideshow. Needs plugin capture on a music tab.",
+  poolStock: "Include built-in stock stills in the pool.",
+  poolLibrary: "Include shared URL library entries in the pool.",
+  poolSession: "Include session-only local uploads in the pool.",
+  slideshowInterval:
+    "Seconds between slides (MM:SS) - slideshow only. Pauses while other wet glass tabs are open - use Sync to match them.",
 } as const;
 
 const Wetglass = ({ showOverlay = true }: WetglassProps) => {
   const { liveRef, controls } = useWetglassHook();
+  const pluginPresent = usePluginPresent();
   const cropAxis = useSyncExternalStore(
     subscribeBgCropAxis,
     getBgCropAxis,
     () => "none" as const,
   );
+  const trackChangeUi = pluginPresent;
+  const showPool =
+    controls.slideshow || (controls.trackChange && trackChangeUi);
 
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-black select-none">
@@ -84,44 +92,54 @@ const Wetglass = ({ showOverlay = true }: WetglassProps) => {
                 onChange={controls.setSlideshow}
                 info={INFO.slideshow}
               />
-              {controls.slideshow ? (
+              {trackChangeUi ? (
+                <Toggle
+                  label="On track change"
+                  checked={controls.trackChange}
+                  onChange={controls.setTrackChange}
+                  info={INFO.trackChange}
+                />
+              ) : null}
+              {showPool ? (
                 <>
                   <Toggle
                     label="Pool · stock"
                     checked={controls.slideshowStock}
                     onChange={controls.setSlideshowStock}
-                    info={INFO.slideshowStock}
+                    info={INFO.poolStock}
                   />
                   <Toggle
                     label="Pool · urls"
                     checked={controls.slideshowLibrary}
                     onChange={controls.setSlideshowLibrary}
-                    info={INFO.slideshowLibrary}
+                    info={INFO.poolLibrary}
                   />
                   <Toggle
                     label="Pool · local"
                     checked={controls.slideshowSession}
                     onChange={controls.setSlideshowSession}
-                    info={INFO.slideshowSession}
-                  />
-                  <DurationField
-                    label="Interval"
-                    value={controls.slideshowIntervalSec}
-                    min={WETGLASS_RANGES.slideshowIntervalSec.min}
-                    max={WETGLASS_RANGES.slideshowIntervalSec.max}
-                    step={WETGLASS_RANGES.slideshowIntervalSec.step}
-                    coarseStep={
-                      WETGLASS_RANGES.slideshowIntervalSec.coarseStep
-                    }
-                    onChange={controls.setSlideshowIntervalSec}
-                    aside={
-                      controls.slideshowRemainSec != null
-                        ? `${controls.slideshowRemainSec}s`
-                        : undefined
-                    }
-                    info={INFO.slideshowInterval}
+                    info={INFO.poolSession}
                   />
                 </>
+              ) : null}
+              {controls.slideshow ? (
+                <DurationField
+                  label="Interval"
+                  value={controls.slideshowIntervalSec}
+                  min={WETGLASS_RANGES.slideshowIntervalSec.min}
+                  max={WETGLASS_RANGES.slideshowIntervalSec.max}
+                  step={WETGLASS_RANGES.slideshowIntervalSec.step}
+                  coarseStep={
+                    WETGLASS_RANGES.slideshowIntervalSec.coarseStep
+                  }
+                  onChange={controls.setSlideshowIntervalSec}
+                  aside={
+                    controls.slideshowRemainSec != null
+                      ? `${controls.slideshowRemainSec}s`
+                      : undefined
+                  }
+                  info={INFO.slideshowInterval}
+                />
               ) : null}
               {cropAxis === "x" ? (
                 <Slider
