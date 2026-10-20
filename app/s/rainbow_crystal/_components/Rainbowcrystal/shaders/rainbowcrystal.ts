@@ -39,12 +39,19 @@ vec3 satMix(vec3 c) {
 }
 
 /**
- * Source used tan() (poles freeze then snap). Linear sin bank keeps the
- * same phase offsets at constant rate — stable, smooth, no stall.
+ * Source used tan() (poles freeze then snap). Continuous quasi-periodic
+ * bank: incommensurate rates so it stays smooth/linear but does not spin
+ * on one axis.
  */
 vec3 linearBank(float time) {
   float a = time * 0.2;
-  return normalize(vec3(sin(a), cos(a + 2.0), sin(a + 5.0)));
+  float b = time * 0.117;
+  float c = time * 0.083;
+  return normalize(vec3(
+    sin(a) + 0.4 * sin(b + 1.7) + 0.18 * sin(c * 1.9 + 0.4),
+    cos(a * 0.71 + 2.0) + 0.35 * cos(b * 1.31 + 0.9),
+    sin(a * 1.19 + 5.0) + 0.3 * sin(b * 0.87 + 4.1) + 0.15 * cos(c + 2.6)
+  ));
 }
 
 void main() {
