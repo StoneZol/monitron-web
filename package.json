@@ -3,7 +3,7 @@
     "version": "2.2.0",
     "private": true,
     "monitron": {
-        "pluginVersion": "1.4.0"
+        "pluginVersion": "1.5.0"
     },
     "scripts": {
         "dev": "next dev",
