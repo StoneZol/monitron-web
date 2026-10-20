@@ -24,8 +24,6 @@ varying vec2 vUv;
 
 uniform vec3 iResolution;
 uniform float uCrystalT;
-/** Bank clock for tan() only - crawls near asymptotes; flight stays on uCrystalT */
-uniform float uBankT;
 uniform vec3 uColor;
 uniform vec3 uHighlight;
 uniform float uSaturation;
@@ -40,6 +38,15 @@ vec3 satMix(vec3 c) {
   return mix(vec3(l), c, uSaturation);
 }
 
+/**
+ * Source used tan() (poles freeze then snap). Linear sin bank keeps the
+ * same phase offsets at constant rate — stable, smooth, no stall.
+ */
+vec3 linearBank(float time) {
+  float a = time * 0.2;
+  return normalize(vec3(sin(a), cos(a + 2.0), sin(a + 5.0)));
+}
+
 void main() {
   vec2 I = vUv * iResolution.xy;
   float iTime = uCrystalT;
@@ -51,6 +58,7 @@ void main() {
   float mode = floor(uColorMode + 0.5);
   float flicker = clamp(uPeakFlicker, 0.0, 1.0);
   vec3 tint = mix(uColor, uHighlight, flicker);
+  vec3 bankN = linearBank(iTime);
 
   for (int step = 0; step < 80; step++) {
     float i = float(step + 1);
@@ -59,9 +67,7 @@ void main() {
     p.z += 0.06;
     D = dot(p, p);
     p /= D;
-    // tan() bank angles; uBankT crawls only through cos~0 flips.
-    // Flight / cells stay on linear iTime (uCrystalT).
-    p = reflect(p, normalize(tan(uBankT * 0.2 + vec3(0.0, 2.0, 5.0))));
+    p = reflect(p, bankN);
     p.z -= iTime * 8.0;
     P = ceil(p / 4.0);
     p = ceil(
