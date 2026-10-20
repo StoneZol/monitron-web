@@ -4,6 +4,7 @@ import { useEffect, useSyncExternalStore } from "react";
 import { toggleFullscreen } from "@/lib/fullscreen";
 import { resetFxOverlay } from "@/components/FxOverlay";
 import { readScreenPrefsMigrating, saveScreenPrefs } from "@/lib/screenPrefs";
+import { registerScreenLivePrefs } from "@/lib/screenLivePrefs";
 import { onTabSyncApply } from "@/lib/tabSyncHotApply";
 import {
   DEFAULT_STOCK_ID,
@@ -246,6 +247,15 @@ export default function useWetglassHook() {
   );
 
   useEffect(() => onTabSyncApply(SCREEN_ID, rehydrateFromStorage), []);
+
+  // Sync must push THIS tab's bg, not a sibling overwrite sitting in localStorage
+  useEffect(
+    () =>
+      registerScreenLivePrefs(SCREEN_ID, () => ({
+        ...readPrefs(),
+      })),
+    [],
+  );
 
   useEffect(
     () =>

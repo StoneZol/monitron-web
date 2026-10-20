@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useSyncExternalStore } from "react";
 import { bindFullscreenEscape } from "@/lib/fullscreen";
-import { readScreenPrefsRaw } from "@/lib/screenPrefs";
+import { snapshotScreenPrefsForSync } from "@/lib/screenLivePrefs";
 import {
   applyIncomingTabSync,
   broadcastHudHide,
@@ -127,9 +127,10 @@ const useScreensOverlayHook = (screenId: string) => {
   const sync = () => {
     if (!getTabHasPeers(screenId)) return;
     const sessionMedia = exportSessionMediaForSync();
+    // Prefer this tab's in-memory prefs when registered (wet glass bg, etc.)
     const applyAt = broadcastTabSync(
       screenId,
-      readScreenPrefsRaw(screenId),
+      snapshotScreenPrefsForSync(screenId),
       sessionMedia,
     );
     scheduleTabSyncApply(applyAt, screenId);
