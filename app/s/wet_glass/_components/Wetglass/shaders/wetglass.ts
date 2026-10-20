@@ -79,7 +79,8 @@ float Saw(float b, float t) {
 vec2 DropLayer2(vec2 uv, float t) {
   vec2 UV = uv;
 
-  uv.y += t * 0.75;
+  // Faster scroll — closer to original Heartfelt big-drop pace
+  uv.y += t * 1.15;
   vec2 a = vec2(6.0, 1.0);
   vec2 grid = a * 2.0;
   vec2 id = floor(uv * grid);
@@ -97,16 +98,16 @@ vec2 DropLayer2(vec2 uv, float t) {
   float wiggle = sin(y + sin(y));
   x += wiggle * (0.5 - abs(x)) * (n.z - 0.5);
   x *= 0.7;
-  float ti = fract(t + n.z);
-  // Fall only: top → bottom, ease-out (may slow), never rebound upward
-  float fall = 1.0 - pow(max(0.0, 1.0 - smoothstep(0.0, 0.92, ti)), 1.7);
-  y = mix(0.92, 0.12, fall);
+  // Slightly faster life cycle than layer scroll
+  float ti = fract(t * 1.35 + n.z);
+  // Fall only: top → past bottom (no mid-cell wall), mild ease-out
+  float fall = 1.0 - pow(max(0.0, 1.0 - ti), 1.35);
+  y = mix(0.98, -0.18, fall);
   vec2 p = vec2(x, y);
 
   float d = length((st - p) * a.yx);
 
-  // Soft birth / soft death so the cell wrap doesn't read as a jump-up
-  float life = S(0.0, 0.06, ti) * S(1.0, 0.88, ti);
+  float life = S(0.0, 0.04, ti) * S(1.0, 0.9, ti);
   float mainDrop = S(0.4, 0.0, d) * life;
 
   float r = sqrt(S(1.0, y, st.y));
@@ -192,13 +193,11 @@ void main() {
   float xf = clamp(uCrossfade, 0.0, 1.0);
   vec3 col = mix(col0, col1, xf);
 
+  // Soft frost via blur only — no gray/sepia color wash on the photo
   float dry = 1.0 - S(0.05, 0.35, c.x);
-  col = mix(col, col * vec3(0.82, 0.88, 0.98), dry * glass * 0.55);
+  col = mix(col, col * 0.97, dry * glass * 0.2);
 
   float fadeT = (T + 3.0) * 0.5;
-  float colFade = sin(fadeT * 0.2) * 0.5 + 0.5;
-  col *= mix(vec3(1.0), vec3(0.8, 0.9, 1.3), colFade * 0.65);
-
   float lightning = sin(fadeT * sin(fadeT * 10.0));
   lightning *= pow(max(0.0, sin(fadeT + sin(fadeT))), 10.0);
   col *= 1.0 + lightning * clamp(uLightning, 0.0, 1.0);
