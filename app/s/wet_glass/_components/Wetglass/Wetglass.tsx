@@ -33,7 +33,7 @@ const INFO = {
   bgAlignY:
     "Vertical crop anchor (cover is cropping top/bottom). 0 = top, 0.5 = center, 1 = bottom.",
   slideshow:
-    "Cycle backgrounds on a timer from the enabled pools (stock / urls / local). Track/tab-change sync is not available yet — the plugin does not send tab titles.",
+    "Cycle backgrounds on a timer from the enabled pools (stock / urls / local). Plugin 1.4.0 can send tab titles; track-change slideshow triggers are not wired yet.",
   slideshowStock: "Include built-in stock stills in the slideshow pool.",
   slideshowLibrary: "Include shared URL library entries in the pool.",
   slideshowSession: "Include session-only local uploads in the pool.",

@@ -41,7 +41,7 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ```
 ┌─────────────────────┐         window.postMessage            ┌──────────────────────┐
-│  Chrome extension   │  hello / audio-frame (bands[32], rms, peak)│  Monitron page       │
+│  Chrome extension   │  hello / audio-frame / tab-title           │  Monitron page       │
 │  tabCapture → FFT   │ ─────────────────────────────────────────► │  subscribeAudioBus   │
 │  (raw spectrum)     │ ◄───────────────────────────────────────── │  visualizer-toggle   │
 └─────────────────────┘                                            └──────────┬───────────┘
@@ -319,6 +319,19 @@ Shows the ControlPanel visualizer section (sets **extension** = true).
 
 A frame also implies the extension is present. Screens slice `bands[]` (and use `rms` / `peak`) locally — no named EQ on the bus.
 
+**Tab title** (low-rate, parallel to frames — plugin ≈1 Hz or on change; do **not** attach to `audio-frame`)
+
+```ts
+{
+  source: "monitron-extension",
+  type: "tab-title",
+  title: string,   // chrome.tabs title / now-playing label
+  t: number,       // capture timestamp ms
+}
+```
+
+Page stores this in [`lib/pluginTabTitle.ts`](lib/pluginTabTitle.ts) / [`hooks/usePluginTabTitle.ts`](hooks/usePluginTabTitle.ts). Screens dedupe `title` vs previous for track/tab-change triggers (not wired yet).
+
 ### Page → extension
 
 **Hello request** (page remount / missed initial hello):
@@ -362,6 +375,16 @@ postMessage(
     bands,
     rms: 0.4,
     peak: 0.7,
+  },
+  "*",
+);
+
+postMessage(
+  {
+    source: "monitron-extension",
+    type: "tab-title",
+    title: "Artist – Track · YouTube Music",
+    t: performance.now(),
   },
   "*",
 );

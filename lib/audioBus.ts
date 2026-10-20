@@ -12,6 +12,11 @@ export const AUDIO_HELLO_TYPE = "hello" as const;
 /** Page asks extension to start/stop feeding bands into the visualizer */
 export const AUDIO_VIZ_TYPE = "visualizer-toggle" as const;
 export const AUDIO_HELLO_REQUEST_TYPE = "hello-request" as const;
+/**
+ * Low-rate now-playing tab title (plugin ~1 Hz or on change).
+ * Parallel to audio-frame — do not hang title on spectrum frames.
+ */
+export const AUDIO_TAB_TITLE_TYPE = "tab-title" as const;
 
 /**
  * Fixed log-spaced spectrum from the plugin.
@@ -50,6 +55,16 @@ export type AudioVisualizerToggle = {
   source: typeof AUDIO_PAGE_SOURCE;
   type: typeof AUDIO_VIZ_TYPE;
   enabled: boolean;
+};
+
+/** Extension → page: title of the tab currently playing audio */
+export type AudioTabTitle = {
+  source: typeof AUDIO_BUS_SOURCE;
+  type: typeof AUDIO_TAB_TITLE_TYPE;
+  /** chrome.tabs tab title / now-playing label */
+  title: string;
+  /** Capture timestamp ms (plugin picks clock; page only stores) */
+  t: number;
 };
 
 /**
@@ -125,6 +140,17 @@ export function isAudioHello(data: unknown): data is AudioHello {
   return msg.source === AUDIO_BUS_SOURCE && msg.type === AUDIO_HELLO_TYPE;
 }
 
+export function isAudioTabTitle(data: unknown): data is AudioTabTitle {
+  if (!data || typeof data !== "object") return false;
+  const msg = data as Record<string, unknown>;
+  return (
+    msg.source === AUDIO_BUS_SOURCE &&
+    msg.type === AUDIO_TAB_TITLE_TYPE &&
+    typeof msg.title === "string" &&
+    typeof msg.t === "number"
+  );
+}
+
 /** Ask extension to start/stop streaming bands for the visualizer */
 export function postVisualizerToggle(enabled: boolean) {
   const message: AudioVisualizerToggle = {
@@ -148,6 +174,7 @@ export function postHelloRequest() {
  * Extension → page:
  *   { source: 'monitron-extension', type: 'hello' }
  *   { source: 'monitron-extension', type: 'audio-frame', t, sampleRate, bands[], rms, peak }
+ *   { source: 'monitron-extension', type: 'tab-title', title, t }  // low-rate, parallel
  * Page → extension:
  *   { source: 'monitron-page', type: 'hello-request' }
  *   { source: 'monitron-page', type: 'visualizer-toggle', enabled }
@@ -155,11 +182,16 @@ export function postHelloRequest() {
 export function subscribeAudioBus(handlers: {
   onHello?: () => void;
   onFrame?: (frame: AudioFrame) => void;
+  onTabTitle?: (msg: AudioTabTitle) => void;
 }): () => void {
   const onMessage = (event: MessageEvent) => {
     if (event.source !== window && event.source != null) return;
     if (isAudioHello(event.data)) {
       handlers.onHello?.();
+      return;
+    }
+    if (isAudioTabTitle(event.data)) {
+      handlers.onTabTitle?.(event.data);
       return;
     }
     if (isAudioFrame(event.data)) {

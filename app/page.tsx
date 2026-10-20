@@ -1,3 +1,4 @@
+import { HomePluginListen } from "@/components/HomePluginListen";
 import { PlaceholderGrid } from "@/components/PlaceholderGrid";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
@@ -33,7 +34,7 @@ export default function Home() {
                         <span className="text-muted">/</span>
                         <span>ch.00</span>
                         <span className="text-muted">/</span>
-                        <span className="text-cyan">illegal_idle</span>
+                        <HomePluginListen />
                     </div>
 
                     <h1
