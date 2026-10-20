@@ -424,4 +424,20 @@ export const placeholders: PlaceholderMeta[] = [
             }),
         ],
     },
+    {
+        id: "rainbow_crystal",
+        title: "Rainbow Crystal",
+        href: "/s/rainbow_crystal",
+        previewSrc: "/s/rainbow_crystal.webp",
+        tags: ["reactive"],
+        cost: "mid",
+        ai: MONITRON_AI,
+        sources: [
+            withPorter({
+                author: "OldEclipse",
+                title: "Rainbow Crystal",
+                href: "https://www.shadertoy.com/view/sXtSzB",
+            }),
+        ],
+    },
 ];
