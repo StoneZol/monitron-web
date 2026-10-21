@@ -9,6 +9,7 @@ import {
   PanelButton,
   Select,
   Slider,
+  Toggle,
 } from "@/components/ControlPanel";
 import MusicVisualBarCanvas from "./MusicVisualBar.Canvas";
 import useMusicVisualBarHook from "./MusicVisualBar.hooks";
@@ -28,9 +29,11 @@ const REACTIVE_CHANNEL_OPTIONS: { value: ReactiveChannel; label: string }[] = [
 
 const INFO = {
   look: "Cyber neon spectrum ring — deep space, frost lens, bloom. FFT from the bus.",
-  flightSpeed: "Base spin crawl + drift glide (1 ≈ calm).",
+  flightSpeed: "Base spin crawl (+ drift glide when unlocked). 1 ≈ calm.",
   bloomGain: "Golden-angle disk bloom (0 = off).",
   streakGain: "Anamorphic horizontal streak (0 = off).",
+  fixedCenter:
+    "Lock the ring at screen center. Off = gentle glide (can surprise).",
   colorChannel: "Band that punches neon hue / sat.",
   spinChannel:
     "Band that accelerates spectrum spin — soft pow cruise + rising-edge kicks.",
@@ -51,6 +54,7 @@ const INFO = {
 
 const MusicVisualBar = ({ showOverlay = true }: MusicVisualBarProps) => {
   const { liveRef, vizRef, visualizer, controls } = useMusicVisualBarHook();
+  const drifting = !controls.fixedCenter;
 
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-black select-none">
@@ -105,6 +109,12 @@ const MusicVisualBar = ({ showOverlay = true }: MusicVisualBarProps) => {
                 format={(v) => v.toFixed(2)}
                 info={INFO.streakGain}
               />
+              <Toggle
+                label="Fixed center"
+                checked={controls.fixedCenter}
+                onChange={controls.setFixedCenter}
+                info={INFO.fixedCenter}
+              />
             </ControlSection>
 
             <VisualizerSection
@@ -128,13 +138,15 @@ const MusicVisualBar = ({ showOverlay = true }: MusicVisualBarProps) => {
                       onChange={controls.setSpinChannel}
                       info={INFO.spinChannel}
                     />
-                    <Select
-                      label="Drift"
-                      value={controls.driftChannel}
-                      options={REACTIVE_CHANNEL_OPTIONS}
-                      onChange={controls.setDriftChannel}
-                      info={INFO.driftChannel}
-                    />
+                    {drifting ? (
+                      <Select
+                        label="Drift"
+                        value={controls.driftChannel}
+                        options={REACTIVE_CHANNEL_OPTIONS}
+                        onChange={controls.setDriftChannel}
+                        info={INFO.driftChannel}
+                      />
+                    ) : null}
                   </ControlSubSection>
                   <ControlSubSection label="drive">
                     <Slider
@@ -157,16 +169,18 @@ const MusicVisualBar = ({ showOverlay = true }: MusicVisualBarProps) => {
                       format={(v) => `×${v.toFixed(1)}`}
                       info={INFO.spinDrive}
                     />
-                    <Slider
-                      label="Drift"
-                      value={controls.driftDrive}
-                      min={MUSIC_VISUAL_BAR_RANGES.driftDrive.min}
-                      max={controls.driftDriveMax}
-                      step={MUSIC_VISUAL_BAR_RANGES.driftDrive.step}
-                      onChange={controls.setDriftDrive}
-                      format={(v) => `×${v.toFixed(1)}`}
-                      info={INFO.driftDrive}
-                    />
+                    {drifting ? (
+                      <Slider
+                        label="Drift"
+                        value={controls.driftDrive}
+                        min={MUSIC_VISUAL_BAR_RANGES.driftDrive.min}
+                        max={controls.driftDriveMax}
+                        step={MUSIC_VISUAL_BAR_RANGES.driftDrive.step}
+                        onChange={controls.setDriftDrive}
+                        format={(v) => `×${v.toFixed(1)}`}
+                        info={INFO.driftDrive}
+                      />
+                    ) : null}
                   </ControlSubSection>
                 </>
               ) : null}

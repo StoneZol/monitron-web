@@ -18,7 +18,9 @@ export type MusicVisualBarLive = {
   /** Non-linear spectrum spin acceleration */
   spinChannel: ReactiveChannel;
   spinDrive: number;
-  /** Smooth drift — mild accel on channel peaks */
+  /** Keep ring locked at screen center (no drift glide) */
+  fixedCenter: boolean;
+  /** Smooth drift — mild accel on channel peaks (when not fixed) */
   driftChannel: ReactiveChannel;
   driftDrive: number;
 };
@@ -34,6 +36,7 @@ export const MUSIC_VISUAL_BAR_DEFAULTS: MusicVisualBarLive = {
   colorDrive: 1.2,
   spinChannel: "mid",
   spinDrive: 2,
+  fixedCenter: true,
   driftChannel: "beat",
   driftDrive: 1.2,
 };

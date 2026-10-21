@@ -42,7 +42,7 @@ type Stored = MusicVisualBarLive & {
 
 const STORED_DEFAULTS: Stored = {
   ...MUSIC_VISUAL_BAR_DEFAULTS,
-  audioSource: "plugin",
+  audioSource: "off",
   micGate: MIC_GATE_DEFAULT,
   micGain: MIC_GAIN_DEFAULT,
   peakGain: PEAK_GAIN_DEFAULT,
@@ -109,6 +109,8 @@ function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
       MUSIC_VISUAL_BAR_DRIVE_MAX,
       STORED_DEFAULTS.spinDrive,
     ),
+    // Missing key → fixed (safer default); only explicit false unlocks drift
+    fixedCenter: raw.fixedCenter !== false,
     driftChannel: channel(driftChRaw, STORED_DEFAULTS.driftChannel),
     driftDrive: clamp(
       Number(driftDrRaw),
@@ -194,6 +196,7 @@ export default function useMusicVisualBarHook() {
       colorDrive: live.colorDrive,
       spinChannel: live.spinChannel,
       spinDrive: live.spinDrive,
+      fixedCenter: live.fixedCenter,
       driftChannel: live.driftChannel,
       driftDrive: live.driftDrive,
       colorDriveMax: MUSIC_VISUAL_BAR_COLOR_DRIVE_MAX,
@@ -208,6 +211,7 @@ export default function useMusicVisualBarHook() {
       setSpinChannel: (spinChannel: ReactiveChannel) =>
         commit({ spinChannel }),
       setSpinDrive: (spinDrive: number) => commit({ spinDrive }),
+      setFixedCenter: (fixedCenter: boolean) => commit({ fixedCenter }),
       setDriftChannel: (driftChannel: ReactiveChannel) =>
         commit({ driftChannel }),
       setDriftDrive: (driftDrive: number) => commit({ driftDrive }),

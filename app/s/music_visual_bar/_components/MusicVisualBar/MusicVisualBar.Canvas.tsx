@@ -208,53 +208,60 @@ function MusicVisualBarQuad({
     const spinRate = baseRate * (1 + spinCruise) + spinKick.current * 4.2;
     spinAngle.current += spinRate * dt;
 
-    // —— Smooth drift: pick a heading, glide; peak channel = mild speed bump ——
-    retargetIn.current -= dt;
-    if (retargetIn.current <= 0) {
-      // New course: ±~50–140° from current so it meanders, not spins in place
-      const turn =
-        (0.7 + Math.random() * 1.5) *
-        (Math.random() < 0.5 ? -1 : 1);
-      targetHeading.current = heading.current + turn;
-      retargetIn.current =
-        DRIFT_RETARGET_MIN +
-        Math.random() * (DRIFT_RETARGET_MAX - DRIFT_RETARGET_MIN);
-    }
+    // —— Center lock or smooth drift ——
+    if (live.fixedCenter) {
+      cx.current = 0;
+      cy.current = 0;
+      driftBoost.current = 0;
+    } else {
+      retargetIn.current -= dt;
+      if (retargetIn.current <= 0) {
+        // New course: ±~50–140° from current so it meanders, not spins in place
+        const turn =
+          (0.7 + Math.random() * 1.5) *
+          (Math.random() < 0.5 ? -1 : 1);
+        targetHeading.current = heading.current + turn;
+        retargetIn.current =
+          DRIFT_RETARGET_MIN +
+          Math.random() * (DRIFT_RETARGET_MAX - DRIFT_RETARGET_MIN);
+      }
 
-    // Soft boundary: ease heading toward center when near the edge
-    const r = Math.hypot(cx.current, cy.current);
-    if (r > DRIFT_MAX_R * 0.72) {
-      const inward = Math.atan2(-cy.current, -cx.current);
-      targetHeading.current = inward;
-    }
+      // Soft boundary: ease heading toward center when near the edge
+      const r = Math.hypot(cx.current, cy.current);
+      if (r > DRIFT_MAX_R * 0.72) {
+        const inward = Math.atan2(-cy.current, -cx.current);
+        targetHeading.current = inward;
+      }
 
-    let dHead = targetHeading.current - heading.current;
-    while (dHead > Math.PI) dHead -= Math.PI * 2;
-    while (dHead < -Math.PI) dHead += Math.PI * 2;
-    heading.current += dHead * Math.min(1, DRIFT_HEADING_TURN * dt);
+      let dHead = targetHeading.current - heading.current;
+      while (dHead > Math.PI) dHead -= Math.PI * 2;
+      while (dHead < -Math.PI) dHead += Math.PI * 2;
+      heading.current += dHead * Math.min(1, DRIFT_HEADING_TURN * dt);
 
-    const peakTarget = driftArmed
-      ? Math.min(1, drivenLevel(driftRaw, live.driftDrive, 1.2))
-      : 0;
-    const boostK =
-      peakTarget > driftBoost.current
-        ? DRIFT_BOOST_ATTACK
-        : DRIFT_BOOST_RELEASE;
-    driftBoost.current += (peakTarget - driftBoost.current) * (1 - Math.exp(-boostK * dt));
+      const peakTarget = driftArmed
+        ? Math.min(1, drivenLevel(driftRaw, live.driftDrive, 1.2))
+        : 0;
+      const boostK =
+        peakTarget > driftBoost.current
+          ? DRIFT_BOOST_ATTACK
+          : DRIFT_BOOST_RELEASE;
+      driftBoost.current +=
+        (peakTarget - driftBoost.current) * (1 - Math.exp(-boostK * dt));
 
-    const speed =
-      DRIFT_BASE_SPEED *
-      Math.max(0.35, live.flightSpeed) *
-      (1 + driftBoost.current * DRIFT_PEAK_BOOST * live.driftDrive * 0.35);
+      const speed =
+        DRIFT_BASE_SPEED *
+        Math.max(0.35, live.flightSpeed) *
+        (1 + driftBoost.current * DRIFT_PEAK_BOOST * live.driftDrive * 0.35);
 
-    cx.current += Math.cos(heading.current) * speed * dt;
-    cy.current += Math.sin(heading.current) * speed * 0.72 * dt;
+      cx.current += Math.cos(heading.current) * speed * dt;
+      cy.current += Math.sin(heading.current) * speed * 0.72 * dt;
 
-    const r2 = Math.hypot(cx.current, cy.current);
-    if (r2 > DRIFT_MAX_R) {
-      const s = DRIFT_MAX_R / r2;
-      cx.current *= s;
-      cy.current *= s;
+      const r2 = Math.hypot(cx.current, cy.current);
+      if (r2 > DRIFT_MAX_R) {
+        const s = DRIFT_MAX_R / r2;
+        cx.current *= s;
+        cy.current *= s;
+      }
     }
 
     ambientT.current = t;
