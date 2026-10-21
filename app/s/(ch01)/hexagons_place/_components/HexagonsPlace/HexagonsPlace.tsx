@@ -6,6 +6,7 @@ import { VisualizerSection } from "@/components/VisualizerSection";
 import {
     ColorField,
     ColorTable,
+    ControlCluster,
     ControlPanel,
     ControlSection,
     ControlSubSection,
@@ -14,6 +15,9 @@ import {
     Toggle,
     TwinkleControls,
 } from "@/components/ControlPanel";
+
+const TOGGLE_COMPACT =
+    "!w-max !max-w-none [&>div]:!w-auto [&>div]:justify-start [&>div]:gap-2";
 import useHexagonsPlaceHook from "./HexagonsPlace.hooks";
 import type { HexagonsPlaceProps } from "./HexagonsPlace.types";
 
@@ -103,47 +107,62 @@ const HexagonsPlace = ({ showOverlay = true }: HexagonsPlaceProps) => {
                     >
                         <ControlSection label="look" info={INFO.look}>
                             <ControlSubSection label="mode">
-                                {!controls.caps ? (
-                                    <TwinkleControls
-                                        title="twinkle"
-                                        checked={controls.twinkle}
-                                        onCheckedChange={controls.setTwinkle}
-                                        speed={controls.twinkleSpeed}
-                                        onSpeedChange={controls.setTwinkleSpeed}
-                                        s={controls.twinkleS}
-                                        onSChange={controls.setTwinkleS}
-                                        l={controls.twinkleL}
-                                        onLChange={controls.setTwinkleL}
-                                        info={INFO.twinkle}
-                                        speedInfo={INFO.twinkleSpeed}
-                                        sInfo={INFO.twinkleS}
-                                        lInfo={INFO.twinkleL}
+                                <ControlCluster layout="stack" className="w-full basis-full">
+                                    {!controls.caps ? (
+                                        <TwinkleControls
+                                            title="twinkle"
+                                            checked={controls.twinkle}
+                                            onCheckedChange={controls.setTwinkle}
+                                            speed={controls.twinkleSpeed}
+                                            onSpeedChange={controls.setTwinkleSpeed}
+                                            s={controls.twinkleS}
+                                            onSChange={controls.setTwinkleS}
+                                            l={controls.twinkleL}
+                                            onLChange={controls.setTwinkleL}
+                                            info={INFO.twinkle}
+                                            speedInfo={INFO.twinkleSpeed}
+                                            sInfo={INFO.twinkleS}
+                                            lInfo={INFO.twinkleL}
+                                        />
+                                    ) : null}
+                                    <Toggle
+                                        label="Caps"
+                                        checked={controls.caps}
+                                        onChange={controls.setCaps}
+                                        info={INFO.caps}
+                                        className={TOGGLE_COMPACT}
                                     />
-                                ) : null}
-                                <Toggle
-                                    label="Caps"
-                                    checked={controls.caps}
-                                    onChange={controls.setCaps}
-                                    info={INFO.caps}
-                                />
-                                {!controls.caps && !controls.twinkle ? (
-                                    <ColorField
-                                        label="Edge"
-                                        value={controls.edgeColor}
-                                        onChange={controls.setEdgeColor}
-                                        info={INFO.edge}
+                                    {!controls.caps && !controls.twinkle ? (
+                                        <ColorField
+                                            label="Edge"
+                                            value={controls.edgeColor}
+                                            onChange={controls.setEdgeColor}
+                                            info={INFO.edge}
+                                        />
+                                    ) : null}
+                                </ControlCluster>
+                                <ControlCluster className="w-full basis-full grid-cols-1 gap-4 sm:grid-cols-2">
+                                    <Slider
+                                        label="Light"
+                                        value={controls.lightIntensity}
+                                        min={0}
+                                        max={2}
+                                        step={0.05}
+                                        onChange={controls.setLightIntensity}
+                                        format={(v) => `×${v.toFixed(2)}`}
+                                        info={INFO.lightIntensity}
                                     />
-                                ) : null}
-                                <Slider
-                                    label="Light"
-                                    value={controls.lightIntensity}
-                                    min={0}
-                                    max={2}
-                                    step={0.05}
-                                    onChange={controls.setLightIntensity}
-                                    format={(v) => `×${v.toFixed(2)}`}
-                                    info={INFO.lightIntensity}
-                                />
+                                    <Slider
+                                        label="Hex grid"
+                                        value={controls.hexGrid}
+                                        min={57}
+                                        max={107}
+                                        step={1}
+                                        onChange={controls.setHexGrid}
+                                        format={(v) => v.toFixed(0)}
+                                        info={INFO.hexGrid}
+                                    />
+                                </ControlCluster>
                             </ControlSubSection>
 
                             {controls.caps && (
@@ -236,63 +255,62 @@ const HexagonsPlace = ({ showOverlay = true }: HexagonsPlaceProps) => {
                                     />
                                 </ControlSubSection>
                             )}
-
-                            <ControlSubSection label="field">
-                                <Slider
-                                    label="Hex grid"
-                                    value={controls.hexGrid}
-                                    min={57}
-                                    max={107}
-                                    step={1}
-                                    onChange={controls.setHexGrid}
-                                    format={(v) => v.toFixed(0)}
-                                    info={INFO.hexGrid}
-                                />
-                            </ControlSubSection>
                         </ControlSection>
 
                         <ControlSection label="fog" info={INFO.fog}>
-                            <ControlSubSection label="tint">
-                                {controls.twinkle && !controls.caps && (
-                                    <>
-                                        <div className="flex flex-wrap gap-1.5">
-                                            <Toggle
-                                                label="Fixed"
-                                                checked={controls.fogFixed}
-                                                onChange={controls.setFogFixed}
-                                                info={INFO.fogFixed}
-                                            />
-                                            <Toggle
-                                                label="Parallel"
-                                                checked={controls.fogParallel}
-                                                onChange={controls.setFogParallel}
-                                                info={INFO.fogParallel}
-                                            />
-                                        </div>
-                                        {controls.fogParallel && (
-                                            <Slider
-                                                label="Speed ×"
-                                                value={controls.fogParallelSpeed}
-                                                min={0.25}
-                                                max={4}
-                                                step={0.05}
-                                                onChange={
-                                                    controls.setFogParallelSpeed
-                                                }
-                                                format={(v) => v.toFixed(2)}
-                                                info={INFO.fogParallelSpeed}
-                                            />
-                                        )}
-                                    </>
-                                )}
-                                {!controls.caps &&
-                                    (!controls.twinkle ||
+                            {!controls.caps ? (
+                                <ControlSubSection label="tint">
+                                    {controls.twinkle ? (
+                                        <>
+                                            <div className="flex w-full flex-wrap items-center gap-x-6 gap-y-2">
+                                                <Toggle
+                                                    label="Fixed"
+                                                    checked={controls.fogFixed}
+                                                    onChange={
+                                                        controls.setFogFixed
+                                                    }
+                                                    info={INFO.fogFixed}
+                                                    className={TOGGLE_COMPACT}
+                                                />
+                                                <Toggle
+                                                    label="Parallel"
+                                                    checked={
+                                                        controls.fogParallel
+                                                    }
+                                                    onChange={
+                                                        controls.setFogParallel
+                                                    }
+                                                    info={INFO.fogParallel}
+                                                    className={TOGGLE_COMPACT}
+                                                />
+                                            </div>
+                                            {controls.fogParallel ? (
+                                                <Slider
+                                                    label="Speed ×"
+                                                    value={
+                                                        controls.fogParallelSpeed
+                                                    }
+                                                    min={0.25}
+                                                    max={4}
+                                                    step={0.05}
+                                                    onChange={
+                                                        controls.setFogParallelSpeed
+                                                    }
+                                                    format={(v) =>
+                                                        v.toFixed(2)
+                                                    }
+                                                    info={INFO.fogParallelSpeed}
+                                                />
+                                            ) : null}
+                                        </>
+                                    ) : null}
+                                    {(!controls.twinkle ||
                                         controls.fogFixed ||
                                         controls.fogParallel) &&
                                     !(
                                         controls.twinkle &&
                                         controls.fogParallel
-                                    ) && (
+                                    ) ? (
                                         <ColorTable
                                             info={INFO.fogColors}
                                             columns={["idle", "peak"]}
@@ -318,99 +336,108 @@ const HexagonsPlace = ({ showOverlay = true }: HexagonsPlaceProps) => {
                                                 },
                                             ]}
                                         />
-                                    )}
-                            </ControlSubSection>
+                                    ) : null}
+                                </ControlSubSection>
+                            ) : null}
                             <ControlSubSection label="volume">
-                                <Slider
-                                    label="Height"
-                                    value={controls.fogHeight}
-                                    min={0.15}
-                                    max={3}
-                                    step={0.05}
-                                    onChange={controls.setFogHeight}
-                                    format={(v) => v.toFixed(2)}
-                                    info={INFO.fogHeight}
-                                />
-                                <Slider
-                                    label="Density"
-                                    value={controls.fogDensity}
-                                    min={0}
-                                    max={1}
-                                    step={0.01}
-                                    onChange={controls.setFogDensity}
-                                    format={(v) => v.toFixed(2)}
-                                    info={INFO.fogDensity}
-                                />
+                                <ControlCluster className="w-full basis-full grid-cols-1 gap-4 sm:grid-cols-2">
+                                    <Slider
+                                        label="Height"
+                                        value={controls.fogHeight}
+                                        min={0.15}
+                                        max={3}
+                                        step={0.05}
+                                        onChange={controls.setFogHeight}
+                                        format={(v) => v.toFixed(2)}
+                                        info={INFO.fogHeight}
+                                    />
+                                    <Slider
+                                        label="Density"
+                                        value={controls.fogDensity}
+                                        min={0}
+                                        max={1}
+                                        step={0.01}
+                                        onChange={controls.setFogDensity}
+                                        format={(v) => v.toFixed(2)}
+                                        info={INFO.fogDensity}
+                                    />
+                                </ControlCluster>
                             </ControlSubSection>
                         </ControlSection>
 
                         <ControlSection label="camera" info={INFO.camera}>
                             <ControlSubSection label="framing">
-                                <Slider
-                                    label="Angle"
-                                    value={controls.cameraAngle}
-                                    min={20}
-                                    max={70}
-                                    step={1}
-                                    onChange={controls.setCameraAngle}
-                                    info={INFO.cameraAngle}
-                                />
-                                <Slider
-                                    label="Height"
-                                    value={controls.cameraHeight}
-                                    min={4}
-                                    max={20}
-                                    step={0.1}
-                                    onChange={controls.setCameraHeight}
-                                    format={(v) => v.toFixed(1)}
-                                    info={INFO.cameraHeight}
-                                />
-                                <Slider
-                                    label="Offset"
-                                    value={controls.cameraOffset}
-                                    min={0}
-                                    max={30}
-                                    step={1}
-                                    onChange={controls.setCameraOffset}
-                                    format={(v) => v.toFixed(1)}
-                                    info={INFO.cameraOffset}
-                                />
-                                <Slider
-                                    label="Rotate"
-                                    value={controls.cameraRotate}
-                                    min={-45}
-                                    max={45}
-                                    step={1}
-                                    onChange={controls.setCameraRotate}
-                                    info={INFO.cameraRotate}
-                                />
-                                <Slider
-                                    label="Zoom"
-                                    value={controls.cameraZoom}
-                                    min={1}
-                                    max={3}
-                                    step={0.1}
-                                    onChange={controls.setCameraZoom}
-                                    format={(v) => v.toFixed(2)}
-                                    info={INFO.cameraZoom}
-                                />
+                                <ControlCluster className="w-full basis-full grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                                    <Slider
+                                        label="Angle"
+                                        value={controls.cameraAngle}
+                                        min={20}
+                                        max={70}
+                                        step={1}
+                                        onChange={controls.setCameraAngle}
+                                        info={INFO.cameraAngle}
+                                    />
+                                    <Slider
+                                        label="Height"
+                                        value={controls.cameraHeight}
+                                        min={4}
+                                        max={20}
+                                        step={0.1}
+                                        onChange={controls.setCameraHeight}
+                                        format={(v) => v.toFixed(1)}
+                                        info={INFO.cameraHeight}
+                                    />
+                                    <Slider
+                                        label="Offset"
+                                        value={controls.cameraOffset}
+                                        min={0}
+                                        max={30}
+                                        step={1}
+                                        onChange={controls.setCameraOffset}
+                                        format={(v) => v.toFixed(1)}
+                                        info={INFO.cameraOffset}
+                                    />
+                                    <Slider
+                                        label="Rotate"
+                                        value={controls.cameraRotate}
+                                        min={-45}
+                                        max={45}
+                                        step={1}
+                                        onChange={controls.setCameraRotate}
+                                        info={INFO.cameraRotate}
+                                    />
+                                    <Slider
+                                        label="Zoom"
+                                        value={controls.cameraZoom}
+                                        min={1}
+                                        max={3}
+                                        step={0.1}
+                                        onChange={controls.setCameraZoom}
+                                        format={(v) => v.toFixed(2)}
+                                        info={INFO.cameraZoom}
+                                    />
+                                </ControlCluster>
                             </ControlSubSection>
                             <ControlSubSection label="orbit">
-                                <Toggle
-                                    label="Spin"
-                                    checked={controls.spin}
-                                    onChange={controls.setSpin}
-                                    info={INFO.spin}
-                                />
-                                <Toggle
-                                    label={
-                                        controls.spinLeft ? "Left" : "Right"
-                                    }
-                                    checked={controls.spinLeft}
-                                    onChange={controls.setSpinLeft}
-                                    disabled={!controls.spin}
-                                    info={INFO.spinDir}
-                                />
+                                <div className="flex w-full flex-wrap items-center gap-x-6 gap-y-2">
+                                    <Toggle
+                                        label="Spin"
+                                        checked={controls.spin}
+                                        onChange={controls.setSpin}
+                                        info={INFO.spin}
+                                        className={TOGGLE_COMPACT}
+                                    />
+                                    <Toggle
+                                        label={
+                                            controls.spinLeft ? "Left" : "Right"
+                                        }
+                                        checked={controls.spinLeft}
+                                        onChange={controls.setSpinLeft}
+                                        disabled={!controls.spin}
+                                        info={INFO.spinDir}
+                                        className={TOGGLE_COMPACT}
+                                    />
+                                </div>
                                 {controls.spin ? (
                                     <Slider
                                         label="Spin speed"
@@ -433,6 +460,7 @@ const HexagonsPlace = ({ showOverlay = true }: HexagonsPlaceProps) => {
                                     checked={controls.gridFixed}
                                     onChange={controls.setGridFixed}
                                     info={INFO.gridFixed}
+                                    className={TOGGLE_COMPACT}
                                 />
                                 {controls.gridFixed ? (
                                     <ColorField
@@ -579,20 +607,24 @@ const HexagonsPlace = ({ showOverlay = true }: HexagonsPlaceProps) => {
                                 </>
                             ) : null}
                             <ControlSubSection label="react">
-                                <Toggle
-                                    label="Band bounce"
-                                    checked={controls.bandBounce}
-                                    onChange={controls.setBandBounce}
-                                    disabled={!visualizer.reactive}
-                                    info={INFO.bandBounce}
-                                />
-                                <Toggle
-                                    label="Flicker"
-                                    checked={controls.bandFlicker}
-                                    onChange={controls.setBandFlicker}
-                                    disabled={!visualizer.reactive}
-                                    info={INFO.bandFlicker}
-                                />
+                                <div className="flex w-full flex-wrap items-center gap-x-6 gap-y-2">
+                                    <Toggle
+                                        label="Band bounce"
+                                        checked={controls.bandBounce}
+                                        onChange={controls.setBandBounce}
+                                        disabled={!visualizer.reactive}
+                                        info={INFO.bandBounce}
+                                        className={TOGGLE_COMPACT}
+                                    />
+                                    <Toggle
+                                        label="Flicker"
+                                        checked={controls.bandFlicker}
+                                        onChange={controls.setBandFlicker}
+                                        disabled={!visualizer.reactive}
+                                        info={INFO.bandFlicker}
+                                        className={TOGGLE_COMPACT}
+                                    />
+                                </div>
                             </ControlSubSection>
                         </VisualizerSection>
                     </ControlPanel>

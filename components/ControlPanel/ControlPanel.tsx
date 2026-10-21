@@ -317,7 +317,8 @@ function PanelFold({
                 /* Nested folds = wrap chips; grow fills a short last row.
                    @container drives ControlCluster `cols` (2-up when wide). */
                 isSub &&
-                    "@container w-full max-w-full overflow-hidden basis-full sm:min-w-62 sm:flex-1 sm:basis-62",
+                    /* No overflow-hidden — clips Select dropdowns inside the chip */
+                    "@container w-full max-w-full basis-full sm:min-w-62 sm:flex-1 sm:basis-62",
                 isSub ? "border border-line/30" : "border border-line/50",
                 className,
             )}

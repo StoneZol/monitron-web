@@ -17,6 +17,8 @@ export type MatrixControls = {
   accelChannel: ReactiveChannel;
   /** Multiplies kick punches + global fall accel on reactive */
   drive: number;
+  /** Band that punches glyph / twinkle color */
+  colorChannel: ReactiveChannel;
   /** Color / twinkle pulse boost 0…2 */
   colorDrive: number;
   /** Multiplies bus peak for punches / glow (quiet tab volume) */

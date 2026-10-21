@@ -32,6 +32,7 @@ const INFO = {
     colorField: "Fixed glyph color when Twinkle is off.",
     rain: "Column drop speed.",
     fallSpeed: "Base column drop speed (higher = faster rain).",
+    colorChannel: "Band that punches glyph / twinkle color.",
     speedChannel: "Band that lifts cruise fall speed (smooth).",
     accelChannel: "Band that kicks fall acceleration + column dumps.",
     speedDrive: "Cruise fall lift strength (0…8).",
@@ -117,6 +118,13 @@ const Matrix = ({ showOverlay = true }: { showOverlay?: boolean }) => {
                                 <>
                                     <ControlSubSection label="channels">
                                         <Select
+                                            label="Color"
+                                            value={controls.colorChannel}
+                                            options={REACTIVE_CHANNEL_OPTIONS}
+                                            onChange={controls.setColorChannel}
+                                            info={INFO.colorChannel}
+                                        />
+                                        <Select
                                             label="Speed"
                                             value={controls.speedChannel}
                                             options={REACTIVE_CHANNEL_OPTIONS}
@@ -132,6 +140,16 @@ const Matrix = ({ showOverlay = true }: { showOverlay?: boolean }) => {
                                         />
                                     </ControlSubSection>
                                     <ControlSubSection label="drive">
+                                        <Slider
+                                            label="Color"
+                                            value={controls.colorDrive}
+                                            min={0}
+                                            max={controls.colorDriveMax}
+                                            step={0.05}
+                                            onChange={controls.setColorDrive}
+                                            format={(v) => `×${v.toFixed(2)}`}
+                                            info={INFO.colorDrive}
+                                        />
                                         <Slider
                                             label="Speed"
                                             value={controls.speedDrive}
@@ -151,16 +169,6 @@ const Matrix = ({ showOverlay = true }: { showOverlay?: boolean }) => {
                                             onChange={controls.setDrive}
                                             format={(v) => `×${v.toFixed(1)}`}
                                             info={INFO.drive}
-                                        />
-                                        <Slider
-                                            label="Color"
-                                            value={controls.colorDrive}
-                                            min={0}
-                                            max={controls.colorDriveMax}
-                                            step={0.05}
-                                            onChange={controls.setColorDrive}
-                                            format={(v) => `×${v.toFixed(2)}`}
-                                            info={INFO.colorDrive}
                                         />
                                     </ControlSubSection>
                                 </>
