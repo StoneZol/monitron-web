@@ -66,7 +66,8 @@ Without the extension the site still works — visualizer UI stays dormant, scre
 
 ### Screen id / URL slug
 
-`id`, route folder `app/s/<id>`, `href`, and prefs key must match.
+`id`, route folder `app/s/(chNN)/<id>`, `href`, and prefs key must match.
+Public URL stays `/s/<id>` — `(chNN)` is a Next.js route group and is not in the path.
 
 - **Spaces in the title → underscores in the slug.**  
   Example: title `Fairy Smoke` → id / path `/s/fairy_smoke` (not `fairysmoke`).
@@ -76,7 +77,7 @@ Without the extension the site still works — visualizer UI stays dormant, scre
 
 ### 1. Register in the catalog
 
-[`lib/placeholders.ts`](lib/placeholders.ts):
+[`lib/placeholders/ch0N.ts`](lib/placeholders/) (barrel merges chapters in [`index.ts`](lib/placeholders/index.ts)):
 
 ```ts
 {
@@ -87,12 +88,14 @@ Without the extension the site still works — visualizer UI stays dormant, scre
 }
 ```
 
+Also add a one-line blurb in the same chapter’s `blurbsCh0N` map (used by SEO).
+
 Card + Open Graph images: see **Preview + Open Graph** below (don’t hand-drop files into `public/s` / `public/og`).
 
 ### 2. Create the screen
 
 ```
-app/s/<id>/                 # same underscore slug as placeholders.id
+app/s/(chNN)/<id>/          # route group + same underscore slug as placeholders.id
   page.tsx
   _components/<Name>/
     index.ts
@@ -277,7 +280,7 @@ ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 | `useRenderScale(screenId)` | `{ scale, setScale, min, max, step }` (chrome / rare custom UI) |
 | `getRenderScale` / `setRenderScale` | Imperative read/write + persist |
 
-Also stamp a subjective `cost: "low" \| "mid" \| "high"` on the home catalog entry in [`lib/placeholders.ts`](lib/placeholders.ts) so users know which channels start hungry.
+Also stamp a subjective `cost: "low" \| "mid" \| "high"` on the home catalog entry in [`lib/placeholders/`](lib/placeholders/) so users know which channels start hungry.
 
 ---
 
