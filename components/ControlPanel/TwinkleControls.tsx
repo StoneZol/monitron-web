@@ -13,7 +13,9 @@ export type TwinkleControlsProps = {
   /** Label + pref identity — must read as twinkle (e.g. "twinkle", "sky twinkle"). */
   title: string;
   checked: boolean;
-  onCheckedChange: (value: boolean) => void;
+  onCheckedChange?: (value: boolean) => void;
+  /** Hide master toggle when mode is chosen elsewhere (e.g. color-mode select). */
+  showToggle?: boolean;
   speed: number;
   onSpeedChange: (value: number) => void;
   s: number;
@@ -35,6 +37,7 @@ export function TwinkleControls({
   title,
   checked,
   onCheckedChange,
+  showToggle = true,
   speed,
   onSpeedChange,
   s,
@@ -47,12 +50,14 @@ export function TwinkleControls({
   lInfo,
   className,
 }: TwinkleControlsProps) {
+  const knobsOpen = checked || !showToggle;
+
   return (
     <div
       className={cn(
         fieldBlock,
         "flex h-fit flex-col gap-1.5 border border-cyan/35 bg-cyan/3 p-1.5",
-        checked && "border-cyan/55",
+        knobsOpen && "border-cyan/55",
         className,
       )}
     >
@@ -62,14 +67,21 @@ export function TwinkleControls({
         </span>
         {info ? <FieldInfo text={info} /> : null}
       </div>
-      <Toggle
-        label={title}
-        checked={checked}
-        onChange={onCheckedChange}
-        className="sm:max-w-none"
-      />
-      {checked ? (
-        <div className="flex w-full min-w-0 flex-col gap-1 border-t border-cyan/15 pt-1">
+      {showToggle && onCheckedChange ? (
+        <Toggle
+          label={title}
+          checked={checked}
+          onChange={onCheckedChange}
+          className="sm:max-w-none"
+        />
+      ) : null}
+      {knobsOpen ? (
+        <div
+          className={cn(
+            "flex w-full min-w-0 flex-col gap-1",
+            showToggle && "border-t border-cyan/15 pt-1",
+          )}
+        >
           <Slider
             label="speed"
             value={speed}

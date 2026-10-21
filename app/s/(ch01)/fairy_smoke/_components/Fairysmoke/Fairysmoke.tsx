@@ -4,6 +4,7 @@ import { ScreensOverlay } from "@/components/ScreensOverlay";
 import { VisualizerSection } from "@/components/VisualizerSection";
 import {
   ColorTable,
+  ControlCluster,
   ControlPanel,
   ControlSection,
   ControlSubSection,
@@ -86,96 +87,99 @@ const Fairysmoke = ({ showOverlay = true }: FairysmokeProps) => {
             onFullscreen={controls.fullscreen}
           >
             <ControlSection label="look" info={INFO.look}>
-              <Slider
-                label="Smoke speed"
-                value={controls.smokeSpeed}
-                min={FAIRYSMOKE_RANGES.smokeSpeed.min}
-                max={FAIRYSMOKE_RANGES.smokeSpeed.max}
-                step={FAIRYSMOKE_RANGES.smokeSpeed.step}
-                onChange={controls.setSmokeSpeed}
-                format={(v) => `×${v.toFixed(2)}`}
-                info={INFO.smokeSpeed}
-              />
-              <Slider
-                label="Chaos"
-                value={controls.chaos}
-                min={FAIRYSMOKE_RANGES.chaos.min}
-                max={FAIRYSMOKE_RANGES.chaos.max}
-                step={FAIRYSMOKE_RANGES.chaos.step}
-                onChange={controls.setChaos}
-                format={(v) => v.toFixed(2)}
-                info={INFO.chaos}
-              />
-              <Slider
-                label="Density"
-                value={controls.density}
-                min={FAIRYSMOKE_RANGES.density.min}
-                max={FAIRYSMOKE_RANGES.density.max}
-                step={FAIRYSMOKE_RANGES.density.step}
-                onChange={controls.setDensity}
-                format={(v) => `×${v.toFixed(2)}`}
-                info={INFO.density}
-              />
-              <Select
-                label="Color mode"
-                value={controls.colorMode}
-                options={COLOR_MODE_OPTIONS}
-                onChange={controls.setColorMode}
-                info={INFO.colorMode}
-              />
-              {mode === "twinkle" ? (
-                <TwinkleControls
-                  title="twinkle"
-                  checked
-                  onCheckedChange={(on) => {
-                    if (!on) controls.setColorMode("original");
-                  }}
-                  speed={controls.twinkleSpeed}
-                  onSpeedChange={controls.setTwinkleSpeed}
-                  s={controls.twinkleS}
-                  onSChange={controls.setTwinkleS}
-                  l={controls.twinkleL}
-                  onLChange={controls.setTwinkleL}
-                  info={INFO.twinkle}
-                  speedInfo={INFO.twinkleSpeed}
-                  sInfo={INFO.twinkleS}
-                  lInfo={INFO.twinkleL}
+              <ControlSubSection label="color" info={INFO.colorMode}>
+                <Select
+                  label="Color mode"
+                  value={controls.colorMode}
+                  options={COLOR_MODE_OPTIONS}
+                  onChange={controls.setColorMode}
+                  info={INFO.colorMode}
                 />
-              ) : null}
-              {mode === "palette" ? (
-                <ColorTable
-                  label="smoke palette"
-                  info={INFO.colorPalette}
-                  columns={["idle", "peak"]}
-                  lockedColumns={audioLocked ? ["peak"] : []}
-                  columnStamps={audioStamp}
-                  rows={[
-                    {
-                      label: "tint",
-                      cells: [
-                        {
-                          value: controls.color,
-                          onChange: controls.setColor,
-                        },
-                        {
-                          value: controls.colorPeak,
-                          onChange: controls.setColorPeak,
-                        },
-                      ],
-                    },
-                  ]}
+                {mode === "twinkle" ? (
+                  <TwinkleControls
+                    title="twinkle"
+                    checked
+                    showToggle={false}
+                    speed={controls.twinkleSpeed}
+                    onSpeedChange={controls.setTwinkleSpeed}
+                    s={controls.twinkleS}
+                    onSChange={controls.setTwinkleS}
+                    l={controls.twinkleL}
+                    onLChange={controls.setTwinkleL}
+                    info={INFO.twinkle}
+                    speedInfo={INFO.twinkleSpeed}
+                    sInfo={INFO.twinkleS}
+                    lInfo={INFO.twinkleL}
+                  />
+                ) : null}
+                {mode === "palette" ? (
+                  <ColorTable
+                    label="smoke palette"
+                    info={INFO.colorPalette}
+                    columns={["idle", "peak"]}
+                    lockedColumns={audioLocked ? ["peak"] : []}
+                    columnStamps={audioStamp}
+                    rows={[
+                      {
+                        label: "tint",
+                        cells: [
+                          {
+                            value: controls.color,
+                            onChange: controls.setColor,
+                          },
+                          {
+                            value: controls.colorPeak,
+                            onChange: controls.setColorPeak,
+                          },
+                        ],
+                      },
+                    ]}
+                  />
+                ) : null}
+              </ControlSubSection>
+
+              <ControlCluster className="w-full basis-full grid-cols-1 gap-4 sm:grid-cols-2">
+                <Slider
+                  label="Smoke speed"
+                  value={controls.smokeSpeed}
+                  min={FAIRYSMOKE_RANGES.smokeSpeed.min}
+                  max={FAIRYSMOKE_RANGES.smokeSpeed.max}
+                  step={FAIRYSMOKE_RANGES.smokeSpeed.step}
+                  onChange={controls.setSmokeSpeed}
+                  format={(v) => `×${v.toFixed(2)}`}
+                  info={INFO.smokeSpeed}
                 />
-              ) : null}
-              <Slider
-                label="Saturation"
-                value={controls.saturation}
-                min={FAIRYSMOKE_RANGES.saturation.min}
-                max={FAIRYSMOKE_RANGES.saturation.max}
-                step={FAIRYSMOKE_RANGES.saturation.step}
-                onChange={controls.setSaturation}
-                format={(v) => `×${v.toFixed(2)}`}
-                info={INFO.saturation}
-              />
+                <Slider
+                  label="Chaos"
+                  value={controls.chaos}
+                  min={FAIRYSMOKE_RANGES.chaos.min}
+                  max={FAIRYSMOKE_RANGES.chaos.max}
+                  step={FAIRYSMOKE_RANGES.chaos.step}
+                  onChange={controls.setChaos}
+                  format={(v) => v.toFixed(2)}
+                  info={INFO.chaos}
+                />
+                <Slider
+                  label="Density"
+                  value={controls.density}
+                  min={FAIRYSMOKE_RANGES.density.min}
+                  max={FAIRYSMOKE_RANGES.density.max}
+                  step={FAIRYSMOKE_RANGES.density.step}
+                  onChange={controls.setDensity}
+                  format={(v) => `×${v.toFixed(2)}`}
+                  info={INFO.density}
+                />
+                <Slider
+                  label="Saturation"
+                  value={controls.saturation}
+                  min={FAIRYSMOKE_RANGES.saturation.min}
+                  max={FAIRYSMOKE_RANGES.saturation.max}
+                  step={FAIRYSMOKE_RANGES.saturation.step}
+                  onChange={controls.setSaturation}
+                  format={(v) => `×${v.toFixed(2)}`}
+                  info={INFO.saturation}
+                />
+              </ControlCluster>
             </ControlSection>
 
             <VisualizerSection

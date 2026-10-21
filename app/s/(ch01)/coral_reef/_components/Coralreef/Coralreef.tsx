@@ -4,6 +4,7 @@ import { ScreensOverlay } from "@/components/ScreensOverlay";
 import { VisualizerSection } from "@/components/VisualizerSection";
 import {
   ColorTable,
+  ControlCluster,
   ControlPanel,
   ControlSection,
   ControlSubSection,
@@ -129,204 +130,217 @@ const Coralreef = ({ showOverlay = true }: CoralreefProps) => {
             onFullscreen={controls.fullscreen}
           >
             <ControlSection label="look" info={INFO.look}>
-              <Slider
-                label="Flight speed"
-                value={controls.flightSpeed}
-                min={CORALREEF_RANGES.flightSpeed.min}
-                max={CORALREEF_RANGES.flightSpeed.max}
-                step={CORALREEF_RANGES.flightSpeed.step}
-                onChange={controls.setFlightSpeed}
-                format={(v) => `×${v.toFixed(2)}`}
-                info={INFO.flightSpeed}
-              />
-              <Select
-                label="Camera"
-                value={controls.cameraMode}
-                options={CAMERA_MODE_OPTIONS}
-                onChange={controls.setCameraMode}
-                info={INFO.cameraMode}
-              />
-              {flex ? (
-                <Slider
-                  label="Camera bank"
-                  value={controls.cameraBank}
-                  min={CORALREEF_RANGES.cameraBank.min}
-                  max={CORALREEF_RANGES.cameraBank.max}
-                  step={CORALREEF_RANGES.cameraBank.step}
-                  onChange={controls.setCameraBank}
-                  format={(v) => `×${v.toFixed(2)}`}
-                  info={INFO.cameraBank}
+              <ControlSubSection label="color" info={INFO.colorMode}>
+                <Select
+                  label="Color mode"
+                  value={controls.colorMode}
+                  options={COLOR_MODE_OPTIONS}
+                  onChange={controls.setColorMode}
+                  info={INFO.colorMode}
                 />
-              ) : (
-                <>
+                {mode === "paletteTwinkle" || mode === "duoTwinkle" ? (
                   <Slider
-                    label="X"
-                    value={controls.yaw}
-                    min={CORALREEF_RANGES.yaw.min}
-                    max={CORALREEF_RANGES.yaw.max}
-                    step={CORALREEF_RANGES.yaw.step}
-                    onChange={controls.setYaw}
-                    format={(v) => `${v.toFixed(1)}°`}
-                    info={INFO.yaw}
+                    label={
+                      mode === "duoTwinkle"
+                        ? "Duo phase speed"
+                        : "Palette speed"
+                    }
+                    value={controls.twinkleSpeed}
+                    min={0}
+                    max={4}
+                    step={0.05}
+                    onChange={controls.setTwinkleSpeed}
+                    format={(v) => `×${v.toFixed(2)}`}
+                    info={
+                      mode === "duoTwinkle"
+                        ? INFO.duoTwinkle
+                        : INFO.paletteTwinkle
+                    }
                   />
-                  <Slider
-                    label="Y"
-                    value={controls.pitch}
-                    min={CORALREEF_RANGES.pitch.min}
-                    max={CORALREEF_RANGES.pitch.max}
-                    step={CORALREEF_RANGES.pitch.step}
-                    onChange={controls.setPitch}
-                    format={(v) => `${v.toFixed(1)}°`}
-                    info={INFO.pitch}
-                  />
-                </>
-              )}
-              <Select
-                label="Color mode"
-                value={controls.colorMode}
-                options={COLOR_MODE_OPTIONS}
-                onChange={controls.setColorMode}
-                info={INFO.colorMode}
-              />
-              {mode === "paletteTwinkle" || mode === "duoTwinkle" ? (
-                <Slider
-                  label={
-                    mode === "duoTwinkle" ? "Duo phase speed" : "Palette speed"
-                  }
-                  value={controls.twinkleSpeed}
-                  min={0}
-                  max={4}
-                  step={0.05}
-                  onChange={controls.setTwinkleSpeed}
-                  format={(v) => `×${v.toFixed(2)}`}
-                  info={
-                    mode === "duoTwinkle"
-                      ? INFO.duoTwinkle
-                      : INFO.paletteTwinkle
-                  }
-                />
-              ) : null}
-              {mode === "twinkle" ? (
-                <TwinkleControls
-                  title="twinkle"
-                  checked
-                  onCheckedChange={(on) => {
-                    if (!on) controls.setColorMode("original");
-                  }}
-                  speed={controls.twinkleSpeed}
-                  onSpeedChange={controls.setTwinkleSpeed}
-                  s={controls.twinkleS}
-                  onSChange={controls.setTwinkleS}
-                  l={controls.twinkleL}
-                  onLChange={controls.setTwinkleL}
-                  info={INFO.twinkle}
-                  speedInfo={INFO.twinkleSpeed}
-                  sInfo={INFO.twinkleS}
-                  lInfo={INFO.twinkleL}
-                />
-              ) : null}
-              {mode === "palette" ||
-              mode === "duo" ||
-              mode === "duoTwinkle" ? (
-                <ColorTable
-                  label={
-                    mode === "palette" ? "reef palette" : "duo ends"
-                  }
-                  info={INFO.colorPalette}
-                  columns={
-                    mode === "palette" ? ["idle", "peak"] : ["A", "B"]
-                  }
-                  lockedColumns={
-                    mode === "palette" && audioLocked ? ["peak"] : []
-                  }
-                  columnStamps={mode === "palette" ? audioStamp : undefined}
-                  rows={[
-                    {
-                      label: mode === "palette" ? "tint" : "mix",
-                      cells: [
-                        {
-                          value: controls.color,
-                          onChange: controls.setColor,
-                        },
-                        {
-                          value: controls.colorPeak,
-                          onChange: controls.setColorPeak,
-                        },
-                      ],
-                    },
-                  ]}
-                />
-              ) : null}
-              <Select
-                label="Tunnel light"
-                value={controls.lightMode}
-                options={LIGHT_MODE_OPTIONS}
-                onChange={controls.setLightMode}
-                info={INFO.lightMode}
-              />
-              {lightCustom ? (
-                <>
+                ) : null}
+                {mode === "twinkle" ? (
                   <TwinkleControls
-                    title="sun twinkle"
-                    checked={controls.lightTwinkle}
-                    onCheckedChange={controls.setLightTwinkle}
-                    speed={controls.lightTwinkleSpeed}
-                    onSpeedChange={controls.setLightTwinkleSpeed}
-                    s={controls.lightTwinkleS}
-                    onSChange={controls.setLightTwinkleS}
-                    l={controls.lightTwinkleL}
-                    onLChange={controls.setLightTwinkleL}
-                    info={INFO.lightTwinkle}
-                    speedInfo={INFO.lightTwinkleSpeed}
-                    sInfo={INFO.lightTwinkleS}
-                    lInfo={INFO.lightTwinkleL}
+                    title="twinkle"
+                    checked
+                    showToggle={false}
+                    speed={controls.twinkleSpeed}
+                    onSpeedChange={controls.setTwinkleSpeed}
+                    s={controls.twinkleS}
+                    onSChange={controls.setTwinkleS}
+                    l={controls.twinkleL}
+                    onLChange={controls.setTwinkleL}
+                    info={INFO.twinkle}
+                    speedInfo={INFO.twinkleSpeed}
+                    sInfo={INFO.twinkleS}
+                    lInfo={INFO.twinkleL}
                   />
-                  {!controls.lightTwinkle ? (
-                    <ColorTable
-                      label="sun palette"
-                      info={INFO.lightPalette}
-                      columns={["idle", "peak"]}
-                      lockedColumns={audioLocked ? ["peak"] : []}
-                      columnStamps={audioStamp}
-                      rows={[
-                        {
-                          label: "sun",
-                          cells: [
-                            {
-                              value: controls.lightColor,
-                              onChange: controls.setLightColor,
-                            },
-                            {
-                              value: controls.lightColorPeak,
-                              onChange: controls.setLightColorPeak,
-                            },
-                          ],
-                        },
-                      ]}
+                ) : null}
+                {mode === "palette" ||
+                mode === "duo" ||
+                mode === "duoTwinkle" ? (
+                  <ColorTable
+                    label={
+                      mode === "palette" ? "reef palette" : "duo ends"
+                    }
+                    info={INFO.colorPalette}
+                    columns={
+                      mode === "palette" ? ["idle", "peak"] : ["A", "B"]
+                    }
+                    lockedColumns={
+                      mode === "palette" && audioLocked ? ["peak"] : []
+                    }
+                    columnStamps={
+                      mode === "palette" ? audioStamp : undefined
+                    }
+                    rows={[
+                      {
+                        label: mode === "palette" ? "tint" : "mix",
+                        cells: [
+                          {
+                            value: controls.color,
+                            onChange: controls.setColor,
+                          },
+                          {
+                            value: controls.colorPeak,
+                            onChange: controls.setColorPeak,
+                          },
+                        ],
+                      },
+                    ]}
+                  />
+                ) : null}
+              </ControlSubSection>
+
+              <ControlSubSection label="light" info={INFO.lightMode}>
+                <Select
+                  label="Tunnel light"
+                  value={controls.lightMode}
+                  options={LIGHT_MODE_OPTIONS}
+                  onChange={controls.setLightMode}
+                  info={INFO.lightMode}
+                />
+                {lightCustom ? (
+                  <>
+                    <TwinkleControls
+                      title="sun twinkle"
+                      checked={controls.lightTwinkle}
+                      onCheckedChange={controls.setLightTwinkle}
+                      speed={controls.lightTwinkleSpeed}
+                      onSpeedChange={controls.setLightTwinkleSpeed}
+                      s={controls.lightTwinkleS}
+                      onSChange={controls.setLightTwinkleS}
+                      l={controls.lightTwinkleL}
+                      onLChange={controls.setLightTwinkleL}
+                      info={INFO.lightTwinkle}
+                      speedInfo={INFO.lightTwinkleSpeed}
+                      sInfo={INFO.lightTwinkleS}
+                      lInfo={INFO.lightTwinkleL}
                     />
-                  ) : null}
-                </>
-              ) : null}
-              <Slider
-                label="Shadow smooth"
-                value={controls.shadowSmooth}
-                min={CORALREEF_RANGES.shadowSmooth.min}
-                max={CORALREEF_RANGES.shadowSmooth.max}
-                step={CORALREEF_RANGES.shadowSmooth.step}
-                onChange={controls.setShadowSmooth}
-                format={(v) => `×${v.toFixed(2)}`}
-                info={INFO.shadowSmooth}
-              />
-              <Slider
-                label="Saturation"
-                value={controls.saturation}
-                min={CORALREEF_RANGES.saturation.min}
-                max={CORALREEF_RANGES.saturation.max}
-                step={CORALREEF_RANGES.saturation.step}
-                onChange={controls.setSaturation}
-                format={(v) => `×${v.toFixed(2)}`}
-                info={INFO.saturation}
-              />
+                    {!controls.lightTwinkle ? (
+                      <ColorTable
+                        label="sun palette"
+                        info={INFO.lightPalette}
+                        columns={["idle", "peak"]}
+                        lockedColumns={audioLocked ? ["peak"] : []}
+                        columnStamps={audioStamp}
+                        rows={[
+                          {
+                            label: "sun",
+                            cells: [
+                              {
+                                value: controls.lightColor,
+                                onChange: controls.setLightColor,
+                              },
+                              {
+                                value: controls.lightColorPeak,
+                                onChange: controls.setLightColorPeak,
+                              },
+                            ],
+                          },
+                        ]}
+                      />
+                    ) : null}
+                  </>
+                ) : null}
+              </ControlSubSection>
+
+              <ControlSubSection label="camera" info={INFO.cameraMode}>
+                <Select
+                  label="Camera"
+                  value={controls.cameraMode}
+                  options={CAMERA_MODE_OPTIONS}
+                  onChange={controls.setCameraMode}
+                  info={INFO.cameraMode}
+                />
+                {flex ? (
+                  <Slider
+                    label="Camera bank"
+                    value={controls.cameraBank}
+                    min={CORALREEF_RANGES.cameraBank.min}
+                    max={CORALREEF_RANGES.cameraBank.max}
+                    step={CORALREEF_RANGES.cameraBank.step}
+                    onChange={controls.setCameraBank}
+                    format={(v) => `×${v.toFixed(2)}`}
+                    info={INFO.cameraBank}
+                  />
+                ) : (
+                  <>
+                    <Slider
+                      label="X"
+                      value={controls.yaw}
+                      min={CORALREEF_RANGES.yaw.min}
+                      max={CORALREEF_RANGES.yaw.max}
+                      step={CORALREEF_RANGES.yaw.step}
+                      onChange={controls.setYaw}
+                      format={(v) => `${v.toFixed(1)}°`}
+                      info={INFO.yaw}
+                    />
+                    <Slider
+                      label="Y"
+                      value={controls.pitch}
+                      min={CORALREEF_RANGES.pitch.min}
+                      max={CORALREEF_RANGES.pitch.max}
+                      step={CORALREEF_RANGES.pitch.step}
+                      onChange={controls.setPitch}
+                      format={(v) => `${v.toFixed(1)}°`}
+                      info={INFO.pitch}
+                    />
+                  </>
+                )}
+              </ControlSubSection>
+
+              <ControlCluster className="w-full basis-full grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <Slider
+                  label="Flight speed"
+                  value={controls.flightSpeed}
+                  min={CORALREEF_RANGES.flightSpeed.min}
+                  max={CORALREEF_RANGES.flightSpeed.max}
+                  step={CORALREEF_RANGES.flightSpeed.step}
+                  onChange={controls.setFlightSpeed}
+                  format={(v) => `×${v.toFixed(2)}`}
+                  info={INFO.flightSpeed}
+                />
+                <Slider
+                  label="Shadow smooth"
+                  value={controls.shadowSmooth}
+                  min={CORALREEF_RANGES.shadowSmooth.min}
+                  max={CORALREEF_RANGES.shadowSmooth.max}
+                  step={CORALREEF_RANGES.shadowSmooth.step}
+                  onChange={controls.setShadowSmooth}
+                  format={(v) => `×${v.toFixed(2)}`}
+                  info={INFO.shadowSmooth}
+                />
+                <Slider
+                  label="Saturation"
+                  value={controls.saturation}
+                  min={CORALREEF_RANGES.saturation.min}
+                  max={CORALREEF_RANGES.saturation.max}
+                  step={CORALREEF_RANGES.saturation.step}
+                  onChange={controls.setSaturation}
+                  format={(v) => `×${v.toFixed(2)}`}
+                  info={INFO.saturation}
+                />
+              </ControlCluster>
             </ControlSection>
 
             <VisualizerSection

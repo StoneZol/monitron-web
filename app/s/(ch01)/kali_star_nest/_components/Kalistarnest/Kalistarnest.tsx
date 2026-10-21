@@ -4,6 +4,7 @@ import { ScreensOverlay } from "@/components/ScreensOverlay";
 import { VisualizerSection } from "@/components/VisualizerSection";
 import {
   ColorTable,
+  ControlCluster,
   ControlPanel,
   ControlSection,
   ControlSubSection,
@@ -99,118 +100,126 @@ const Kalistarnest = ({ showOverlay = true }: KalistarnestProps) => {
             onFullscreen={controls.fullscreen}
           >
             <ControlSection label="look" info={INFO.look}>
-              <Slider
-                label="Flight speed"
-                value={controls.flightSpeed}
-                min={KALISTARNEST_RANGES.flightSpeed.min}
-                max={KALISTARNEST_RANGES.flightSpeed.max}
-                step={KALISTARNEST_RANGES.flightSpeed.step}
-                onChange={controls.setFlightSpeed}
-                format={(v) => `×${v.toFixed(2)}`}
-                info={INFO.flightSpeed}
-              />
-              <Select
-                label="Camera"
-                value={controls.cameraMode}
-                options={CAMERA_MODE_OPTIONS}
-                onChange={controls.setCameraMode}
-                info={INFO.cameraMode}
-              />
-              {flex ? (
-                <Slider
-                  label="Camera bank"
-                  value={controls.cameraBank}
-                  min={KALISTARNEST_RANGES.cameraBank.min}
-                  max={KALISTARNEST_RANGES.cameraBank.max}
-                  step={KALISTARNEST_RANGES.cameraBank.step}
-                  onChange={controls.setCameraBank}
-                  format={(v) => `×${v.toFixed(2)}`}
-                  info={INFO.cameraBank}
+              <ControlSubSection label="color" info={INFO.colorMode}>
+                <Select
+                  label="Color mode"
+                  value={controls.colorMode}
+                  options={COLOR_MODE_OPTIONS}
+                  onChange={controls.setColorMode}
+                  info={INFO.colorMode}
                 />
-              ) : (
-                <>
-                  <Slider
-                    label="X"
-                    value={controls.yaw}
-                    min={KALISTARNEST_RANGES.yaw.min}
-                    max={KALISTARNEST_RANGES.yaw.max}
-                    step={KALISTARNEST_RANGES.yaw.step}
-                    onChange={controls.setYaw}
-                    format={(v) => `${v.toFixed(1)}°`}
-                    info={INFO.yaw}
-                  />
-                  <Slider
-                    label="Y"
-                    value={controls.pitch}
-                    min={KALISTARNEST_RANGES.pitch.min}
-                    max={KALISTARNEST_RANGES.pitch.max}
-                    step={KALISTARNEST_RANGES.pitch.step}
-                    onChange={controls.setPitch}
-                    format={(v) => `${v.toFixed(1)}°`}
-                    info={INFO.pitch}
-                  />
-                </>
-              )}
-              <Select
-                label="Color mode"
-                value={controls.colorMode}
-                options={COLOR_MODE_OPTIONS}
-                onChange={controls.setColorMode}
-                info={INFO.colorMode}
-              />
-              {custom ? (
-                <>
-                  <TwinkleControls
-                    title="stars twinkle"
-                    checked={controls.starTwinkle}
-                    onCheckedChange={controls.setStarTwinkle}
-                    speed={controls.starTwinkleSpeed}
-                    onSpeedChange={controls.setStarTwinkleSpeed}
-                    s={controls.starTwinkleS}
-                    onSChange={controls.setStarTwinkleS}
-                    l={controls.starTwinkleL}
-                    onLChange={controls.setStarTwinkleL}
-                    info={INFO.starTwinkle}
-                    speedInfo={INFO.twinkleSpeed}
-                    sInfo={INFO.twinkleS}
-                    lInfo={INFO.twinkleL}
-                  />
-                  {!controls.starTwinkle ? (
-                    <ColorTable
-                      label="stars palette"
-                      info={INFO.starPalette}
-                      columns={["idle", "peak"]}
-                      lockedColumns={audioLocked ? ["peak"] : []}
-                      columnStamps={audioStamp}
-                      rows={[
-                        {
-                          label: "stars",
-                          cells: [
-                            {
-                              value: controls.starColor,
-                              onChange: controls.setStarColor,
-                            },
-                            {
-                              value: controls.starColorPeak,
-                              onChange: controls.setStarColorPeak,
-                            },
-                          ],
-                        },
-                      ]}
+                {custom ? (
+                  <>
+                    <TwinkleControls
+                      title="stars twinkle"
+                      checked={controls.starTwinkle}
+                      onCheckedChange={controls.setStarTwinkle}
+                      speed={controls.starTwinkleSpeed}
+                      onSpeedChange={controls.setStarTwinkleSpeed}
+                      s={controls.starTwinkleS}
+                      onSChange={controls.setStarTwinkleS}
+                      l={controls.starTwinkleL}
+                      onLChange={controls.setStarTwinkleL}
+                      info={INFO.starTwinkle}
+                      speedInfo={INFO.twinkleSpeed}
+                      sInfo={INFO.twinkleS}
+                      lInfo={INFO.twinkleL}
                     />
-                  ) : null}
-                </>
-              ) : null}
-              <Slider
-                label="Saturation"
-                value={controls.saturation}
-                min={KALISTARNEST_RANGES.saturation.min}
-                max={KALISTARNEST_RANGES.saturation.max}
-                step={KALISTARNEST_RANGES.saturation.step}
-                onChange={controls.setSaturation}
-                format={(v) => `×${v.toFixed(2)}`}
-                info={INFO.saturation}
-              />
+                    {!controls.starTwinkle ? (
+                      <ColorTable
+                        label="stars palette"
+                        info={INFO.starPalette}
+                        columns={["idle", "peak"]}
+                        lockedColumns={audioLocked ? ["peak"] : []}
+                        columnStamps={audioStamp}
+                        rows={[
+                          {
+                            label: "stars",
+                            cells: [
+                              {
+                                value: controls.starColor,
+                                onChange: controls.setStarColor,
+                              },
+                              {
+                                value: controls.starColorPeak,
+                                onChange: controls.setStarColorPeak,
+                              },
+                            ],
+                          },
+                        ]}
+                      />
+                    ) : null}
+                  </>
+                ) : null}
+              </ControlSubSection>
+
+              <ControlSubSection label="camera" info={INFO.cameraMode}>
+                <Select
+                  label="Camera"
+                  value={controls.cameraMode}
+                  options={CAMERA_MODE_OPTIONS}
+                  onChange={controls.setCameraMode}
+                  info={INFO.cameraMode}
+                />
+                {flex ? (
+                  <Slider
+                    label="Camera bank"
+                    value={controls.cameraBank}
+                    min={KALISTARNEST_RANGES.cameraBank.min}
+                    max={KALISTARNEST_RANGES.cameraBank.max}
+                    step={KALISTARNEST_RANGES.cameraBank.step}
+                    onChange={controls.setCameraBank}
+                    format={(v) => `×${v.toFixed(2)}`}
+                    info={INFO.cameraBank}
+                  />
+                ) : (
+                  <ControlCluster className="grid-cols-1 gap-4 sm:grid-cols-2">
+                    <Slider
+                      label="X"
+                      value={controls.yaw}
+                      min={KALISTARNEST_RANGES.yaw.min}
+                      max={KALISTARNEST_RANGES.yaw.max}
+                      step={KALISTARNEST_RANGES.yaw.step}
+                      onChange={controls.setYaw}
+                      format={(v) => `${v.toFixed(1)}°`}
+                      info={INFO.yaw}
+                    />
+                    <Slider
+                      label="Y"
+                      value={controls.pitch}
+                      min={KALISTARNEST_RANGES.pitch.min}
+                      max={KALISTARNEST_RANGES.pitch.max}
+                      step={KALISTARNEST_RANGES.pitch.step}
+                      onChange={controls.setPitch}
+                      format={(v) => `${v.toFixed(1)}°`}
+                      info={INFO.pitch}
+                    />
+                  </ControlCluster>
+                )}
+              </ControlSubSection>
+
+              <ControlCluster className="w-full basis-full grid-cols-1 gap-4 sm:grid-cols-2">
+                <Slider
+                  label="Flight speed"
+                  value={controls.flightSpeed}
+                  min={KALISTARNEST_RANGES.flightSpeed.min}
+                  max={KALISTARNEST_RANGES.flightSpeed.max}
+                  step={KALISTARNEST_RANGES.flightSpeed.step}
+                  onChange={controls.setFlightSpeed}
+                  format={(v) => `×${v.toFixed(2)}`}
+                  info={INFO.flightSpeed}
+                />
+                <Slider
+                  label="Saturation"
+                  value={controls.saturation}
+                  min={KALISTARNEST_RANGES.saturation.min}
+                  max={KALISTARNEST_RANGES.saturation.max}
+                  step={KALISTARNEST_RANGES.saturation.step}
+                  onChange={controls.setSaturation}
+                  format={(v) => `×${v.toFixed(2)}`}
+                  info={INFO.saturation}
+                />
+              </ControlCluster>
             </ControlSection>
 
             <VisualizerSection
