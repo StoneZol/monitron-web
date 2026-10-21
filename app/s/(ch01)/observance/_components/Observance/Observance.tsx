@@ -4,6 +4,7 @@ import { ScreensOverlay } from "@/components/ScreensOverlay";
 import { VisualizerSection } from "@/components/VisualizerSection";
 import {
   ColorTable,
+  ControlCluster,
   ControlPanel,
   ControlSection,
   ControlSubSection,
@@ -55,7 +56,7 @@ const INFO = {
   pitch: "Look pitch relative to flight (deg). 0 = along the path.",
   cameraBank:
     "Flex look cone radius. Wander stays inside a circle; bank scales how wide that circle gets.",
-  crosses: "Cross markers, plant / air / bar / base lamps, and path sway.",
+  crosses: "Cross markers, plant / air / bar / base lamps.",
   crossesAir: "Lift crosses off the hills by a fixed height (float in air).",
   crossesFlip: "Slide the crossbar down the stem (inverted cross). No rotation.",
   crossBaseLight:
@@ -67,7 +68,8 @@ const INFO = {
   crossBaseTwinkleSpeed: "How fast base-lamp hue runs a full lap (1 ≈ 6s).",
   crossBaseTwinkleS: "Saturation % for base-lamp twinkle hsl().",
   crossBaseTwinkleL: "Lightness % for base-lamp twinkle hsl().",
-  crossSway: "Scale stock path sway (1 = Shadertoy, 0 = locked, 2 = 2×).",
+  crossSway:
+    "Stock camera path sway (1 = Shadertoy, 0 = locked, 2 = 2×). Only in stock mode.",
   sun: "Tint for the chromatic lightning stripes (idle→peak or HSL twinkle).",
   sunPalette:
     "Idle = rest. Peak = color-channel target. Hidden while sun twinkle is on; peak locked when audio is off.",
@@ -102,6 +104,7 @@ const Observance = ({ showOverlay = true }: ObservanceProps) => {
   const { liveRef, vizRef, visualizer, controls } = useObservanceHook();
   const audioLocked = !visualizer.reactive;
   const audioStamp = audioLocked ? ({ peak: "audio" } as const) : undefined;
+  const camStock = controls.cameraMode === "stock";
   const camFlex = controls.cameraMode === "flex";
   const camManual = controls.cameraMode === "manual";
 
@@ -117,60 +120,6 @@ const Observance = ({ showOverlay = true }: ObservanceProps) => {
             onFullscreen={controls.fullscreen}
           >
             <ControlSection label="look" info={INFO.look}>
-              <Slider
-                label="Flight speed"
-                value={controls.flightSpeed}
-                min={OBSERVANCE_RANGES.flightSpeed.min}
-                max={OBSERVANCE_RANGES.flightSpeed.max}
-                step={OBSERVANCE_RANGES.flightSpeed.step}
-                onChange={controls.setFlightSpeed}
-                format={(v) => `×${v.toFixed(2)}`}
-                info={INFO.flightSpeed}
-              />
-              <Select
-                label="Camera"
-                value={controls.cameraMode}
-                options={CAMERA_MODE_OPTIONS}
-                onChange={controls.setCameraMode}
-                info={INFO.cameraMode}
-              />
-              {camFlex ? (
-                <Slider
-                  label="Camera bank"
-                  value={controls.cameraBank}
-                  min={OBSERVANCE_RANGES.cameraBank.min}
-                  max={OBSERVANCE_RANGES.cameraBank.max}
-                  step={OBSERVANCE_RANGES.cameraBank.step}
-                  onChange={controls.setCameraBank}
-                  format={(v) => `×${v.toFixed(2)}`}
-                  info={INFO.cameraBank}
-                />
-              ) : null}
-              {camManual ? (
-                <>
-                  <Slider
-                    label="X"
-                    value={controls.yaw}
-                    min={OBSERVANCE_RANGES.yaw.min}
-                    max={OBSERVANCE_RANGES.yaw.max}
-                    step={OBSERVANCE_RANGES.yaw.step}
-                    onChange={controls.setYaw}
-                    format={(v) => `${v.toFixed(1)}°`}
-                    info={INFO.yaw}
-                  />
-                  <Slider
-                    label="Y"
-                    value={controls.pitch}
-                    min={OBSERVANCE_RANGES.pitch.min}
-                    max={OBSERVANCE_RANGES.pitch.max}
-                    step={OBSERVANCE_RANGES.pitch.step}
-                    onChange={controls.setPitch}
-                    format={(v) => `${v.toFixed(1)}°`}
-                    info={INFO.pitch}
-                  />
-                </>
-              ) : null}
-
               <ControlSubSection label="crosses" info={INFO.crosses}>
                 <Toggle
                   label="In air"
@@ -219,9 +168,7 @@ const Observance = ({ showOverlay = true }: ObservanceProps) => {
                   <TwinkleControls
                     title="base twinkle"
                     checked
-                    onCheckedChange={(on) => {
-                      if (!on) controls.setCrossBaseLightMode("off");
-                    }}
+                    showToggle={false}
                     speed={controls.crossBaseTwinkleSpeed}
                     onSpeedChange={controls.setCrossBaseTwinkleSpeed}
                     s={controls.crossBaseTwinkleS}
@@ -234,28 +181,7 @@ const Observance = ({ showOverlay = true }: ObservanceProps) => {
                     lInfo={INFO.crossBaseTwinkleL}
                   />
                 ) : null}
-                <Slider
-                  label="Cross sway"
-                  value={controls.crossSway}
-                  min={OBSERVANCE_RANGES.crossSway.min}
-                  max={OBSERVANCE_RANGES.crossSway.max}
-                  step={OBSERVANCE_RANGES.crossSway.step}
-                  onChange={controls.setCrossSway}
-                  format={(v) => `×${v.toFixed(2)}`}
-                  info={INFO.crossSway}
-                />
               </ControlSubSection>
-
-              <Slider
-                label="Lightning"
-                value={controls.lightningRate}
-                min={OBSERVANCE_RANGES.lightningRate.min}
-                max={OBSERVANCE_RANGES.lightningRate.max}
-                step={OBSERVANCE_RANGES.lightningRate.step}
-                onChange={controls.setLightningRate}
-                format={(v) => `×${v.toFixed(2)}`}
-                info={INFO.lightningRate}
-              />
 
               <ControlSubSection label="sun" info={INFO.sun}>
                 <TwinkleControls
@@ -298,6 +224,87 @@ const Observance = ({ showOverlay = true }: ObservanceProps) => {
                   />
                 ) : null}
               </ControlSubSection>
+
+              <ControlSubSection label="camera" info={INFO.cameraMode}>
+                <Select
+                  label="Camera"
+                  value={controls.cameraMode}
+                  options={CAMERA_MODE_OPTIONS}
+                  onChange={controls.setCameraMode}
+                  info={INFO.cameraMode}
+                />
+                {camStock ? (
+                  <Slider
+                    label="Cross sway"
+                    value={controls.crossSway}
+                    min={OBSERVANCE_RANGES.crossSway.min}
+                    max={OBSERVANCE_RANGES.crossSway.max}
+                    step={OBSERVANCE_RANGES.crossSway.step}
+                    onChange={controls.setCrossSway}
+                    format={(v) => `×${v.toFixed(2)}`}
+                    info={INFO.crossSway}
+                  />
+                ) : null}
+                {camFlex ? (
+                  <Slider
+                    label="Camera bank"
+                    value={controls.cameraBank}
+                    min={OBSERVANCE_RANGES.cameraBank.min}
+                    max={OBSERVANCE_RANGES.cameraBank.max}
+                    step={OBSERVANCE_RANGES.cameraBank.step}
+                    onChange={controls.setCameraBank}
+                    format={(v) => `×${v.toFixed(2)}`}
+                    info={INFO.cameraBank}
+                  />
+                ) : null}
+                {camManual ? (
+                  <>
+                    <Slider
+                      label="X"
+                      value={controls.yaw}
+                      min={OBSERVANCE_RANGES.yaw.min}
+                      max={OBSERVANCE_RANGES.yaw.max}
+                      step={OBSERVANCE_RANGES.yaw.step}
+                      onChange={controls.setYaw}
+                      format={(v) => `${v.toFixed(1)}°`}
+                      info={INFO.yaw}
+                    />
+                    <Slider
+                      label="Y"
+                      value={controls.pitch}
+                      min={OBSERVANCE_RANGES.pitch.min}
+                      max={OBSERVANCE_RANGES.pitch.max}
+                      step={OBSERVANCE_RANGES.pitch.step}
+                      onChange={controls.setPitch}
+                      format={(v) => `${v.toFixed(1)}°`}
+                      info={INFO.pitch}
+                    />
+                  </>
+                ) : null}
+              </ControlSubSection>
+
+              <ControlCluster className="w-full basis-full grid-cols-1 gap-4 sm:grid-cols-2">
+                <Slider
+                  label="Flight speed"
+                  value={controls.flightSpeed}
+                  min={OBSERVANCE_RANGES.flightSpeed.min}
+                  max={OBSERVANCE_RANGES.flightSpeed.max}
+                  step={OBSERVANCE_RANGES.flightSpeed.step}
+                  onChange={controls.setFlightSpeed}
+                  format={(v) => `×${v.toFixed(2)}`}
+                  info={INFO.flightSpeed}
+                />
+                <Slider
+                  label="Lightning"
+                  value={controls.lightningRate}
+                  min={OBSERVANCE_RANGES.lightningRate.min}
+                  max={OBSERVANCE_RANGES.lightningRate.max}
+                  step={OBSERVANCE_RANGES.lightningRate.step}
+                  onChange={controls.setLightningRate}
+                  format={(v) => `×${v.toFixed(2)}`}
+                  info={INFO.lightningRate}
+                />
+              </ControlCluster>
             </ControlSection>
 
             <VisualizerSection

@@ -29,6 +29,7 @@ const REACTIVE_CHANNEL_OPTIONS: { value: ReactiveChannel; label: string }[] = [
 
 const INFO = {
   look: "Dark Terrain flight — soft hills, flex look, sun-tinted lightning.",
+  misc: "Flight speed, lightning rate, and flex look bank.",
   flightSpeed: "Base camera advance along the path (1 ≈ Shadertoy default).",
   cameraBank:
     "Coral-style flex look cone (0 = dead ahead, 1 = default wander).",
@@ -79,41 +80,6 @@ const Darkterrain = ({ showOverlay = true }: DarkterrainProps) => {
             onFullscreen={controls.fullscreen}
           >
             <ControlSection label="look" info={INFO.look}>
-              <Slider
-                label="Flight speed"
-                value={controls.flightSpeed}
-                min={DARKTERRAIN_RANGES.flightSpeed.min}
-                max={DARKTERRAIN_RANGES.flightSpeed.max}
-                step={DARKTERRAIN_RANGES.flightSpeed.step}
-                onChange={controls.setFlightSpeed}
-                format={(v) => `×${v.toFixed(2)}`}
-                info={INFO.flightSpeed}
-              />
-
-              <ControlSubSection label="camera">
-                <Slider
-                  label="Camera bank"
-                  value={controls.cameraBank}
-                  min={DARKTERRAIN_RANGES.cameraBank.min}
-                  max={DARKTERRAIN_RANGES.cameraBank.max}
-                  step={DARKTERRAIN_RANGES.cameraBank.step}
-                  onChange={controls.setCameraBank}
-                  format={(v) => `×${v.toFixed(2)}`}
-                  info={INFO.cameraBank}
-                />
-              </ControlSubSection>
-
-              <Slider
-                label="Lightning"
-                value={controls.lightningRate}
-                min={DARKTERRAIN_RANGES.lightningRate.min}
-                max={DARKTERRAIN_RANGES.lightningRate.max}
-                step={DARKTERRAIN_RANGES.lightningRate.step}
-                onChange={controls.setLightningRate}
-                format={(v) => `×${v.toFixed(2)}`}
-                info={INFO.lightningRate}
-              />
-
               <ControlSubSection label="sun" info={INFO.sun}>
                 <TwinkleControls
                   title="sun twinkle"
@@ -154,6 +120,39 @@ const Darkterrain = ({ showOverlay = true }: DarkterrainProps) => {
                     ]}
                   />
                 ) : null}
+              </ControlSubSection>
+
+              <ControlSubSection label="misc" info={INFO.misc}>
+                <Slider
+                  label="Camera bank"
+                  value={controls.cameraBank}
+                  min={DARKTERRAIN_RANGES.cameraBank.min}
+                  max={DARKTERRAIN_RANGES.cameraBank.max}
+                  step={DARKTERRAIN_RANGES.cameraBank.step}
+                  onChange={controls.setCameraBank}
+                  format={(v) => `×${v.toFixed(2)}`}
+                  info={INFO.cameraBank}
+                />
+                <Slider
+                  label="Flight speed"
+                  value={controls.flightSpeed}
+                  min={DARKTERRAIN_RANGES.flightSpeed.min}
+                  max={DARKTERRAIN_RANGES.flightSpeed.max}
+                  step={DARKTERRAIN_RANGES.flightSpeed.step}
+                  onChange={controls.setFlightSpeed}
+                  format={(v) => `×${v.toFixed(2)}`}
+                  info={INFO.flightSpeed}
+                />
+                <Slider
+                  label="Lightning"
+                  value={controls.lightningRate}
+                  min={DARKTERRAIN_RANGES.lightningRate.min}
+                  max={DARKTERRAIN_RANGES.lightningRate.max}
+                  step={DARKTERRAIN_RANGES.lightningRate.step}
+                  onChange={controls.setLightningRate}
+                  format={(v) => `×${v.toFixed(2)}`}
+                  info={INFO.lightningRate}
+                />
               </ControlSubSection>
             </ControlSection>
 
