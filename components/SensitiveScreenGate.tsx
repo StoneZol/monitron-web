@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useSyncExternalStore, type ReactNode } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useSyncExternalStore, type ReactNode } from "react";
 import { panelButtonClassName } from "@/components/ControlPanel/PanelButton";
 import { SensitivePreviewToggle } from "@/components/SensitivePreviewToggle";
+import { homeHrefFromViaParam } from "@/lib/catalogVia";
 import {
   SENSITIVE_GATE_ATTR,
   SENSITIVE_GATE_ID,
@@ -20,6 +22,23 @@ type SensitiveScreenGateProps = {
   screenTitle?: string;
   children: ReactNode;
 };
+
+function GateHomeLink({ href }: { href: string }) {
+  return (
+    <Link href={href} className={cn(panelButtonClassName, "inline-flex gap-2")}>
+      <span className="text-muted">src://</span>
+      home
+      <span aria-hidden className="text-cyan">
+        →
+      </span>
+    </Link>
+  );
+}
+
+function GateHomeLinkVia() {
+  const searchParams = useSearchParams();
+  return <GateHomeLink href={homeHrefFromViaParam(searchParams.get("via"))} />;
+}
 
 function GateFace({ screenTitle }: { screenTitle?: string }) {
   return (
@@ -60,13 +79,9 @@ function GateFace({ screenTitle }: { screenTitle?: string }) {
       </div>
 
       <div className="relative z-1 mt-7">
-        <Link href="/" className={cn(panelButtonClassName, "inline-flex gap-2")}>
-          <span className="text-muted">src://</span>
-          home
-          <span aria-hidden className="text-cyan">
-            →
-          </span>
-        </Link>
+        <Suspense fallback={<GateHomeLink href="/" />}>
+          <GateHomeLinkVia />
+        </Suspense>
       </div>
     </>
   );

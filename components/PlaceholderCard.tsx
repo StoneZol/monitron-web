@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSyncExternalStore, type ReactNode } from "react";
 import { PlaceholderCredit } from "@/components/SourceCredit";
 import { SensitiveCensorMark } from "@/components/SensitiveCensorMark";
+import { screenHrefWithVia } from "@/lib/catalogVia";
 import {
   COST_META,
   isSensitivePlaceholder,
@@ -21,6 +22,8 @@ import { cn } from "@/lib/utils";
 type PlaceholderCardProps = {
   placeholder: PlaceholderMeta;
   index?: number;
+  /** When set, screen links keep `?via=ch-NN` so back returns to that chapter. */
+  catalogChapter?: number;
 };
 
 const TONE_CLASS: Record<ResolvedPlaceholderTag["tone"], string> = {
@@ -72,6 +75,7 @@ function PreviewShell({
 export function PlaceholderCard({
   placeholder,
   index = 0,
+  catalogChapter,
 }: PlaceholderCardProps) {
   const channel = String(index + 1).padStart(2, "0");
   const hasPreview = Boolean(placeholder.previewSrc);
@@ -84,13 +88,17 @@ export function PlaceholderCard({
     () => false,
   );
   const locked = sensitive && !revealSensitive;
+  const href =
+    catalogChapter != null
+      ? screenHrefWithVia(placeholder.href, catalogChapter)
+      : placeholder.href;
 
   return (
     <div className="group relative">
       <div className="relative clip-frame">
         <PreviewShell
           locked={locked}
-          href={placeholder.href}
+          href={href}
           label={
             locked
               ? `${placeholder.title} (locked — enable sensitive previews in header)`
@@ -225,7 +233,7 @@ export function PlaceholderCard({
         </div>
       ) : (
         <Link
-          href={placeholder.href}
+          href={href}
           className="mt-2 flex items-start justify-between gap-3 border-t border-dashed border-line pt-2 outline-none"
         >
           <div>

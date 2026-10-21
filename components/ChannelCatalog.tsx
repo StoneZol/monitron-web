@@ -103,7 +103,11 @@ export function ChannelCatalog({ chapters }: ChannelCatalogProps) {
         />
       </div>
 
-      <PlaceholderGrid placeholders={items} indexOffset={indexOffset} />
+      <PlaceholderGrid
+        placeholders={items}
+        indexOffset={indexOffset}
+        catalogChapter={chapter}
+      />
 
       <div className="mt-8 flex justify-end">
         <ChapterNav

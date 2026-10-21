@@ -2,6 +2,7 @@
 
 import {
     createContext,
+    Suspense,
     useContext,
     useEffect,
     useId,
@@ -138,7 +139,11 @@ export function ControlPanel({
         >
             <div className="flex shrink-0 flex-col items-center gap-1.5 border-b border-line p-2">
                 <div className="flex w-full items-center gap-2">
-                    {overlay ? <NavBackButton /> : null}
+                    {overlay ? (
+                        <Suspense fallback={<NavBackButton href="/" />}>
+                            <NavBackButton />
+                        </Suspense>
+                    ) : null}
                     <span className="min-w-0 flex-1 text-start text-sm uppercase tracking-[0.28em]">
                         {title}
                     </span>
