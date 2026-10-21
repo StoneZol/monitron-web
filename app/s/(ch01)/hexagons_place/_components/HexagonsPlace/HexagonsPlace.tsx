@@ -4,16 +4,15 @@ import dynamic from "next/dynamic";
 import { ScreensOverlay } from "@/components/ScreensOverlay";
 import { VisualizerSection } from "@/components/VisualizerSection";
 import {
-    ColorField,
-    ColorTable,
-    ControlPanel,
-    ControlSection,
-    ControlSubSection,
-    PanelButton,
-    Select,
-    Slider,
-    Toggle,
-    TwinkleControls,
+  ColorField,
+  ColorTable,
+  ControlPanel,
+  ControlSection,
+  ControlSubSection,
+  Select,
+  Slider,
+  Toggle,
+  TwinkleControls,
 } from "@/components/ControlPanel";
 import useHexagonsPlaceHook from "./HexagonsPlace.hooks";
 import type { HexagonsPlaceProps } from "./HexagonsPlace.types";
@@ -99,16 +98,8 @@ const HexagonsPlace = ({ showOverlay = true }: HexagonsPlaceProps) => {
                 <ScreensOverlay screenId="hexagons_place">
                     <ControlPanel
                         title="hexagons place"
-                        actions={
-                            <div className="flex gap-2">
-                                <PanelButton onClick={controls.reset} className="flex-1">
-                                    reset
-                                </PanelButton>
-                                <PanelButton onClick={controls.fullscreen} className="flex-1">
-                                    fullscreen
-                                </PanelButton>
-                            </div>
-                        }
+                        onReset={controls.reset}
+                        onFullscreen={controls.fullscreen}
                     >
                         <ControlSection label="look" info={INFO.look}>
                             <ControlSubSection label="mode">

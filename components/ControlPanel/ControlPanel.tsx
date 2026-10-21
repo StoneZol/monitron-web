@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
 import { useScreensOverlay } from "@/components/ScreensOverlay/ScreensOverlay.context";
 import { NavBackButton } from "@/components/NavBackButton";
 import { VisualPipButton } from "@/components/VisualPipButton";
-import { ScreenCreditBar } from "@/components/SourceCredit";
+import { ScreenTitleCredit } from "@/components/SourceCredit";
 import { placeholders } from "@/lib/placeholders";
 import {
     readPanelSections,
@@ -33,8 +33,10 @@ import { useRenderScale } from "@/lib/renderScale";
 type ControlPanelProps = {
     title: string;
     children: ReactNode;
-    /** Fixed under the chrome header — outside the scroll body (reset / fullscreen) */
-    actions?: ReactNode;
+    /** Restores screen defaults — sits beside render scale */
+    onReset?: () => void;
+    /** Toggle document fullscreen — lives in chrome `mode` with PiP */
+    onFullscreen?: () => void;
     className?: string;
 };
 
@@ -81,7 +83,8 @@ function ChromePair({
 export function ControlPanel({
     title,
     children,
-    actions,
+    onReset,
+    onFullscreen,
     className,
 }: ControlPanelProps) {
     const overlay = useScreensOverlay();
@@ -137,20 +140,33 @@ export function ControlPanel({
                 className,
             )}
         >
-            {/* Compact chrome — capped width so it doesn’t stretch across a wide HUD */}
             <div className="flex shrink-0 flex-col gap-1.5 border-b border-line p-2">
-                <div className="flex w-full max-w-md items-center gap-2">
+                {/* Title full width + reset; display/preset share the next row */}
+                <div className="flex w-full items-center gap-2">
                     {overlay ? (
                         <Suspense fallback={<NavBackButton href="/" />}>
                             <NavBackButton />
                         </Suspense>
                     ) : null}
-                    <span className="min-w-0 flex-1 text-start text-sm uppercase tracking-[0.28em]">
-                        {title}
-                    </span>
+                    {placeholder ? (
+                        <ScreenTitleCredit title={title} meta={placeholder} />
+                    ) : (
+                        <span className="min-w-0 flex-1 text-start text-sm uppercase tracking-[0.28em]">
+                            {title}
+                        </span>
+                    )}
+                    {onReset ? (
+                        <PanelButton
+                            onClick={onReset}
+                            className="h-9 shrink-0 px-2.5 py-0"
+                            title="Reset look + fx to defaults"
+                        >
+                            reset
+                        </PanelButton>
+                    ) : null}
                 </div>
                 {overlay ? (
-                    <div className="grid w-full max-w-md grid-cols-2 gap-1.5">
+                    <div className="grid w-full grid-cols-3 gap-1.5">
                         <ChromePair
                             label="display"
                             info="Sync pushes this tab’s prefs (incl. audio source) to other open tabs of the same screen and hot-applies them (no reload — fullscreen stays). Hide clears the HUD on this tab only."
@@ -188,33 +204,23 @@ export function ControlPanel({
                                 paste
                             </PanelButton>
                         </ChromePair>
+                        <ChromePair
+                            label="mode"
+                            info="Fullscreen fills the display. PiP floats the visual in a mini window (Chromium)."
+                        >
+                            {onFullscreen ? (
+                                <PanelButton
+                                    onClick={onFullscreen}
+                                    className="p-1"
+                                >
+                                    fullscreen
+                                </PanelButton>
+                            ) : null}
+                            <VisualPipButton className="p-1" />
+                        </ChromePair>
                     </div>
                 ) : null}
             </div>
-            {actions || placeholder || overlay ? (
-                <div className="shrink-0 border-b border-line p-2">
-                    {actions || overlay ? (
-                        <div
-                            className={cn(
-                                "flex max-w-md gap-2",
-                                actions ? "[&>div]:contents" : null,
-                            )}
-                        >
-                            {actions}
-                            {overlay ? <VisualPipButton /> : null}
-                        </div>
-                    ) : null}
-                    {placeholder ? (
-                        <ScreenCreditBar
-                            meta={placeholder}
-                            className={cn(
-                                "max-w-md",
-                                actions || overlay ? "mt-2" : null,
-                            )}
-                        />
-                    ) : null}
-                </div>
-            ) : null}
             {overlay ? <RenderScaleChrome /> : null}
             <div className="control-panel-scroll control-panel-sections min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain p-2">
                 {children}
@@ -229,18 +235,17 @@ function RenderScaleChrome() {
     const renderScale = useRenderScale(overlay?.screenId);
     return (
         <div className="shrink-0 border-b border-line px-2 py-1.5">
-            <div className="max-w-md">
-                <Slider
-                    label="Render scale"
-                    value={renderScale.scale}
-                    min={renderScale.min}
-                    max={renderScale.max}
-                    step={renderScale.step}
-                    onChange={renderScale.setScale}
-                    format={(v) => `${Math.round(v * 100)}%`}
-                    info="Internal buffer resolution for this screen. Default 50% ≈ half the pixels / GPU load. 100% = full native look. Slider is shared chrome; the value is saved per screen."
-                />
-            </div>
+            <Slider
+                label="Render scale"
+                value={renderScale.scale}
+                min={renderScale.min}
+                max={renderScale.max}
+                step={renderScale.step}
+                onChange={renderScale.setScale}
+                format={(v) => `${Math.round(v * 100)}%`}
+                info="Internal buffer resolution for this screen. Default 50% ≈ half the pixels / GPU load. 100% = full native look. Slider is shared chrome; the value is saved per screen."
+                className="w-full sm:max-w-none"
+            />
         </div>
     );
 }

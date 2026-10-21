@@ -7,7 +7,6 @@ import {
   ControlPanel,
   ControlSection,
   ControlSubSection,
-  PanelButton,
   Select,
   Slider,
   TwinkleControls,
@@ -82,19 +81,8 @@ const Rainbowcrystal = ({ showOverlay = true }: RainbowcrystalProps) => {
         <ScreensOverlay screenId="rainbow_crystal">
           <ControlPanel
             title="rainbow crystal"
-            actions={
-              <div className="flex gap-2">
-                <PanelButton onClick={controls.reset} className="flex-1">
-                  reset
-                </PanelButton>
-                <PanelButton
-                  onClick={controls.fullscreen}
-                  className="flex-1"
-                >
-                  fullscreen
-                </PanelButton>
-              </div>
-            }
+            onReset={controls.reset}
+            onFullscreen={controls.fullscreen}
           >
             <ControlSection label="look" info={INFO.look}>
               <Slider

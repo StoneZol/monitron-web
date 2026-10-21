@@ -28,7 +28,7 @@ export function NavBackButton({
       title={label}
       className={cn(
         panelButtonClassName,
-        "inline-flex size-7 shrink-0 items-center justify-center p-0 text-base leading-none",
+        "inline-flex h-9 w-9 shrink-0 items-center justify-center p-0 text-base leading-none",
         className,
       )}
     >

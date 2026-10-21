@@ -3,14 +3,13 @@
 import { ScreensOverlay } from "@/components/ScreensOverlay";
 import { VisualizerSection } from "@/components/VisualizerSection";
 import {
-    ColorField,
-    ControlPanel,
-    ControlSection,
-    ControlSubSection,
-    PanelButton,
-    Select,
-    Slider,
-    TwinkleControls,
+  ColorField,
+  ControlPanel,
+  ControlSection,
+  ControlSubSection,
+  Select,
+  Slider,
+  TwinkleControls,
 } from "@/components/ControlPanel";
 import useMatrixHook from "./Matrix.hooks";
 import type { ReactiveChannel } from "./Matrix.types";
@@ -67,19 +66,8 @@ const Matrix = ({ showOverlay = true }: { showOverlay?: boolean }) => {
                 <ScreensOverlay screenId="matrix">
                     <ControlPanel
                         title="matrix"
-                        actions={
-                            <div className="flex gap-2">
-                                <PanelButton onClick={controls.reset} className="flex-1">
-                                    reset
-                                </PanelButton>
-                                <PanelButton
-                                    onClick={controls.fullscreen}
-                                    className="flex-1"
-                                >
-                                    fullscreen
-                                </PanelButton>
-                            </div>
-                        }
+                        onReset={controls.reset}
+                        onFullscreen={controls.fullscreen}
                     >
                         <ControlSection label="look" info={INFO.look}>
                             <ControlSubSection label="color" info={INFO.color}>

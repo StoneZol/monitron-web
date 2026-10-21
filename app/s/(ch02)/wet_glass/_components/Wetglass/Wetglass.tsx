@@ -8,7 +8,6 @@ import {
   ControlSection,
   DurationField,
   MediaField,
-  PanelButton,
   Slider,
   Toggle,
 } from "@/components/ControlPanel";
@@ -67,19 +66,8 @@ const Wetglass = ({ showOverlay = true }: WetglassProps) => {
         <ScreensOverlay screenId="wet_glass">
           <ControlPanel
             title="wet glass"
-            actions={
-              <div className="flex gap-2">
-                <PanelButton onClick={controls.reset} className="flex-1">
-                  reset
-                </PanelButton>
-                <PanelButton
-                  onClick={controls.fullscreen}
-                  className="flex-1"
-                >
-                  fullscreen
-                </PanelButton>
-              </div>
-            }
+            onReset={controls.reset}
+            onFullscreen={controls.fullscreen}
           >
             <ControlSection label="look" info={INFO.look}>
               <MediaField

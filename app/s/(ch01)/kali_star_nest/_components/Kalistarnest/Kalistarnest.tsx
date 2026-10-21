@@ -7,7 +7,6 @@ import {
   ControlPanel,
   ControlSection,
   ControlSubSection,
-  PanelButton,
   Select,
   Slider,
   TwinkleControls,
@@ -96,19 +95,8 @@ const Kalistarnest = ({ showOverlay = true }: KalistarnestProps) => {
         <ScreensOverlay screenId="kali_star_nest">
           <ControlPanel
             title="kali star nest"
-            actions={
-              <div className="flex gap-2">
-                <PanelButton onClick={controls.reset} className="flex-1">
-                  reset
-                </PanelButton>
-                <PanelButton
-                  onClick={controls.fullscreen}
-                  className="flex-1"
-                >
-                  fullscreen
-                </PanelButton>
-              </div>
-            }
+            onReset={controls.reset}
+            onFullscreen={controls.fullscreen}
           >
             <ControlSection label="look" info={INFO.look}>
               <Slider
