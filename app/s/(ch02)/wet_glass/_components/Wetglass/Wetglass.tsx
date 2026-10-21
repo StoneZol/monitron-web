@@ -4,8 +4,10 @@ import { useSyncExternalStore } from "react";
 import { ScreensOverlay } from "@/components/ScreensOverlay";
 import { FxOverlaySection } from "@/components/FxOverlay";
 import {
+  ControlCluster,
   ControlPanel,
   ControlSection,
+  ControlSubSection,
   DurationField,
   MediaField,
   Slider,
@@ -70,139 +72,144 @@ const Wetglass = ({ showOverlay = true }: WetglassProps) => {
             onFullscreen={controls.fullscreen}
           >
             <ControlSection label="look" info={INFO.look}>
-              <MediaField
-                label="Background"
-                value={controls.mediaValue}
-                onChange={controls.setMedia}
-                stocks={STOCK_PLACEHOLDERS}
-                info={INFO.background}
-                enableVideo
-              />
-              {!videoBg ? (
-                <Toggle
-                  label="Slideshow"
-                  checked={controls.slideshow}
-                  onChange={controls.setSlideshow}
-                  info={INFO.slideshow}
+              <ControlSubSection label="background" info={INFO.background}>
+                <MediaField
+                  label="Background"
+                  value={controls.mediaValue}
+                  onChange={controls.setMedia}
+                  stocks={STOCK_PLACEHOLDERS}
+                  info={INFO.background}
+                  enableVideo
                 />
-              ) : null}
-              {!videoBg && trackChangeUi ? (
-                <Toggle
-                  label="On track change"
-                  checked={controls.trackChange}
-                  onChange={controls.setTrackChange}
-                  info={INFO.trackChange}
-                />
-              ) : null}
-              {showPool ? (
-                <>
+                {!videoBg ? (
                   <Toggle
-                    label="Pool · stock"
-                    checked={controls.slideshowStock}
-                    onChange={controls.setSlideshowStock}
-                    info={INFO.poolStock}
+                    label="Slideshow"
+                    checked={controls.slideshow}
+                    onChange={controls.setSlideshow}
+                    info={INFO.slideshow}
                   />
+                ) : null}
+                {!videoBg && trackChangeUi ? (
                   <Toggle
-                    label="Pool · urls"
-                    checked={controls.slideshowLibrary}
-                    onChange={controls.setSlideshowLibrary}
-                    info={INFO.poolLibrary}
+                    label="On track change"
+                    checked={controls.trackChange}
+                    onChange={controls.setTrackChange}
+                    info={INFO.trackChange}
                   />
-                  <Toggle
-                    label="Pool · local"
-                    checked={controls.slideshowSession}
-                    onChange={controls.setSlideshowSession}
-                    info={INFO.poolSession}
+                ) : null}
+                {showPool ? (
+                  <>
+                    <Toggle
+                      label="Pool · stock"
+                      checked={controls.slideshowStock}
+                      onChange={controls.setSlideshowStock}
+                      info={INFO.poolStock}
+                    />
+                    <Toggle
+                      label="Pool · urls"
+                      checked={controls.slideshowLibrary}
+                      onChange={controls.setSlideshowLibrary}
+                      info={INFO.poolLibrary}
+                    />
+                    <Toggle
+                      label="Pool · local"
+                      checked={controls.slideshowSession}
+                      onChange={controls.setSlideshowSession}
+                      info={INFO.poolSession}
+                    />
+                  </>
+                ) : null}
+                {controls.slideshow ? (
+                  <DurationField
+                    label="Interval"
+                    value={controls.slideshowIntervalSec}
+                    min={WETGLASS_RANGES.slideshowIntervalSec.min}
+                    max={WETGLASS_RANGES.slideshowIntervalSec.max}
+                    step={WETGLASS_RANGES.slideshowIntervalSec.step}
+                    coarseStep={
+                      WETGLASS_RANGES.slideshowIntervalSec.coarseStep
+                    }
+                    onChange={controls.setSlideshowIntervalSec}
+                    aside={
+                      controls.slideshowRemainSec != null
+                        ? `${controls.slideshowRemainSec}s`
+                        : undefined
+                    }
+                    info={INFO.slideshowInterval}
                   />
-                </>
-              ) : null}
-              {controls.slideshow ? (
-                <DurationField
-                  label="Interval"
-                  value={controls.slideshowIntervalSec}
-                  min={WETGLASS_RANGES.slideshowIntervalSec.min}
-                  max={WETGLASS_RANGES.slideshowIntervalSec.max}
-                  step={WETGLASS_RANGES.slideshowIntervalSec.step}
-                  coarseStep={
-                    WETGLASS_RANGES.slideshowIntervalSec.coarseStep
-                  }
-                  onChange={controls.setSlideshowIntervalSec}
-                  aside={
-                    controls.slideshowRemainSec != null
-                      ? `${controls.slideshowRemainSec}s`
-                      : undefined
-                  }
-                  info={INFO.slideshowInterval}
-                />
-              ) : null}
-              {cropAxis === "x" ? (
+                ) : null}
+                {cropAxis === "x" ? (
+                  <Slider
+                    label="Align X"
+                    value={controls.bgAlignX}
+                    min={WETGLASS_RANGES.bgAlignX.min}
+                    max={WETGLASS_RANGES.bgAlignX.max}
+                    step={WETGLASS_RANGES.bgAlignX.step}
+                    onChange={controls.setBgAlignX}
+                    format={(v) =>
+                      v <= 0.02 ? "left" : v >= 0.98 ? "right" : v.toFixed(2)
+                    }
+                    info={INFO.bgAlignX}
+                  />
+                ) : null}
+                {cropAxis === "y" ? (
+                  <Slider
+                    label="Align Y"
+                    value={controls.bgAlignY}
+                    min={WETGLASS_RANGES.bgAlignY.min}
+                    max={WETGLASS_RANGES.bgAlignY.max}
+                    step={WETGLASS_RANGES.bgAlignY.step}
+                    onChange={controls.setBgAlignY}
+                    format={(v) =>
+                      v <= 0.02 ? "top" : v >= 0.98 ? "bottom" : v.toFixed(2)
+                    }
+                    info={INFO.bgAlignY}
+                  />
+                ) : null}
+              </ControlSubSection>
+
+              <ControlCluster className="w-full basis-full grid-cols-1 gap-4 sm:grid-cols-2">
                 <Slider
-                  label="Align X"
-                  value={controls.bgAlignX}
-                  min={WETGLASS_RANGES.bgAlignX.min}
-                  max={WETGLASS_RANGES.bgAlignX.max}
-                  step={WETGLASS_RANGES.bgAlignX.step}
-                  onChange={controls.setBgAlignX}
-                  format={(v) =>
-                    v <= 0.02 ? "left" : v >= 0.98 ? "right" : v.toFixed(2)
-                  }
-                  info={INFO.bgAlignX}
+                  label="Rain"
+                  value={controls.rainAmount}
+                  min={WETGLASS_RANGES.rainAmount.min}
+                  max={WETGLASS_RANGES.rainAmount.max}
+                  step={WETGLASS_RANGES.rainAmount.step}
+                  onChange={controls.setRainAmount}
+                  format={(v) => v.toFixed(2)}
+                  info={INFO.rainAmount}
                 />
-              ) : null}
-              {cropAxis === "y" ? (
                 <Slider
-                  label="Align Y"
-                  value={controls.bgAlignY}
-                  min={WETGLASS_RANGES.bgAlignY.min}
-                  max={WETGLASS_RANGES.bgAlignY.max}
-                  step={WETGLASS_RANGES.bgAlignY.step}
-                  onChange={controls.setBgAlignY}
-                  format={(v) =>
-                    v <= 0.02 ? "top" : v >= 0.98 ? "bottom" : v.toFixed(2)
-                  }
-                  info={INFO.bgAlignY}
+                  label="Drop speed"
+                  value={controls.dropSpeed}
+                  min={WETGLASS_RANGES.dropSpeed.min}
+                  max={WETGLASS_RANGES.dropSpeed.max}
+                  step={WETGLASS_RANGES.dropSpeed.step}
+                  onChange={controls.setDropSpeed}
+                  format={(v) => `×${v.toFixed(2)}`}
+                  info={INFO.dropSpeed}
                 />
-              ) : null}
-              <Slider
-                label="Rain"
-                value={controls.rainAmount}
-                min={WETGLASS_RANGES.rainAmount.min}
-                max={WETGLASS_RANGES.rainAmount.max}
-                step={WETGLASS_RANGES.rainAmount.step}
-                onChange={controls.setRainAmount}
-                format={(v) => v.toFixed(2)}
-                info={INFO.rainAmount}
-              />
-              <Slider
-                label="Drop speed"
-                value={controls.dropSpeed}
-                min={WETGLASS_RANGES.dropSpeed.min}
-                max={WETGLASS_RANGES.dropSpeed.max}
-                step={WETGLASS_RANGES.dropSpeed.step}
-                onChange={controls.setDropSpeed}
-                format={(v) => `×${v.toFixed(2)}`}
-                info={INFO.dropSpeed}
-              />
-              <Slider
-                label="Glass"
-                value={controls.glass}
-                min={WETGLASS_RANGES.glass.min}
-                max={WETGLASS_RANGES.glass.max}
-                step={WETGLASS_RANGES.glass.step}
-                onChange={controls.setGlass}
-                format={(v) => v.toFixed(2)}
-                info={INFO.glass}
-              />
-              <Slider
-                label="Lightning"
-                value={controls.lightning}
-                min={WETGLASS_RANGES.lightning.min}
-                max={WETGLASS_RANGES.lightning.max}
-                step={WETGLASS_RANGES.lightning.step}
-                onChange={controls.setLightning}
-                format={(v) => v.toFixed(2)}
-                info={INFO.lightning}
-              />
+                <Slider
+                  label="Glass"
+                  value={controls.glass}
+                  min={WETGLASS_RANGES.glass.min}
+                  max={WETGLASS_RANGES.glass.max}
+                  step={WETGLASS_RANGES.glass.step}
+                  onChange={controls.setGlass}
+                  format={(v) => v.toFixed(2)}
+                  info={INFO.glass}
+                />
+                <Slider
+                  label="Lightning"
+                  value={controls.lightning}
+                  min={WETGLASS_RANGES.lightning.min}
+                  max={WETGLASS_RANGES.lightning.max}
+                  step={WETGLASS_RANGES.lightning.step}
+                  onChange={controls.setLightning}
+                  format={(v) => v.toFixed(2)}
+                  info={INFO.lightning}
+                />
+              </ControlCluster>
             </ControlSection>
 
             <FxOverlaySection />

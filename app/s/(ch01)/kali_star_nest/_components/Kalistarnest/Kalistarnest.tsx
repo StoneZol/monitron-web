@@ -173,7 +173,7 @@ const Kalistarnest = ({ showOverlay = true }: KalistarnestProps) => {
                     info={INFO.cameraBank}
                   />
                 ) : (
-                  <ControlCluster className="grid-cols-1 gap-4 sm:grid-cols-2">
+                  <>
                     <Slider
                       label="X"
                       value={controls.yaw}
@@ -194,7 +194,7 @@ const Kalistarnest = ({ showOverlay = true }: KalistarnestProps) => {
                       format={(v) => `${v.toFixed(1)}°`}
                       info={INFO.pitch}
                     />
-                  </ControlCluster>
+                  </>
                 )}
               </ControlSubSection>
 

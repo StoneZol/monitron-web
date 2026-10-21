@@ -4,8 +4,10 @@ import { ScreensOverlay } from "@/components/ScreensOverlay";
 import { VisualizerSection } from "@/components/VisualizerSection";
 import {
   ColorTable,
+  ControlCluster,
   ControlPanel,
   ControlSection,
+  ControlSubSection,
   Slider,
   Toggle,
   TwinkleControls,
@@ -27,6 +29,7 @@ const INFO = {
   twinkleSpeed: "How fast hue runs a full lap (1 ≈ 6s).",
   twinkleS: "Saturation % for the twinkle hsl().",
   twinkleL: "Lightness % for the twinkle hsl().",
+  bars: "Mirror layout, peak caps, and the bottom RMS / peak rail.",
   mirror: "Reflect the same bands left/right from center.",
   peakDecay: "How sticky the white peak caps are (higher = slower fall).",
   showRail: "Bottom rms (cyan) / peak (warn) meter rail.",
@@ -85,63 +88,72 @@ const Spectrum = ({ showOverlay = true }: SpectrumProps) => {
             onFullscreen={controls.fullscreen}
           >
             <ControlSection label="look" info={INFO.look}>
-              <TwinkleControls
-                title="twinkle"
-                checked={controls.twinkle}
-                onCheckedChange={controls.setTwinkle}
-                speed={controls.twinkleSpeed}
-                onSpeedChange={controls.setTwinkleSpeed}
-                s={controls.twinkleS}
-                onSChange={controls.setTwinkleS}
-                l={controls.twinkleL}
-                onLChange={controls.setTwinkleL}
-                info={INFO.twinkle}
-                speedInfo={INFO.twinkleSpeed}
-                sInfo={INFO.twinkleS}
-                lInfo={INFO.twinkleL}
-              />
-              <ColorTable
-                label="band tint"
-                info={INFO.colors}
-                columns={["low", "high"]}
-                rows={[
-                  {
-                    label: "seed",
-                    cells: [
-                      {
-                        value: controls.colorLow,
-                        onChange: controls.setColorLow,
-                      },
-                      {
-                        value: controls.colorHigh,
-                        onChange: controls.setColorHigh,
-                      },
-                    ],
-                  },
-                ]}
-              />
-              <Toggle
-                label="Mirror"
-                checked={controls.mirror}
-                onChange={controls.setMirror}
-                info={INFO.mirror}
-              />
-              <Toggle
-                label="RMS / peak rail"
-                checked={controls.showRail}
-                onChange={controls.setShowRail}
-                info={INFO.showRail}
-              />
-              <Slider
-                label="Peak hold"
-                value={controls.peakDecay}
-                min={SPECTRUM_RANGES.peakDecay.min}
-                max={SPECTRUM_RANGES.peakDecay.max}
-                step={SPECTRUM_RANGES.peakDecay.step}
-                onChange={controls.setPeakDecay}
-                format={(v) => v.toFixed(2)}
-                info={INFO.peakDecay}
-              />
+              <ControlCluster layout="stack" className="w-full basis-full">
+                <TwinkleControls
+                  title="twinkle"
+                  checked={controls.twinkle}
+                  onCheckedChange={controls.setTwinkle}
+                  speed={controls.twinkleSpeed}
+                  onSpeedChange={controls.setTwinkleSpeed}
+                  s={controls.twinkleS}
+                  onSChange={controls.setTwinkleS}
+                  l={controls.twinkleL}
+                  onLChange={controls.setTwinkleL}
+                  info={INFO.twinkle}
+                  speedInfo={INFO.twinkleSpeed}
+                  sInfo={INFO.twinkleS}
+                  lInfo={INFO.twinkleL}
+                />
+                <ColorTable
+                  label="band tint"
+                  info={INFO.colors}
+                  columns={["low", "high"]}
+                  rows={[
+                    {
+                      label: "seed",
+                      cells: [
+                        {
+                          value: controls.colorLow,
+                          onChange: controls.setColorLow,
+                        },
+                        {
+                          value: controls.colorHigh,
+                          onChange: controls.setColorHigh,
+                        },
+                      ],
+                    },
+                  ]}
+                />
+              </ControlCluster>
+
+              <ControlSubSection label="bars" info={INFO.bars}>
+                <div className="flex w-full flex-wrap items-center gap-x-6 gap-y-2">
+                  <Toggle
+                    label="Mirror"
+                    checked={controls.mirror}
+                    onChange={controls.setMirror}
+                    info={INFO.mirror}
+                    className="!w-max !max-w-none [&>div]:!w-auto [&>div]:justify-start [&>div]:gap-2"
+                  />
+                  <Toggle
+                    label="RMS / peak rail"
+                    checked={controls.showRail}
+                    onChange={controls.setShowRail}
+                    info={INFO.showRail}
+                    className="!w-max !max-w-none [&>div]:!w-auto [&>div]:justify-start [&>div]:gap-2"
+                  />
+                </div>
+                <Slider
+                  label="Peak hold"
+                  value={controls.peakDecay}
+                  min={SPECTRUM_RANGES.peakDecay.min}
+                  max={SPECTRUM_RANGES.peakDecay.max}
+                  step={SPECTRUM_RANGES.peakDecay.step}
+                  onChange={controls.setPeakDecay}
+                  format={(v) => v.toFixed(2)}
+                  info={INFO.peakDecay}
+                />
+              </ControlSubSection>
             </ControlSection>
 
             <VisualizerSection
