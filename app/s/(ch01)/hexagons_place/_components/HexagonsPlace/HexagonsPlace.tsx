@@ -4,15 +4,15 @@ import dynamic from "next/dynamic";
 import { ScreensOverlay } from "@/components/ScreensOverlay";
 import { VisualizerSection } from "@/components/VisualizerSection";
 import {
-  ColorField,
-  ColorTable,
-  ControlPanel,
-  ControlSection,
-  ControlSubSection,
-  Select,
-  Slider,
-  Toggle,
-  TwinkleControls,
+    ColorField,
+    ColorTable,
+    ControlPanel,
+    ControlSection,
+    ControlSubSection,
+    Select,
+    Slider,
+    Toggle,
+    TwinkleControls,
 } from "@/components/ControlPanel";
 import useHexagonsPlaceHook from "./HexagonsPlace.hooks";
 import type { HexagonsPlaceProps } from "./HexagonsPlace.types";
@@ -90,7 +90,7 @@ const HexagonsPlace = ({ showOverlay = true }: HexagonsPlaceProps) => {
         ? ({ peak: "audio" } as const)
         : undefined;
 
-  return (
+    return (
         <div className="relative h-screen w-screen overflow-hidden bg-black select-none">
             <HexagonsCanvas live={live} vizRef={visualizer.vizRef} />
 
@@ -396,24 +396,22 @@ const HexagonsPlace = ({ showOverlay = true }: HexagonsPlaceProps) => {
                                 />
                             </ControlSubSection>
                             <ControlSubSection label="orbit">
-                                <div className="flex flex-wrap gap-1.5">
-                                    <Toggle
-                                        label="Spin"
-                                        checked={controls.spin}
-                                        onChange={controls.setSpin}
-                                        info={INFO.spin}
-                                    />
-                                    <Toggle
-                                        label={
-                                            controls.spinLeft ? "Left" : "Right"
-                                        }
-                                        checked={controls.spinLeft}
-                                        onChange={controls.setSpinLeft}
-                                        disabled={!controls.spin}
-                                        info={INFO.spinDir}
-                                    />
-                                </div>
-                                {controls.spin && (
+                                <Toggle
+                                    label="Spin"
+                                    checked={controls.spin}
+                                    onChange={controls.setSpin}
+                                    info={INFO.spin}
+                                />
+                                <Toggle
+                                    label={
+                                        controls.spinLeft ? "Left" : "Right"
+                                    }
+                                    checked={controls.spinLeft}
+                                    onChange={controls.setSpinLeft}
+                                    disabled={!controls.spin}
+                                    info={INFO.spinDir}
+                                />
+                                {controls.spin ? (
                                     <Slider
                                         label="Spin speed"
                                         value={controls.spinSpeed}
@@ -424,7 +422,7 @@ const HexagonsPlace = ({ showOverlay = true }: HexagonsPlaceProps) => {
                                         format={(v) => v.toFixed(2)}
                                         info={INFO.spinSpeed}
                                     />
-                                )}
+                                ) : null}
                             </ControlSubSection>
                         </ControlSection>
 
@@ -492,25 +490,7 @@ const HexagonsPlace = ({ showOverlay = true }: HexagonsPlaceProps) => {
                             visualizer={visualizer}
                             info={INFO.visualizer}
                         >
-                            <ControlSubSection label="react">
-                                <div className="flex flex-wrap gap-1.5">
-                                    <Toggle
-                                        label="Band bounce"
-                                        checked={controls.bandBounce}
-                                        onChange={controls.setBandBounce}
-                                        disabled={!visualizer.reactive}
-                                        info={INFO.bandBounce}
-                                    />
-                                    <Toggle
-                                        label="Flicker"
-                                        checked={controls.bandFlicker}
-                                        onChange={controls.setBandFlicker}
-                                        disabled={!visualizer.reactive}
-                                        info={INFO.bandFlicker}
-                                    />
-                                </div>
-                            </ControlSubSection>
-                            {visualizer.reactive && (
+                            {visualizer.reactive ? (
                                 <>
                                     <ControlSubSection label="channels">
                                         <Select
@@ -546,7 +526,9 @@ const HexagonsPlace = ({ showOverlay = true }: HexagonsPlaceProps) => {
                                             options={[
                                                 ...REACTIVE_CHANNEL_OPTIONS,
                                             ]}
-                                            onChange={controls.setSpinAccelChannel}
+                                            onChange={
+                                                controls.setSpinAccelChannel
+                                            }
                                             info={INFO.spinAccelChannel}
                                         />
                                     </ControlSubSection>
@@ -587,19 +569,37 @@ const HexagonsPlace = ({ showOverlay = true }: HexagonsPlaceProps) => {
                                             min={0}
                                             max={controls.spinAccelDriveMax}
                                             step={0.1}
-                                            onChange={controls.setSpinAccelDrive}
+                                            onChange={
+                                                controls.setSpinAccelDrive
+                                            }
                                             format={(v) => `×${v.toFixed(1)}`}
                                             info={INFO.spinAccelDrive}
                                         />
                                     </ControlSubSection>
                                 </>
-                            )}
+                            ) : null}
+                            <ControlSubSection label="react">
+                                <Toggle
+                                    label="Band bounce"
+                                    checked={controls.bandBounce}
+                                    onChange={controls.setBandBounce}
+                                    disabled={!visualizer.reactive}
+                                    info={INFO.bandBounce}
+                                />
+                                <Toggle
+                                    label="Flicker"
+                                    checked={controls.bandFlicker}
+                                    onChange={controls.setBandFlicker}
+                                    disabled={!visualizer.reactive}
+                                    info={INFO.bandFlicker}
+                                />
+                            </ControlSubSection>
                         </VisualizerSection>
                     </ControlPanel>
                 </ScreensOverlay>
             )}
         </div>
-  );
+    );
 };
 
 export default HexagonsPlace;
