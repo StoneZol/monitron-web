@@ -25,6 +25,9 @@ export function buildSlideshowPool(live: WetglassLive): MediaSelection[] {
 }
 
 export function currentMediaSelection(live: WetglassLive): MediaSelection {
+  if (live.bgSource === "video" && live.videoId) {
+    return { kind: "video", id: live.videoId };
+  }
   if (live.bgSource === "library" && live.libraryId) {
     return { kind: "library", id: live.libraryId };
   }

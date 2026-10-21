@@ -16,6 +16,7 @@ import {
   subscribeTabSync,
 } from "@/lib/tabBroadcast";
 import { exportSessionMediaForSync } from "@/lib/userMedia";
+import { exportSessionVideoForSync } from "@/lib/sessionVideo";
 
 const listeners = new Map<string, Set<() => void>>();
 
@@ -127,11 +128,13 @@ const useScreensOverlayHook = (screenId: string) => {
   const sync = () => {
     if (!getTabHasPeers(screenId)) return;
     const sessionMedia = exportSessionMediaForSync();
+    const sessionVideo = exportSessionVideoForSync();
     // Prefer this tab's in-memory prefs when registered (wet glass bg, etc.)
     const applyAt = broadcastTabSync(
       screenId,
       snapshotScreenPrefsForSync(screenId),
       sessionMedia,
+      sessionVideo,
     );
     scheduleTabSyncApply(applyAt, screenId);
   };

@@ -17,6 +17,10 @@ import {
   invalidateUserMediaCache,
   subscribeUserMedia,
 } from "@/lib/userMedia";
+import {
+  getSessionVideoEntry,
+  subscribeSessionVideo,
+} from "@/lib/sessionVideo";
 import type { MediaSelection } from "@/components/ControlPanel";
 import { getTabHasPeers } from "@/lib/tabBroadcast";
 import {
@@ -69,10 +73,14 @@ function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
     typeof raw.sessionId === "string" && raw.sessionId
       ? raw.sessionId
       : null;
+  const videoId =
+    typeof raw.videoId === "string" && raw.videoId ? raw.videoId : null;
 
-  // Session files are RAM-only — restore only if still in this tab (or after Sync)
+  // Session stills / video are RAM-only — restore only if still in this tab
   let bgSource: WetglassBgSource = "stock";
-  if (
+  if (rawSource === "video" && videoId && getSessionVideoEntry(videoId)) {
+    bgSource = "video";
+  } else if (
     rawSource === "session" &&
     sessionId &&
     getSessionMediaEntry(sessionId)
@@ -85,6 +93,15 @@ function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
   ) {
     bgSource = "library";
   }
+
+  const slideshow = asBool(raw.slideshow, STORED_DEFAULTS.slideshow);
+  const trackChangeRaw = asBool(raw.trackChange, STORED_DEFAULTS.trackChange);
+  // Video mutex: no slideshow / track-change while a video bg is active
+  const trackChange =
+    bgSource === "video"
+      ? false
+      : trackChangeRaw && !slideshow;
+  const slideshowOn = bgSource === "video" ? false : slideshow;
 
   return {
     rainAmount: clamp(
@@ -118,13 +135,8 @@ function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
       1,
       STORED_DEFAULTS.bgAlignY,
     ),
-    slideshow: asBool(raw.slideshow, STORED_DEFAULTS.slideshow),
-    // Mutual exclusion - drop trackChange if slideshow won
-    trackChange: (() => {
-      const slideshow = asBool(raw.slideshow, STORED_DEFAULTS.slideshow);
-      const trackChange = asBool(raw.trackChange, STORED_DEFAULTS.trackChange);
-      return trackChange && !slideshow;
-    })(),
+    slideshow: slideshowOn,
+    trackChange,
     slideshowStock: asBool(raw.slideshowStock, STORED_DEFAULTS.slideshowStock),
     slideshowLibrary: asBool(
       raw.slideshowLibrary,
@@ -144,6 +156,7 @@ function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
     stockId,
     libraryId,
     sessionId: bgSource === "session" ? sessionId : null,
+    videoId: bgSource === "video" ? videoId : null,
   };
 }
 
@@ -194,19 +207,55 @@ function applyMediaSelection(sel: MediaSelection): void {
       bgSource: "stock",
       stockId: asStockId(sel.id),
       sessionId: null,
+      videoId: null,
+    });
+    return;
+  }
+  if (sel.kind === "video") {
+    if (!getSessionVideoEntry(sel.id)) {
+      writePrefs({
+        ...cur,
+        bgSource: "stock",
+        videoId: null,
+        sessionId: null,
+      });
+      return;
+    }
+    writePrefs({
+      ...cur,
+      bgSource: "video",
+      videoId: sel.id,
+      sessionId: null,
+      slideshow: false,
+      trackChange: false,
     });
     return;
   }
   if (sel.kind === "session") {
     if (!getSessionMediaEntry(sel.id)) {
-      writePrefs({ ...cur, bgSource: "stock", sessionId: null });
+      writePrefs({
+        ...cur,
+        bgSource: "stock",
+        sessionId: null,
+        videoId: null,
+      });
       return;
     }
-    writePrefs({ ...cur, bgSource: "session", sessionId: sel.id });
+    writePrefs({
+      ...cur,
+      bgSource: "session",
+      sessionId: sel.id,
+      videoId: null,
+    });
     return;
   }
   if (!getMediaLibraryEntry(sel.id)) {
-    writePrefs({ ...cur, bgSource: "stock", sessionId: null });
+    writePrefs({
+      ...cur,
+      bgSource: "stock",
+      sessionId: null,
+      videoId: null,
+    });
     return;
   }
   writePrefs({
@@ -214,6 +263,7 @@ function applyMediaSelection(sel: MediaSelection): void {
     bgSource: "library",
     libraryId: sel.id,
     sessionId: null,
+    videoId: null,
   });
 }
 
@@ -226,6 +276,7 @@ function applyMediaSelection(sel: MediaSelection): void {
  */
 function advanceBgPool(from: "slideshow" | "track"): void {
   const cur = readPrefs();
+  if (cur.bgSource === "video") return;
   if (from === "slideshow") {
     if (!cur.slideshow) return;
     if (getTabHasPeers(SCREEN_ID)) return;
@@ -293,6 +344,7 @@ export default function useWetglassHook() {
             bgSource: "stock",
             libraryId: null,
             sessionId: null,
+            videoId: null,
           });
         } else if (
           cur.bgSource === "session" &&
@@ -302,6 +354,27 @@ export default function useWetglassHook() {
             ...cur,
             bgSource: "stock",
             sessionId: null,
+            videoId: null,
+          });
+        } else {
+          emit();
+        }
+      }),
+    [],
+  );
+
+  useEffect(
+    () =>
+      subscribeSessionVideo(() => {
+        const cur = readPrefs();
+        if (
+          cur.bgSource === "video" &&
+          (!cur.videoId || !getSessionVideoEntry(cur.videoId))
+        ) {
+          writePrefs({
+            ...cur,
+            bgSource: "stock",
+            videoId: null,
           });
         } else {
           emit();
@@ -382,11 +455,13 @@ export default function useWetglassHook() {
   };
 
   const mediaValue: MediaSelection =
-    live.bgSource === "library" && live.libraryId
-      ? { kind: "library", id: live.libraryId }
-      : live.bgSource === "session" && live.sessionId
-        ? { kind: "session", id: live.sessionId }
-        : { kind: "stock", id: live.stockId };
+    live.bgSource === "video" && live.videoId
+      ? { kind: "video", id: live.videoId }
+      : live.bgSource === "library" && live.libraryId
+        ? { kind: "library", id: live.libraryId }
+        : live.bgSource === "session" && live.sessionId
+          ? { kind: "session", id: live.sessionId }
+          : { kind: "stock", id: live.stockId };
 
   return {
     liveRef,
@@ -411,18 +486,41 @@ export default function useWetglassHook() {
       setLightning: (lightning: number) => commit({ lightning }),
       setBgAlignX: (bgAlignX: number) => commit({ bgAlignX }),
       setBgAlignY: (bgAlignY: number) => commit({ bgAlignY }),
-      setSlideshow: (slideshow: boolean) =>
-        commit(
-          slideshow
-            ? { slideshow: true, trackChange: false }
-            : { slideshow: false },
-        ),
-      setTrackChange: (trackChange: boolean) =>
-        commit(
-          trackChange
-            ? { trackChange: true, slideshow: false }
-            : { trackChange: false },
-        ),
+      setSlideshow: (slideshow: boolean) => {
+        const cur = readPrefs();
+        if (!slideshow) {
+          commit({ slideshow: false });
+          return;
+        }
+        // Enabling slideshow drops video bg (stills pool only)
+        if (cur.bgSource === "video") {
+          commit({
+            slideshow: true,
+            trackChange: false,
+            bgSource: "stock",
+            videoId: null,
+          });
+          return;
+        }
+        commit({ slideshow: true, trackChange: false });
+      },
+      setTrackChange: (trackChange: boolean) => {
+        const cur = readPrefs();
+        if (!trackChange) {
+          commit({ trackChange: false });
+          return;
+        }
+        if (cur.bgSource === "video") {
+          commit({
+            trackChange: true,
+            slideshow: false,
+            bgSource: "stock",
+            videoId: null,
+          });
+          return;
+        }
+        commit({ trackChange: true, slideshow: false });
+      },
       setSlideshowStock: (slideshowStock: boolean) =>
         commit({ slideshowStock }),
       setSlideshowLibrary: (slideshowLibrary: boolean) =>

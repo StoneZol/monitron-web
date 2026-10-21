@@ -14,6 +14,7 @@ import {
   getSessionMediaEntry,
   libraryImageSrc,
 } from "@/lib/userMedia";
+import { getSessionVideoEntry } from "@/lib/sessionVideo";
 import { setBgCropFromAspects } from "./Wetglass.bgCrop";
 import type { WetglassLive } from "./Wetglass.types";
 import {
@@ -31,6 +32,8 @@ const CROSSFADE_SEC = 1.15;
 function prepBgTexture(tex: THREE.Texture): THREE.Texture {
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
+  // Same mip path for stills + video so textureLod glass fog matches.
+  // VideoTexture re-uploads each frame; WebGL2 regenerateMipmap keeps frost real.
   tex.generateMipmaps = true;
   tex.minFilter = THREE.LinearMipmapLinearFilter;
   tex.magFilter = THREE.LinearFilter;
@@ -38,26 +41,96 @@ function prepBgTexture(tex: THREE.Texture): THREE.Texture {
   return tex;
 }
 
+function disposeBgTexture(tex: THREE.Texture | null) {
+  if (!tex) return;
+  const img = tex.image as unknown;
+  if (img instanceof HTMLVideoElement) {
+    img.pause();
+    img.removeAttribute("src");
+    img.load();
+  }
+  tex.dispose();
+}
+
+function loadVideoTexture(url: string): Promise<THREE.VideoTexture> {
+  return new Promise((resolve, reject) => {
+    const video = document.createElement("video");
+    video.src = url;
+    video.crossOrigin = "anonymous";
+    video.loop = true;
+    video.muted = true;
+    video.playsInline = true;
+    video.preload = "auto";
+    const fail = () => {
+      video.removeAttribute("src");
+      video.load();
+      reject(new Error("video load failed"));
+    };
+    video.addEventListener(
+      "loadeddata",
+      () => {
+        void video.play().catch(() => {
+          /* muted autoplay usually ok; keep texture anyway */
+        });
+        const tex = new THREE.VideoTexture(video);
+        prepBgTexture(tex);
+        resolve(tex);
+      },
+      { once: true },
+    );
+    video.addEventListener("error", fail, { once: true });
+  });
+}
+
 function texSize(tex: THREE.Texture): { w: number; h: number } {
-  const img = tex.image as { width?: number; height?: number } | undefined;
+  const img = tex.image as
+    | HTMLVideoElement
+    | { width?: number; height?: number; videoWidth?: number; videoHeight?: number }
+    | undefined;
+  if (img && typeof HTMLVideoElement !== "undefined" && img instanceof HTMLVideoElement) {
+    return {
+      w: Math.max(1, img.videoWidth || img.width || 1),
+      h: Math.max(1, img.videoHeight || img.height || 1),
+    };
+  }
   return {
     w: Math.max(1, img?.width ?? 1),
     h: Math.max(1, img?.height ?? 1),
   };
 }
 
-function resolveBgUrl(live: WetglassLive): { key: string; url: string } {
+function resolveBgUrl(
+  live: WetglassLive,
+): { key: string; url: string; kind: "image" | "video" } {
+  if (live.bgSource === "video" && live.videoId) {
+    const entry = getSessionVideoEntry(live.videoId);
+    if (entry) {
+      return { key: `vid:${entry.id}`, url: entry.objectUrl, kind: "video" };
+    }
+  }
   if (live.bgSource === "session" && live.sessionId) {
     const entry = getSessionMediaEntry(live.sessionId);
-    if (entry) return { key: `sess:${entry.id}`, url: entry.objectUrl };
+    if (entry) {
+      return { key: `sess:${entry.id}`, url: entry.objectUrl, kind: "image" };
+    }
   }
   if (live.bgSource === "library" && live.libraryId) {
     const entry = getMediaLibraryEntry(live.libraryId);
     // Remote URLs via same-origin proxy (prod CORS / hotlink 403)
-    if (entry) return { key: `lib:${entry.id}`, url: libraryImageSrc(entry) };
+    if (entry) {
+      return {
+        key: `lib:${entry.id}`,
+        url: libraryImageSrc(entry),
+        kind: "image",
+      };
+    }
   }
   const stockId = live.stockId || DEFAULT_STOCK_ID;
-  return { key: `stock:${stockId}`, url: stockPlaceholderSrc(stockId) };
+  return {
+    key: `stock:${stockId}`,
+    url: stockPlaceholderSrc(stockId),
+    kind: "image",
+  };
 }
 
 function WetglassQuad({ liveRef }: { liveRef: RefObject<WetglassLive> }) {
@@ -143,7 +216,7 @@ function WetglassQuad({ liveRef }: { liveRef: RefObject<WetglassLive> }) {
     crossfade.current = 0;
     fading.current = false;
     matRef.current.uniforms.uCrossfade!.value = 0;
-    if (prev && prev !== next) prev.dispose();
+    if (prev && prev !== next) disposeBgTexture(prev);
     publishCrop();
   };
 
@@ -164,7 +237,7 @@ function WetglassQuad({ liveRef }: { liveRef: RefObject<WetglassLive> }) {
     }
     // Already showing this key
     if (fromKey.current === key && !fading.current) {
-      tex.dispose();
+      disposeBgTexture(tex);
       inflightKey.current = null;
       return;
     }
@@ -175,7 +248,7 @@ function WetglassQuad({ liveRef }: { liveRef: RefObject<WetglassLive> }) {
       fromRef.current = mid;
       fromKey.current = toKey.current;
       bindSlot(0, mid);
-      if (old && old !== mid) old.dispose();
+      if (old && old !== mid) disposeBgTexture(old);
     }
     const staleTo = toRef.current;
     toRef.current = tex;
@@ -186,7 +259,7 @@ function WetglassQuad({ liveRef }: { liveRef: RefObject<WetglassLive> }) {
     matRef.current.uniforms.uCrossfade!.value = 0;
     inflightKey.current = null;
     if (staleTo && staleTo !== tex && staleTo !== fromRef.current) {
-      staleTo.dispose();
+      disposeBgTexture(staleTo);
     }
     publishCrop();
   };
@@ -200,8 +273,8 @@ function WetglassQuad({ liveRef }: { liveRef: RefObject<WetglassLive> }) {
   useEffect(
     () => () => {
       mat.dispose();
-      fromRef.current?.dispose();
-      toRef.current?.dispose();
+      disposeBgTexture(fromRef.current);
+      disposeBgTexture(toRef.current);
     },
     [mat],
   );
@@ -219,17 +292,59 @@ function WetglassQuad({ liveRef }: { liveRef: RefObject<WetglassLive> }) {
   useEffect(() => {
     let cancelled = false;
 
-    const loadKey = (key: string, url: string) => {
+    const fallbackStock = () => {
+      const stockId = liveRef.current.stockId || DEFAULT_STOCK_ID;
+      const fbKey = `stock:${stockId}`;
+      const fbUrl = stockPlaceholderSrc(stockId);
+      if (
+        fbKey === fromKey.current ||
+        fbKey === toKey.current ||
+        fbKey === inflightKey.current
+      ) {
+        return;
+      }
+      inflightKey.current = fbKey;
+      loadKey(fbKey, fbUrl, "image");
+    };
+
+    const loadKey = (
+      key: string,
+      url: string,
+      kind: "image" | "video",
+    ) => {
+      if (kind === "video") {
+        void loadVideoTexture(url).then(
+          (tex) => {
+            if (cancelled) {
+              disposeBgTexture(tex);
+              return;
+            }
+            if (inflightKey.current !== key) {
+              disposeBgTexture(tex);
+              return;
+            }
+            startCrossfade(key, tex);
+          },
+          () => {
+            if (cancelled) return;
+            if (inflightKey.current !== key) return;
+            inflightKey.current = null;
+            fallbackStock();
+          },
+        );
+        return;
+      }
+
       loader.setCrossOrigin("anonymous");
       loader.load(
         url,
         (tex) => {
           if (cancelled) {
-            tex.dispose();
+            disposeBgTexture(tex);
             return;
           }
           if (inflightKey.current !== key) {
-            tex.dispose();
+            disposeBgTexture(tex);
             return;
           }
           startCrossfade(key, tex);
@@ -239,26 +354,15 @@ function WetglassQuad({ liveRef }: { liveRef: RefObject<WetglassLive> }) {
           if (cancelled) return;
           if (inflightKey.current !== key) return;
           inflightKey.current = null;
-          if (key.startsWith("lib:")) {
-            const stockId = liveRef.current.stockId || DEFAULT_STOCK_ID;
-            const fbKey = `stock:${stockId}`;
-            const fbUrl = stockPlaceholderSrc(stockId);
-            if (
-              fbKey === fromKey.current ||
-              fbKey === toKey.current ||
-              fbKey === inflightKey.current
-            ) {
-              return;
-            }
-            inflightKey.current = fbKey;
-            loadKey(fbKey, fbUrl);
+          if (key.startsWith("lib:") || key.startsWith("vid:")) {
+            fallbackStock();
           }
         },
       );
     };
 
     const tick = () => {
-      const { key, url } = resolveBgUrl(liveRef.current);
+      const { key, url, kind } = resolveBgUrl(liveRef.current);
       if (
         key === fromKey.current ||
         key === toKey.current ||
@@ -267,7 +371,7 @@ function WetglassQuad({ liveRef }: { liveRef: RefObject<WetglassLive> }) {
         return;
       }
       inflightKey.current = key;
-      loadKey(key, url);
+      loadKey(key, url, kind);
     };
 
     tick();
@@ -289,6 +393,18 @@ function WetglassQuad({ liveRef }: { liveRef: RefObject<WetglassLive> }) {
     m.uniforms.uGlass!.value = live.glass;
     m.uniforms.uLightning!.value = live.lightning;
     m.uniforms.uBgAlign!.value.set(live.bgAlignX, live.bgAlignY);
+
+    // Video metadata can arrive after first bind — keep cover UV honest
+    const t0 = fromRef.current;
+    const t1 = toRef.current ?? t0;
+    if (t0) {
+      const { w, h } = texSize(t0);
+      m.uniforms.iChannelResolution0!.value.set(w, h);
+    }
+    if (t1) {
+      const { w, h } = texSize(t1);
+      m.uniforms.iChannelResolution1!.value.set(w, h);
+    }
 
     if (fading.current) {
       const dur = Math.min(

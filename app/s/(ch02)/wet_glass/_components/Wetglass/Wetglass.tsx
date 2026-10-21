@@ -29,15 +29,15 @@ const INFO = {
   glass: "Glass fog - 0 = clear, 1 = opaque frosted blur.",
   lightning: "Occasional lightning flash intensity.",
   background:
-    "Stock stills, shared URL library (max 20, tiny 67x37 previews), or local files (session only, multi-select up to 20 - cleared on refresh).",
+    "Stock stills, URL library, local stills (session, up to 20), or one session video (max ~80 MB). Video turns off slideshow / track change; Sync can push the clip to peer tabs.",
   bgAlignX:
     "Horizontal crop anchor (cover is cropping left/right). 0 = left, 0.5 = center, 1 = right.",
   bgAlignY:
     "Vertical crop anchor (cover is cropping top/bottom). 0 = top, 0.5 = center, 1 = bottom.",
   slideshow:
-    "Cycle backgrounds on a timer from the pool. Turns off On track change. Timer pauses while other wet glass tabs are open - use Sync to match them.",
+    "Cycle still backgrounds on a timer from the pool. Turns off On track change. Disabled while a video bg is active. Timer pauses while other wet glass tabs are open - use Sync to match them.",
   trackChange:
-    "Next background when the plugin tab title changes (new track / tab). Turns off Slideshow. Needs plugin capture on a music tab.",
+    "Next still when the plugin tab title changes. Turns off Slideshow. Disabled while a video bg is active. Needs plugin capture on a music tab.",
   poolStock: "Include built-in stock stills in the pool.",
   poolLibrary: "Include shared URL library entries in the pool.",
   poolSession: "Include session-only local uploads in the pool.",
@@ -54,8 +54,10 @@ const Wetglass = ({ showOverlay = true }: WetglassProps) => {
     () => "none" as const,
   );
   const trackChangeUi = pluginPresent;
+  const videoBg = controls.mediaValue.kind === "video";
   const showPool =
-    controls.slideshow || (controls.trackChange && trackChangeUi);
+    !videoBg &&
+    (controls.slideshow || (controls.trackChange && trackChangeUi));
 
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-black select-none">
@@ -86,14 +88,17 @@ const Wetglass = ({ showOverlay = true }: WetglassProps) => {
                 onChange={controls.setMedia}
                 stocks={STOCK_PLACEHOLDERS}
                 info={INFO.background}
+                enableVideo
               />
-              <Toggle
-                label="Slideshow"
-                checked={controls.slideshow}
-                onChange={controls.setSlideshow}
-                info={INFO.slideshow}
-              />
-              {trackChangeUi ? (
+              {!videoBg ? (
+                <Toggle
+                  label="Slideshow"
+                  checked={controls.slideshow}
+                  onChange={controls.setSlideshow}
+                  info={INFO.slideshow}
+                />
+              ) : null}
+              {!videoBg && trackChangeUi ? (
                 <Toggle
                   label="On track change"
                   checked={controls.trackChange}

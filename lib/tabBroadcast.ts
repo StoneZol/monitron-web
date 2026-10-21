@@ -3,8 +3,10 @@
 import { saveScreenPrefs } from "@/lib/screenPrefs";
 import type { SessionMediaSyncItem } from "@/lib/userMedia";
 import { replaceSessionMediaFromSync } from "@/lib/userMedia";
+import type { SessionVideoSyncItem } from "@/lib/sessionVideo";
+import { replaceSessionVideoFromSync } from "@/lib/sessionVideo";
 
-export const TAB_SYNC_VERSION = 5 as const;
+export const TAB_SYNC_VERSION = 6 as const;
 
 /** How far ahead of "now" all tabs aim to hot-apply together. */
 export const TAB_SYNC_LEAD_MS = 1000;
@@ -26,6 +28,8 @@ export type TabSyncMessage = {
   applyAt: number;
   /** Session-only local images (Blobs) — RAM on each tab after Sync. */
   sessionMedia: SessionMediaSyncItem[];
+  /** Session video bg (single Blob) — Wet Glass etc. */
+  sessionVideo: SessionVideoSyncItem | null;
 };
 
 let tabSenderId: string | null = null;
@@ -88,6 +92,7 @@ export function broadcastTabSync(
   screenId: string,
   prefs: Record<string, unknown>,
   sessionMedia: SessionMediaSyncItem[] = [],
+  sessionVideo: SessionVideoSyncItem | null = null,
 ): number {
   const applyAt = Date.now() + TAB_SYNC_LEAD_MS;
   if (typeof window === "undefined" || typeof BroadcastChannel === "undefined") {
@@ -102,6 +107,7 @@ export function broadcastTabSync(
     prefs: { ...prefs },
     applyAt,
     sessionMedia,
+    sessionVideo,
   };
   const ch = new BroadcastChannel(tabSyncChannelName(path));
   ch.postMessage(msg);
@@ -149,6 +155,11 @@ export function applyIncomingTabSync(
       );
     } catch {
       /* previews may fail; prefs still apply */
+    }
+    try {
+      await replaceSessionVideoFromSync(msg.sessionVideo ?? null);
+    } catch {
+      /* video blob may fail; prefs still apply */
     }
     saveScreenPrefs(screenId, msg.prefs);
     scheduleTabSyncApply(Math.max(msg.applyAt, Date.now()), screenId);

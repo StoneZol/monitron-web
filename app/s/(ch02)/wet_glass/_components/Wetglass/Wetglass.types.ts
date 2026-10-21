@@ -7,7 +7,7 @@ export type WetglassProps = {
   showOverlay?: boolean;
 };
 
-export type WetglassBgSource = "stock" | "library" | "session";
+export type WetglassBgSource = "stock" | "library" | "session" | "video";
 
 export type WetglassLive = {
   rainAmount: number;
@@ -18,14 +18,14 @@ export type WetglassLive = {
   bgAlignX: number;
   /** Cover crop anchor Y: 0 top → 1 bottom (0.5 center) */
   bgAlignY: number;
-  /** Cycle backgrounds on a timer (mutex with trackChange) */
+  /** Cycle backgrounds on a timer (mutex with trackChange + video) */
   slideshow: boolean;
   /**
    * Advance background when plugin tab-title changes
-   * (mutex with slideshow). Shares pool flags below.
+   * (mutex with slideshow + video). Shares pool flags below.
    */
   trackChange: boolean;
-  /** Shared pool: stock / urls / local (slideshow + track-change) */
+  /** Shared pool: stock / urls / local stills (slideshow + track-change) */
   slideshowStock: boolean;
   slideshowLibrary: boolean;
   slideshowSession: boolean;
@@ -34,8 +34,10 @@ export type WetglassLive = {
   bgSource: WetglassBgSource;
   stockId: StockPlaceholderId;
   libraryId: string | null;
-  /** Session file id — valid only until refresh */
+  /** Session still id — valid only until refresh */
   sessionId: string | null;
+  /** Session video id — single slot; mutex with slideshow / trackChange */
+  videoId: string | null;
 };
 
 export const WETGLASS_DEFAULTS: WetglassLive = {
@@ -55,6 +57,7 @@ export const WETGLASS_DEFAULTS: WetglassLive = {
   stockId: DEFAULT_STOCK_ID,
   libraryId: null,
   sessionId: null,
+  videoId: null,
 };
 
 export const WETGLASS_RANGES = {
