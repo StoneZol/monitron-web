@@ -56,6 +56,7 @@ const INFO = {
     "Pulse + shake hole scale from the hole audio channel (needs reactive audio).",
   scaleDrive: "How hard scale punches when Scale punch is on.",
   diskSpin: "Accretion disk / horizon swirl speed.",
+  disk: "Orbit, tilt, belt roll, hole size, and disk swirl.",
   holeChannel: "Band that punches hole / disk color, glow, and scale punch.",
   yawChannel: "Band that lifts cruise yaw orbit (smooth).",
   yawAccelChannel: "Band that kicks yaw acceleration (rising-edge).",
@@ -193,56 +194,58 @@ const Blackhole = ({ showOverlay = true }: BlackholeProps) => {
                 ) : null}
               </ControlSubSection>
 
-              <Slider
-                label="Yaw speed"
-                value={controls.yawSpeed}
-                min={BLACKHOLE_RANGES.yawSpeed.min}
-                max={BLACKHOLE_RANGES.yawSpeed.max}
-                step={BLACKHOLE_RANGES.yawSpeed.step}
-                onChange={controls.setYawSpeed}
-                format={(v) => v.toFixed(2)}
-                info={INFO.yawSpeed}
-              />
-              <Slider
-                label="Pitch"
-                value={controls.pitch}
-                min={BLACKHOLE_RANGES.pitch.min}
-                max={BLACKHOLE_RANGES.pitch.max}
-                step={BLACKHOLE_RANGES.pitch.step}
-                onChange={controls.setPitch}
-                format={(v) => `${v.toFixed(0)}°`}
-                info={INFO.pitch}
-              />
-              <Slider
-                label="Belt angle"
-                value={controls.beltAngle}
-                min={BLACKHOLE_RANGES.beltAngle.min}
-                max={BLACKHOLE_RANGES.beltAngle.max}
-                step={BLACKHOLE_RANGES.beltAngle.step}
-                onChange={controls.setBeltAngle}
-                format={(v) => `${v.toFixed(0)}°`}
-                info={INFO.beltAngle}
-              />
-              <Slider
-                label="Scale"
-                value={controls.blackHoleSize}
-                min={BLACKHOLE_RANGES.blackHoleSize.min}
-                max={BLACKHOLE_RANGES.blackHoleSize.max}
-                step={BLACKHOLE_RANGES.blackHoleSize.step}
-                onChange={controls.setBlackHoleSize}
-                format={(v) => v.toFixed(2)}
-                info={INFO.scale}
-              />
-              <Slider
-                label="Disk spin"
-                value={controls.diskRotationSpeed}
-                min={BLACKHOLE_RANGES.diskRotationSpeed.min}
-                max={BLACKHOLE_RANGES.diskRotationSpeed.max}
-                step={BLACKHOLE_RANGES.diskRotationSpeed.step}
-                onChange={controls.setDiskRotationSpeed}
-                format={(v) => v.toFixed(2)}
-                info={INFO.diskSpin}
-              />
+              <ControlSubSection label="disk" info={INFO.disk}>
+                <Slider
+                  label="Yaw speed"
+                  value={controls.yawSpeed}
+                  min={BLACKHOLE_RANGES.yawSpeed.min}
+                  max={BLACKHOLE_RANGES.yawSpeed.max}
+                  step={BLACKHOLE_RANGES.yawSpeed.step}
+                  onChange={controls.setYawSpeed}
+                  format={(v) => v.toFixed(2)}
+                  info={INFO.yawSpeed}
+                />
+                <Slider
+                  label="Pitch"
+                  value={controls.pitch}
+                  min={BLACKHOLE_RANGES.pitch.min}
+                  max={BLACKHOLE_RANGES.pitch.max}
+                  step={BLACKHOLE_RANGES.pitch.step}
+                  onChange={controls.setPitch}
+                  format={(v) => `${v.toFixed(0)}°`}
+                  info={INFO.pitch}
+                />
+                <Slider
+                  label="Belt angle"
+                  value={controls.beltAngle}
+                  min={BLACKHOLE_RANGES.beltAngle.min}
+                  max={BLACKHOLE_RANGES.beltAngle.max}
+                  step={BLACKHOLE_RANGES.beltAngle.step}
+                  onChange={controls.setBeltAngle}
+                  format={(v) => `${v.toFixed(0)}°`}
+                  info={INFO.beltAngle}
+                />
+                <Slider
+                  label="Scale"
+                  value={controls.blackHoleSize}
+                  min={BLACKHOLE_RANGES.blackHoleSize.min}
+                  max={BLACKHOLE_RANGES.blackHoleSize.max}
+                  step={BLACKHOLE_RANGES.blackHoleSize.step}
+                  onChange={controls.setBlackHoleSize}
+                  format={(v) => v.toFixed(2)}
+                  info={INFO.scale}
+                />
+                <Slider
+                  label="Disk spin"
+                  value={controls.diskRotationSpeed}
+                  min={BLACKHOLE_RANGES.diskRotationSpeed.min}
+                  max={BLACKHOLE_RANGES.diskRotationSpeed.max}
+                  step={BLACKHOLE_RANGES.diskRotationSpeed.step}
+                  onChange={controls.setDiskRotationSpeed}
+                  format={(v) => v.toFixed(2)}
+                  info={INFO.diskSpin}
+                />
+              </ControlSubSection>
             </ControlSection>
 
             <VisualizerSection
@@ -253,7 +256,7 @@ const Blackhole = ({ showOverlay = true }: BlackholeProps) => {
                 <>
                   <ControlSubSection label="channels">
                     <Select
-                      label="Hole"
+                      label="Hole color"
                       value={controls.holeChannel}
                       options={REACTIVE_CHANNEL_OPTIONS}
                       onChange={controls.setHoleChannel}
@@ -283,7 +286,7 @@ const Blackhole = ({ showOverlay = true }: BlackholeProps) => {
                   </ControlSubSection>
                   <ControlSubSection label="drive">
                     <Slider
-                      label="Hole"
+                      label="Hole color"
                       value={controls.holeDrive}
                       min={BLACKHOLE_RANGES.colorDrive.min}
                       max={controls.colorDriveMax}
