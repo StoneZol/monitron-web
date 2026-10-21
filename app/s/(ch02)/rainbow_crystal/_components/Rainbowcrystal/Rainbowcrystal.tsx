@@ -4,6 +4,7 @@ import { ScreensOverlay } from "@/components/ScreensOverlay";
 import { VisualizerSection } from "@/components/VisualizerSection";
 import {
   ColorTable,
+  ControlCluster,
   ControlPanel,
   ControlSection,
   ControlSubSection,
@@ -85,88 +86,91 @@ const Rainbowcrystal = ({ showOverlay = true }: RainbowcrystalProps) => {
             onFullscreen={controls.fullscreen}
           >
             <ControlSection label="look" info={INFO.look}>
-              <Slider
-                label="Crystal speed"
-                value={controls.crystalSpeed}
-                min={RAINBOWCRYSTAL_RANGES.crystalSpeed.min}
-                max={RAINBOWCRYSTAL_RANGES.crystalSpeed.max}
-                step={RAINBOWCRYSTAL_RANGES.crystalSpeed.step}
-                onChange={controls.setCrystalSpeed}
-                format={(v) => `x${v.toFixed(2)}`}
-                info={INFO.crystalSpeed}
-              />
-              <Select
-                label="Color mode"
-                value={controls.colorMode}
-                options={COLOR_MODE_OPTIONS}
-                onChange={controls.setColorMode}
-                info={INFO.colorMode}
-              />
-              {mode === "flow" ? (
+              <ControlSubSection label="color" info={INFO.colorMode}>
+                <Select
+                  label="Color mode"
+                  value={controls.colorMode}
+                  options={COLOR_MODE_OPTIONS}
+                  onChange={controls.setColorMode}
+                  info={INFO.colorMode}
+                />
+                {mode === "flow" ? (
+                  <Slider
+                    label="Flow speed"
+                    value={controls.twinkleSpeed}
+                    min={0}
+                    max={4}
+                    step={0.05}
+                    onChange={controls.setTwinkleSpeed}
+                    format={(v) => `×${v.toFixed(2)}`}
+                    info={INFO.flowSpeed}
+                  />
+                ) : null}
+                {mode === "twinkle" ? (
+                  <TwinkleControls
+                    title="twinkle"
+                    checked
+                    showToggle={false}
+                    speed={controls.twinkleSpeed}
+                    onSpeedChange={controls.setTwinkleSpeed}
+                    s={controls.twinkleS}
+                    onSChange={controls.setTwinkleS}
+                    l={controls.twinkleL}
+                    onLChange={controls.setTwinkleL}
+                    info={INFO.twinkle}
+                    speedInfo={INFO.twinkleSpeed}
+                    sInfo={INFO.twinkleS}
+                    lInfo={INFO.twinkleL}
+                  />
+                ) : null}
+                {mode === "palette" ? (
+                  <ColorTable
+                    label="crystal palette"
+                    info={INFO.colorPalette}
+                    columns={["idle", "peak"]}
+                    lockedColumns={audioLocked ? ["peak"] : []}
+                    columnStamps={audioStamp}
+                    rows={[
+                      {
+                        label: "tint",
+                        cells: [
+                          {
+                            value: controls.color,
+                            onChange: controls.setColor,
+                          },
+                          {
+                            value: controls.colorPeak,
+                            onChange: controls.setColorPeak,
+                          },
+                        ],
+                      },
+                    ]}
+                  />
+                ) : null}
+              </ControlSubSection>
+
+              <ControlCluster className="w-full basis-full grid-cols-1 gap-4 sm:grid-cols-2">
                 <Slider
-                  label="Flow speed"
-                  value={controls.twinkleSpeed}
-                  min={0}
-                  max={4}
-                  step={0.05}
-                  onChange={controls.setTwinkleSpeed}
-                  format={(v) => `x${v.toFixed(2)}`}
-                  info={INFO.flowSpeed}
+                  label="Crystal speed"
+                  value={controls.crystalSpeed}
+                  min={RAINBOWCRYSTAL_RANGES.crystalSpeed.min}
+                  max={RAINBOWCRYSTAL_RANGES.crystalSpeed.max}
+                  step={RAINBOWCRYSTAL_RANGES.crystalSpeed.step}
+                  onChange={controls.setCrystalSpeed}
+                  format={(v) => `×${v.toFixed(2)}`}
+                  info={INFO.crystalSpeed}
                 />
-              ) : null}
-              {mode === "twinkle" ? (
-                <TwinkleControls
-                  title="twinkle"
-                  checked
-                  onCheckedChange={(on) => {
-                    if (!on) controls.setColorMode("original");
-                  }}
-                  speed={controls.twinkleSpeed}
-                  onSpeedChange={controls.setTwinkleSpeed}
-                  s={controls.twinkleS}
-                  onSChange={controls.setTwinkleS}
-                  l={controls.twinkleL}
-                  onLChange={controls.setTwinkleL}
-                  info={INFO.twinkle}
-                  speedInfo={INFO.twinkleSpeed}
-                  sInfo={INFO.twinkleS}
-                  lInfo={INFO.twinkleL}
+                <Slider
+                  label="Saturation"
+                  value={controls.saturation}
+                  min={RAINBOWCRYSTAL_RANGES.saturation.min}
+                  max={RAINBOWCRYSTAL_RANGES.saturation.max}
+                  step={RAINBOWCRYSTAL_RANGES.saturation.step}
+                  onChange={controls.setSaturation}
+                  format={(v) => `×${v.toFixed(2)}`}
+                  info={INFO.saturation}
                 />
-              ) : null}
-              {mode === "palette" ? (
-                <ColorTable
-                  label="crystal palette"
-                  info={INFO.colorPalette}
-                  columns={["idle", "peak"]}
-                  lockedColumns={audioLocked ? ["peak"] : []}
-                  columnStamps={audioStamp}
-                  rows={[
-                    {
-                      label: "tint",
-                      cells: [
-                        {
-                          value: controls.color,
-                          onChange: controls.setColor,
-                        },
-                        {
-                          value: controls.colorPeak,
-                          onChange: controls.setColorPeak,
-                        },
-                      ],
-                    },
-                  ]}
-                />
-              ) : null}
-              <Slider
-                label="Saturation"
-                value={controls.saturation}
-                min={RAINBOWCRYSTAL_RANGES.saturation.min}
-                max={RAINBOWCRYSTAL_RANGES.saturation.max}
-                step={RAINBOWCRYSTAL_RANGES.saturation.step}
-                onChange={controls.setSaturation}
-                format={(v) => `x${v.toFixed(2)}`}
-                info={INFO.saturation}
-              />
+              </ControlCluster>
             </ControlSection>
 
             <VisualizerSection

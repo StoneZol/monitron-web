@@ -3,6 +3,7 @@
 import { ScreensOverlay } from "@/components/ScreensOverlay";
 import { VisualizerSection } from "@/components/VisualizerSection";
 import {
+  ControlCluster,
   ControlPanel,
   ControlSection,
   ControlSubSection,
@@ -67,42 +68,44 @@ const MusicVisualBar = ({ showOverlay = true }: MusicVisualBarProps) => {
             onFullscreen={controls.fullscreen}
           >
             <ControlSection label="look" info={INFO.look}>
-              <Slider
-                label="Spin base"
-                value={controls.flightSpeed}
-                min={MUSIC_VISUAL_BAR_RANGES.flightSpeed.min}
-                max={MUSIC_VISUAL_BAR_RANGES.flightSpeed.max}
-                step={MUSIC_VISUAL_BAR_RANGES.flightSpeed.step}
-                onChange={controls.setFlightSpeed}
-                format={(v) => `×${v.toFixed(2)}`}
-                info={INFO.flightSpeed}
-              />
-              <Slider
-                label="Bloom"
-                value={controls.bloomGain}
-                min={MUSIC_VISUAL_BAR_RANGES.bloomGain.min}
-                max={MUSIC_VISUAL_BAR_RANGES.bloomGain.max}
-                step={MUSIC_VISUAL_BAR_RANGES.bloomGain.step}
-                onChange={controls.setBloomGain}
-                format={(v) => v.toFixed(2)}
-                info={INFO.bloomGain}
-              />
-              <Slider
-                label="Streak"
-                value={controls.streakGain}
-                min={MUSIC_VISUAL_BAR_RANGES.streakGain.min}
-                max={MUSIC_VISUAL_BAR_RANGES.streakGain.max}
-                step={MUSIC_VISUAL_BAR_RANGES.streakGain.step}
-                onChange={controls.setStreakGain}
-                format={(v) => v.toFixed(2)}
-                info={INFO.streakGain}
-              />
               <Toggle
                 label="Fixed center"
                 checked={controls.fixedCenter}
                 onChange={controls.setFixedCenter}
                 info={INFO.fixedCenter}
               />
+              <ControlCluster className="w-full basis-full grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <Slider
+                  label="Spin base"
+                  value={controls.flightSpeed}
+                  min={MUSIC_VISUAL_BAR_RANGES.flightSpeed.min}
+                  max={MUSIC_VISUAL_BAR_RANGES.flightSpeed.max}
+                  step={MUSIC_VISUAL_BAR_RANGES.flightSpeed.step}
+                  onChange={controls.setFlightSpeed}
+                  format={(v) => `×${v.toFixed(2)}`}
+                  info={INFO.flightSpeed}
+                />
+                <Slider
+                  label="Bloom"
+                  value={controls.bloomGain}
+                  min={MUSIC_VISUAL_BAR_RANGES.bloomGain.min}
+                  max={MUSIC_VISUAL_BAR_RANGES.bloomGain.max}
+                  step={MUSIC_VISUAL_BAR_RANGES.bloomGain.step}
+                  onChange={controls.setBloomGain}
+                  format={(v) => v.toFixed(2)}
+                  info={INFO.bloomGain}
+                />
+                <Slider
+                  label="Streak"
+                  value={controls.streakGain}
+                  min={MUSIC_VISUAL_BAR_RANGES.streakGain.min}
+                  max={MUSIC_VISUAL_BAR_RANGES.streakGain.max}
+                  step={MUSIC_VISUAL_BAR_RANGES.streakGain.step}
+                  onChange={controls.setStreakGain}
+                  format={(v) => v.toFixed(2)}
+                  info={INFO.streakGain}
+                />
+              </ControlCluster>
             </ControlSection>
 
             <VisualizerSection

@@ -4,6 +4,7 @@ import { ScreensOverlay } from "@/components/ScreensOverlay";
 import { VisualizerSection } from "@/components/VisualizerSection";
 import {
   ColorTable,
+  ControlCluster,
   ControlPanel,
   ControlSection,
   ControlSubSection,
@@ -97,129 +98,135 @@ const Protean = ({ showOverlay = true }: ProteanProps) => {
             onFullscreen={controls.fullscreen}
           >
             <ControlSection label="look" info={INFO.look}>
-              <Slider
-                label="Flight speed"
-                value={controls.flightSpeed}
-                min={PROTEAN_RANGES.flightSpeed.min}
-                max={PROTEAN_RANGES.flightSpeed.max}
-                step={PROTEAN_RANGES.flightSpeed.step}
-                onChange={controls.setFlightSpeed}
-                format={(v) => `×${v.toFixed(2)}`}
-                info={INFO.flightSpeed}
-              />
-              <Select
-                label="Camera"
-                value={controls.cameraMode}
-                options={CAMERA_MODE_OPTIONS}
-                onChange={controls.setCameraMode}
-                info={INFO.cameraMode}
-              />
-              {camManual ? (
-                <>
+              <ControlSubSection label="color" info={INFO.colorMode}>
+                <Select
+                  label="Color mode"
+                  value={controls.colorMode}
+                  options={COLOR_MODE_OPTIONS}
+                  onChange={controls.setColorMode}
+                  info={INFO.colorMode}
+                />
+                {mode === "paletteTwinkle" ? (
                   <Slider
-                    label="X"
-                    value={controls.yaw}
-                    min={PROTEAN_RANGES.yaw.min}
-                    max={PROTEAN_RANGES.yaw.max}
-                    step={PROTEAN_RANGES.yaw.step}
-                    onChange={controls.setYaw}
-                    format={(v) => `${v.toFixed(1)}°`}
-                    info={INFO.yaw}
+                    label="Palette speed"
+                    value={controls.twinkleSpeed}
+                    min={0}
+                    max={4}
+                    step={0.05}
+                    onChange={controls.setTwinkleSpeed}
+                    format={(v) => `×${v.toFixed(2)}`}
+                    info={INFO.paletteTwinkle}
                   />
-                  <Slider
-                    label="Y"
-                    value={controls.pitch}
-                    min={PROTEAN_RANGES.pitch.min}
-                    max={PROTEAN_RANGES.pitch.max}
-                    step={PROTEAN_RANGES.pitch.step}
-                    onChange={controls.setPitch}
-                    format={(v) => `${v.toFixed(1)}°`}
-                    info={INFO.pitch}
+                ) : null}
+                {mode === "twinkle" ? (
+                  <TwinkleControls
+                    title="twinkle"
+                    checked
+                    showToggle={false}
+                    speed={controls.twinkleSpeed}
+                    onSpeedChange={controls.setTwinkleSpeed}
+                    s={controls.twinkleS}
+                    onSChange={controls.setTwinkleS}
+                    l={controls.twinkleL}
+                    onLChange={controls.setTwinkleL}
+                    info={INFO.twinkle}
+                    speedInfo={INFO.twinkleSpeed}
+                    sInfo={INFO.twinkleS}
+                    lInfo={INFO.twinkleL}
                   />
-                </>
-              ) : null}
-              <Slider
-                label="Morph"
-                value={controls.morph}
-                min={PROTEAN_RANGES.morph.min}
-                max={PROTEAN_RANGES.morph.max}
-                step={PROTEAN_RANGES.morph.step}
-                onChange={controls.setMorph}
-                format={(v) => v.toFixed(2)}
-                info={INFO.morph}
-              />
-              <Select
-                label="Color mode"
-                value={controls.colorMode}
-                options={COLOR_MODE_OPTIONS}
-                onChange={controls.setColorMode}
-                info={INFO.colorMode}
-              />
-              {mode === "paletteTwinkle" ? (
+                ) : null}
+                {mode === "solid" ? (
+                  <ColorTable
+                    label="solid palette"
+                    info={INFO.solidPalette}
+                    columns={["idle", "peak"]}
+                    lockedColumns={audioLocked ? ["peak"] : []}
+                    columnStamps={audioStamp}
+                    rows={[
+                      {
+                        label: "tint",
+                        cells: [
+                          {
+                            value: controls.color,
+                            onChange: controls.setColor,
+                          },
+                          {
+                            value: controls.colorPeak,
+                            onChange: controls.setColorPeak,
+                          },
+                        ],
+                      },
+                    ]}
+                  />
+                ) : null}
+              </ControlSubSection>
+
+              <ControlSubSection label="camera" info={INFO.cameraMode}>
+                <Select
+                  label="Camera"
+                  value={controls.cameraMode}
+                  options={CAMERA_MODE_OPTIONS}
+                  onChange={controls.setCameraMode}
+                  info={INFO.cameraMode}
+                />
+                {camManual ? (
+                  <ControlCluster className="grid-cols-1 gap-4 sm:grid-cols-2">
+                    <Slider
+                      label="X"
+                      value={controls.yaw}
+                      min={PROTEAN_RANGES.yaw.min}
+                      max={PROTEAN_RANGES.yaw.max}
+                      step={PROTEAN_RANGES.yaw.step}
+                      onChange={controls.setYaw}
+                      format={(v) => `${v.toFixed(1)}°`}
+                      info={INFO.yaw}
+                    />
+                    <Slider
+                      label="Y"
+                      value={controls.pitch}
+                      min={PROTEAN_RANGES.pitch.min}
+                      max={PROTEAN_RANGES.pitch.max}
+                      step={PROTEAN_RANGES.pitch.step}
+                      onChange={controls.setPitch}
+                      format={(v) => `${v.toFixed(1)}°`}
+                      info={INFO.pitch}
+                    />
+                  </ControlCluster>
+                ) : null}
+              </ControlSubSection>
+
+              <ControlCluster className="w-full basis-full grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <Slider
-                  label="Palette speed"
-                  value={controls.twinkleSpeed}
-                  min={0}
-                  max={4}
-                  step={0.05}
-                  onChange={controls.setTwinkleSpeed}
+                  label="Flight speed"
+                  value={controls.flightSpeed}
+                  min={PROTEAN_RANGES.flightSpeed.min}
+                  max={PROTEAN_RANGES.flightSpeed.max}
+                  step={PROTEAN_RANGES.flightSpeed.step}
+                  onChange={controls.setFlightSpeed}
                   format={(v) => `×${v.toFixed(2)}`}
-                  info={INFO.paletteTwinkle}
+                  info={INFO.flightSpeed}
                 />
-              ) : null}
-              {mode === "twinkle" ? (
-                <TwinkleControls
-                  title="twinkle"
-                  checked
-                  onCheckedChange={(on) => {
-                    if (!on) controls.setColorMode("original");
-                  }}
-                  speed={controls.twinkleSpeed}
-                  onSpeedChange={controls.setTwinkleSpeed}
-                  s={controls.twinkleS}
-                  onSChange={controls.setTwinkleS}
-                  l={controls.twinkleL}
-                  onLChange={controls.setTwinkleL}
-                  info={INFO.twinkle}
-                  speedInfo={INFO.twinkleSpeed}
-                  sInfo={INFO.twinkleS}
-                  lInfo={INFO.twinkleL}
+                <Slider
+                  label="Morph"
+                  value={controls.morph}
+                  min={PROTEAN_RANGES.morph.min}
+                  max={PROTEAN_RANGES.morph.max}
+                  step={PROTEAN_RANGES.morph.step}
+                  onChange={controls.setMorph}
+                  format={(v) => v.toFixed(2)}
+                  info={INFO.morph}
                 />
-              ) : null}
-              {mode === "solid" ? (
-                <ColorTable
-                  label="solid palette"
-                  info={INFO.solidPalette}
-                  columns={["idle", "peak"]}
-                  lockedColumns={audioLocked ? ["peak"] : []}
-                  columnStamps={audioStamp}
-                  rows={[
-                    {
-                      label: "tint",
-                      cells: [
-                        {
-                          value: controls.color,
-                          onChange: controls.setColor,
-                        },
-                        {
-                          value: controls.colorPeak,
-                          onChange: controls.setColorPeak,
-                        },
-                      ],
-                    },
-                  ]}
+                <Slider
+                  label="Saturation"
+                  value={controls.saturation}
+                  min={PROTEAN_RANGES.saturation.min}
+                  max={PROTEAN_RANGES.saturation.max}
+                  step={PROTEAN_RANGES.saturation.step}
+                  onChange={controls.setSaturation}
+                  format={(v) => `×${v.toFixed(2)}`}
+                  info={INFO.saturation}
                 />
-              ) : null}
-              <Slider
-                label="Saturation"
-                value={controls.saturation}
-                min={PROTEAN_RANGES.saturation.min}
-                max={PROTEAN_RANGES.saturation.max}
-                step={PROTEAN_RANGES.saturation.step}
-                onChange={controls.setSaturation}
-                format={(v) => `×${v.toFixed(2)}`}
-                info={INFO.saturation}
-              />
+              </ControlCluster>
             </ControlSection>
 
             <VisualizerSection
