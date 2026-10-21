@@ -47,7 +47,7 @@ export function ColorTable({
     return (
         <div
             className={cn(
-                "border border-line/60 p-1.5",
+                "w-full min-w-0 max-w-full border border-line/60 p-1.5",
                 disabled && "pointer-events-none opacity-40",
                 className,
             )}

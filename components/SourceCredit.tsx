@@ -138,34 +138,43 @@ export function PlaceholderCredit({
   );
 }
 
-type ScreenCreditBarProps = {
+type ScreenTitleCreditProps = {
+  /** Panel chrome title — click opens about / credits. */
+  title: string;
   meta: PlaceholderMeta;
   className?: string;
 };
 
 /**
- * Overlay chrome: single `sources (c)` → about modal (credits / refs / AI).
+ * Overlay chrome title as a button: `TITLE (c)` → about modal.
  */
-export function ScreenCreditBar({ meta, className }: ScreenCreditBarProps) {
+export function ScreenTitleCredit({
+  title,
+  meta,
+  className,
+}: ScreenTitleCreditProps) {
   const sources = meta.sources ?? [];
   const hasSources = sources.length > 0;
   const [aboutOpen, setAboutOpen] = useState(false);
 
   return (
-    <div className={cn("flex max-w-full", className)}>
+    <>
       <PanelButton
         onClick={() => setAboutOpen(true)}
-        className="px-2 py-1 shadow-none"
         title="About / sources / credits"
+        className={cn(
+          "h-9 min-w-0 flex-1 justify-between gap-2 px-2.5 py-0 text-start text-sm tracking-[0.28em]",
+          className,
+        )}
       >
-        {hasSources ? "sources (c)" : "(c)"}
+        <span className="min-w-0 truncate">{title}</span>
+        <span className="shrink-0 text-[10px] tracking-[0.18em] text-muted" aria-hidden>
+          (c)
+        </span>
       </PanelButton>
 
       {aboutOpen ? (
-        <ScreenAbout
-          title={meta.title}
-          onClose={() => setAboutOpen(false)}
-        >
+        <ScreenAbout title={meta.title} onClose={() => setAboutOpen(false)}>
           <p className="text-muted normal-case tracking-normal">
             Monitron screen — generative fullscreen saver.
           </p>
@@ -181,6 +190,6 @@ export function ScreenCreditBar({ meta, className }: ScreenCreditBarProps) {
           </div>
         </ScreenAbout>
       ) : null}
-    </div>
+    </>
   );
 }

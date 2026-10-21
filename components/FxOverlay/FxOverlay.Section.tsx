@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  ControlCluster,
   ControlSection,
   Select,
   Slider,
@@ -53,6 +54,7 @@ function intensityInfo(mode: string): string {
 
 /**
  * Shared panel block — mounts just above VisualizerSection on every screen.
+ * Overlay pick = half-width like visualizer source; knobs = 2-col ControlCluster.
  */
 export function FxOverlaySection() {
   const overlay = useScreensOverlay();
@@ -65,108 +67,121 @@ export function FxOverlaySection() {
   const knobs = new Set<FxModeKnob>(mod?.knobs ?? []);
 
   return (
-    <ControlSection label="fx overlay" info={INFO.section} defaultOpen={false}>
-      <Select
-        label="Overlay"
-        value={fx.mode}
-        options={FX_MODE_OPTIONS}
-        onChange={fx.setMode}
-        info={
-          mod?.source
-            ? `${INFO.mode} Source: ${mod.source.title} — ${mod.source.author} (${mod.source.href}).`
-            : INFO.mode
-        }
-      />
-      {fx.mode !== "off" ? (
-        <>
-          {mod?.source ? (
-            <a
-              href={mod.source.href}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="truncate font-mono text-[9px] uppercase tracking-[0.14em] text-cyan/70 transition-colors hover:text-signal"
-              title={mod.source.title}
-            >
-              ref — {mod.source.author}
-              <span className="ml-1 text-muted/60">↗</span>
-            </a>
-          ) : null}
-          {knobs.has("intensity") ? (
-            <Slider
-              label="Intensity"
-              value={fx.intensity}
-              min={FX_RANGES.intensity.min}
-              max={FX_RANGES.intensity.max}
-              step={FX_RANGES.intensity.step}
-              onChange={fx.setIntensity}
-              format={(v) => {
-                if (fx.mode === "hue") return `${Math.round(v * 360)}°`;
-                if (fx.mode === "blur") return `${(v * 12).toFixed(1)}px`;
-                return v.toFixed(2);
-              }}
-              info={intensityInfo(fx.mode)}
-            />
-          ) : null}
-          {knobs.has("contrast") ? (
-            <Slider
-              label={fx.mode === "hue" ? "Saturate" : "Contrast"}
-              value={fx.contrast}
-              min={FX_RANGES.contrast.min}
-              max={FX_RANGES.contrast.max}
-              step={FX_RANGES.contrast.step}
-              onChange={fx.setContrast}
-              format={(v) => `×${v.toFixed(2)}`}
-              info={fx.mode === "hue" ? INFO.contrastHue : INFO.contrast}
-            />
-          ) : null}
-          {knobs.has("speed") ? (
-            <Slider
-              label="Speed"
-              value={fx.speed}
-              min={FX_RANGES.speed.min}
-              max={FX_RANGES.speed.max}
-              step={FX_RANGES.speed.step}
-              onChange={fx.setSpeed}
-              format={(v) =>
-                fx.mode === "hue"
-                  ? `${Math.round(v * 60)}°/s`
-                  : `×${v.toFixed(2)}`
-              }
-              info={fx.mode === "hue" ? INFO.speedHue : INFO.speed}
-            />
-          ) : null}
-          {knobs.has("particles") ? (
-            <Slider
-              label="Particles"
-              value={fx.particles}
-              min={FX_RANGES.particles.min}
-              max={FX_RANGES.particles.max}
-              step={FX_RANGES.particles.step}
-              onChange={fx.setParticles}
-              format={(v) => `×${v.toFixed(2)}`}
-              info={INFO.particles}
-            />
-          ) : null}
+    <ControlSection
+      label="fx overlay"
+      info={INFO.section}
+      defaultOpen={false}
+      className="@container w-full max-w-full"
+    >
+      <div className="flex w-full min-w-0 basis-full flex-col gap-1">
+        <div className="w-full min-w-0 max-w-[min(100%,50%)]">
           <Select
-            label="Blend (add-on)"
-            value={fx.blend}
-            options={FX_BLEND_OPTIONS}
-            onChange={fx.setBlend}
-            info={INFO.blend}
+            label="Overlay"
+            value={fx.mode}
+            options={FX_MODE_OPTIONS}
+            onChange={fx.setMode}
+            info={
+              mod?.source
+                ? `${INFO.mode} Source: ${mod.source.title} — ${mod.source.author} (${mod.source.href}).`
+                : INFO.mode
+            }
+            className="sm:max-w-none"
           />
-          {fx.blend !== "normal" ? (
-            <Slider
-              label="Wash"
-              value={fx.wash}
-              min={FX_RANGES.wash.min}
-              max={FX_RANGES.wash.max}
-              step={FX_RANGES.wash.step}
-              onChange={fx.setWash}
-              format={(v) => v.toFixed(2)}
-              info={INFO.wash}
+        </div>
+        {fx.mode !== "off" && mod?.source ? (
+          <a
+            href={mod.source.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="truncate font-mono text-[9px] uppercase tracking-[0.14em] text-cyan/70 transition-colors hover:text-signal"
+            title={mod.source.title}
+          >
+            ref — {mod.source.author}
+            <span className="ml-1 text-muted/60">↗</span>
+          </a>
+        ) : null}
+      </div>
+
+      {fx.mode !== "off" ? (
+        <div className="w-full min-w-0 basis-full">
+          <ControlCluster>
+            <Select
+              label="Blend (add-on)"
+              value={fx.blend}
+              options={FX_BLEND_OPTIONS}
+              onChange={fx.setBlend}
+              info={INFO.blend}
             />
-          ) : null}
-        </>
+            {fx.blend !== "normal" ? (
+              <Slider
+                label="Wash"
+                value={fx.wash}
+                min={FX_RANGES.wash.min}
+                max={FX_RANGES.wash.max}
+                step={FX_RANGES.wash.step}
+                onChange={fx.setWash}
+                format={(v) => v.toFixed(2)}
+                info={INFO.wash}
+              />
+            ) : null}
+            {knobs.has("intensity") ? (
+              <Slider
+                label="Intensity"
+                value={fx.intensity}
+                min={FX_RANGES.intensity.min}
+                max={FX_RANGES.intensity.max}
+                step={FX_RANGES.intensity.step}
+                onChange={fx.setIntensity}
+                format={(v) => {
+                  if (fx.mode === "hue") return `${Math.round(v * 360)}°`;
+                  if (fx.mode === "blur") return `${(v * 12).toFixed(1)}px`;
+                  return v.toFixed(2);
+                }}
+                info={intensityInfo(fx.mode)}
+              />
+            ) : null}
+            {knobs.has("contrast") ? (
+              <Slider
+                label={fx.mode === "hue" ? "Saturate" : "Contrast"}
+                value={fx.contrast}
+                min={FX_RANGES.contrast.min}
+                max={FX_RANGES.contrast.max}
+                step={FX_RANGES.contrast.step}
+                onChange={fx.setContrast}
+                format={(v) => `×${v.toFixed(2)}`}
+                info={fx.mode === "hue" ? INFO.contrastHue : INFO.contrast}
+              />
+            ) : null}
+            {knobs.has("speed") ? (
+              <Slider
+                label="Speed"
+                value={fx.speed}
+                min={FX_RANGES.speed.min}
+                max={FX_RANGES.speed.max}
+                step={FX_RANGES.speed.step}
+                onChange={fx.setSpeed}
+                format={(v) =>
+                  fx.mode === "hue"
+                    ? `${Math.round(v * 60)}°/s`
+                    : `×${v.toFixed(2)}`
+                }
+                info={fx.mode === "hue" ? INFO.speedHue : INFO.speed}
+              />
+            ) : null}
+            {knobs.has("particles") ? (
+              <Slider
+                label="Particles"
+                value={fx.particles}
+                min={FX_RANGES.particles.min}
+                max={FX_RANGES.particles.max}
+                step={FX_RANGES.particles.step}
+                onChange={fx.setParticles}
+                format={(v) => `×${v.toFixed(2)}`}
+                info={INFO.particles}
+              />
+            ) : null}
+          </ControlCluster>
+        </div>
       ) : null}
     </ControlSection>
   );

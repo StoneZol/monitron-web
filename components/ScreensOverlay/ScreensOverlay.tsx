@@ -41,8 +41,11 @@ const ScreensOverlay = ({ screenId, children }: ScreensOverlayProps) => {
       value={{ screenId, hide, sync, hasPeers }}
     >
       <FxOverlayLayer screenId={screenId} />
-      <div className="absolute inset-0 z-10 flex h-screen w-screen items-center justify-center">
-        <div className="relative z-20 w-80">{children}</div>
+      <div className="absolute inset-0 z-10 flex h-dvh w-full items-center justify-center p-2 sm:p-4">
+        {/* 1 col · 2 @ md · 3 subsection chips @ lg (15.5rem × 3) */}
+        <div className="relative z-20 w-full max-w-[min(100%,22rem)] md:max-w-[min(100%,34rem)] lg:max-w-[min(100%,50rem)]">
+          {children}
+        </div>
       </div>
     </ScreensOverlayContext.Provider>
   );

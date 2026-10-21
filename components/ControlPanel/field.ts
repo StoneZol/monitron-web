@@ -1,8 +1,16 @@
 import { cn } from "@/lib/utils";
 
-/** Shared ControlPanel field rhythm — label + control, separation via parent gaps */
+/**
+ * Shared ControlPanel field rhythm.
+ * Always bound by parent width (`max-w-full`) so wrap chips never spill
+ * into the next column. Cap width on sm+ so rows of knobs stay compact.
+ */
 export const fieldRoot =
-  "flex flex-col gap-0.5 text-[10px] uppercase tracking-[0.2em]";
+  "flex w-full min-w-0 max-w-full flex-col gap-0.5 self-start text-[10px] uppercase tracking-[0.2em] sm:max-w-42";
+
+/** Wider blocks (media / bus / twinkle) — still clipped to parent */
+export const fieldBlock =
+  "w-full min-w-0 max-w-full self-start";
 
 export const fieldLabelRow =
   "flex h-3.5 shrink-0 items-center justify-between gap-2 leading-none";

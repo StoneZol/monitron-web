@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 import { FieldLabel } from "./FieldInfo";
 import {
@@ -27,6 +28,8 @@ type SelectProps<T extends string = string> = {
   info?: string;
   className?: string;
 };
+
+type ListCoords = { top: number; left: number; width: number };
 
 function stepEnabledIndex<T extends string>(
   options: SelectOption<T>[],
@@ -55,15 +58,60 @@ export function Select<T extends string>({
   className,
 }: SelectProps<T>) {
   const [open, setOpen] = useState(false);
+  const [coords, setCoords] = useState<ListCoords | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const listRef = useRef<HTMLUListElement>(null);
   const listId = useId();
   const selected = options.find((o) => o.value === value) ?? options[0];
   const canStep = options.filter((o) => !o.disabled).length > 1;
 
+  useLayoutEffect(() => {
+    if (!open) {
+      setCoords(null);
+      return;
+    }
+
+    const place = () => {
+      const btn = triggerRef.current?.getBoundingClientRect();
+      if (!btn) return;
+
+      const listEl = listRef.current;
+      const listH = listEl?.offsetHeight ?? 192;
+      const gap = 4;
+      const pad = 8;
+
+      let top = btn.bottom + gap;
+      if (top + listH > window.innerHeight - pad) {
+        top = Math.max(pad, btn.top - listH - gap);
+      }
+
+      let left = btn.left;
+      left = Math.min(left, window.innerWidth - btn.width - pad);
+      left = Math.max(pad, left);
+
+      setCoords({ top, left, width: btn.width });
+    };
+
+    place();
+    const raf = requestAnimationFrame(place);
+
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place, true);
+
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", place, true);
+    };
+  }, [open, options.length]);
+
   useEffect(() => {
     if (!open) return;
     const onDoc = (e: MouseEvent) => {
-      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
+      const t = e.target as Node;
+      if (rootRef.current?.contains(t) || listRef.current?.contains(t)) return;
+      setOpen(false);
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setOpen(false);
@@ -106,6 +154,7 @@ export function Select<T extends string>({
         </button>
         <div className="relative min-w-0 flex-1">
           <button
+            ref={triggerRef}
             type="button"
             role="combobox"
             aria-expanded={open}
@@ -124,46 +173,60 @@ export function Select<T extends string>({
               {open ? "▴" : "▾"}
             </span>
           </button>
-          {open ? (
-            <ul
-              id={listId}
-              role="listbox"
-              className="absolute top-full left-0 z-30 mt-1 max-h-48 w-full overflow-y-auto border border-signal bg-screen/95 shadow-[2px_2px_0_var(--magenta)] backdrop-blur-sm"
-            >
-              {options.map((opt) => {
-                const active = opt.value === value;
-                const optDisabled = Boolean(opt.disabled);
-                return (
-                  <li
-                    key={opt.value}
-                    role="option"
-                    aria-selected={active}
-                    aria-disabled={optDisabled || undefined}
-                  >
-                    <button
-                      type="button"
-                      disabled={optDisabled}
-                      className={cn(
-                        "flex w-full px-2 py-1.5 text-left text-[10px] uppercase tracking-[0.18em]",
-                        optDisabled
-                          ? "cursor-not-allowed text-muted opacity-40"
-                          : active
-                            ? "bg-signal/20 text-cyan"
-                            : "text-signal hover:bg-signal/10 hover:text-cyan",
-                      )}
-                      onClick={() => {
-                        if (optDisabled) return;
-                        onChange(opt.value);
-                        setOpen(false);
-                      }}
-                    >
-                      {opt.label}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          ) : null}
+          {open
+            ? createPortal(
+                <ul
+                  ref={listRef}
+                  id={listId}
+                  role="listbox"
+                  style={
+                    coords
+                      ? {
+                          top: coords.top,
+                          left: coords.left,
+                          width: coords.width,
+                        }
+                      : { top: 0, left: 0, width: 0, visibility: "hidden" }
+                  }
+                  className="fixed z-50 max-h-48 overflow-y-auto border border-signal bg-screen/95 shadow-[2px_2px_0_var(--magenta)] backdrop-blur-sm"
+                  onMouseDown={(e) => e.stopPropagation()}
+                >
+                  {options.map((opt) => {
+                    const active = opt.value === value;
+                    const optDisabled = Boolean(opt.disabled);
+                    return (
+                      <li
+                        key={opt.value}
+                        role="option"
+                        aria-selected={active}
+                        aria-disabled={optDisabled || undefined}
+                      >
+                        <button
+                          type="button"
+                          disabled={optDisabled}
+                          className={cn(
+                            "flex w-full px-2 py-1.5 text-left text-[10px] uppercase tracking-[0.18em]",
+                            optDisabled
+                              ? "cursor-not-allowed text-muted opacity-40"
+                              : active
+                                ? "bg-signal/20 text-cyan"
+                                : "text-signal hover:bg-signal/10 hover:text-cyan",
+                          )}
+                          onClick={() => {
+                            if (optDisabled) return;
+                            onChange(opt.value);
+                            setOpen(false);
+                          }}
+                        >
+                          {opt.label}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>,
+                document.body,
+              )
+            : null}
         </div>
         <button
           type="button"

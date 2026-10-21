@@ -44,6 +44,8 @@ export type AudioFrame = {
 export type AudioHello = {
   source: typeof AUDIO_BUS_SOURCE;
   type: typeof AUDIO_HELLO_TYPE;
+  /** Extension manifest version (plugin ≥1.6 with version field). Older builds omit this. */
+  version?: string;
 };
 
 export type AudioHelloRequest = {
@@ -137,7 +139,11 @@ export function isAudioFrame(data: unknown): data is AudioFrame {
 export function isAudioHello(data: unknown): data is AudioHello {
   if (!data || typeof data !== "object") return false;
   const msg = data as Record<string, unknown>;
-  return msg.source === AUDIO_BUS_SOURCE && msg.type === AUDIO_HELLO_TYPE;
+  if (msg.source !== AUDIO_BUS_SOURCE || msg.type !== AUDIO_HELLO_TYPE) {
+    return false;
+  }
+  if (msg.version != null && typeof msg.version !== "string") return false;
+  return true;
 }
 
 export function isAudioTabTitle(data: unknown): data is AudioTabTitle {
@@ -172,7 +178,7 @@ export function postHelloRequest() {
 
 /**
  * Extension → page:
- *   { source: 'monitron-extension', type: 'hello' }
+ *   { source: 'monitron-extension', type: 'hello', version? }
  *   { source: 'monitron-extension', type: 'audio-frame', t, sampleRate, bands[], rms, peak }
  *   { source: 'monitron-extension', type: 'tab-title', title, t }  // low-rate, parallel
  * Page → extension:
@@ -180,14 +186,14 @@ export function postHelloRequest() {
  *   { source: 'monitron-page', type: 'visualizer-toggle', enabled }
  */
 export function subscribeAudioBus(handlers: {
-  onHello?: () => void;
+  onHello?: (hello: AudioHello) => void;
   onFrame?: (frame: AudioFrame) => void;
   onTabTitle?: (msg: AudioTabTitle) => void;
 }): () => void {
   const onMessage = (event: MessageEvent) => {
     if (event.source !== window && event.source != null) return;
     if (isAudioHello(event.data)) {
-      handlers.onHello?.();
+      handlers.onHello?.(event.data);
       return;
     }
     if (isAudioTabTitle(event.data)) {

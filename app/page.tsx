@@ -1,12 +1,13 @@
+import { ChannelCatalog } from "@/components/ChannelCatalog";
 import { HomePluginListen } from "@/components/HomePluginListen";
-import { PlaceholderGrid } from "@/components/PlaceholderGrid";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { panelButtonClassName } from "@/components/ControlPanel/PanelButton";
 import { PLUGIN_URL } from "@/lib/audioBus";
-import { placeholders } from "@/lib/placeholders";
+import { placeholderChapters, placeholders } from "@/lib/placeholders";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
+import { Suspense } from "react";
 
 export default function Home() {
     return (
@@ -102,15 +103,19 @@ export default function Home() {
                     />
                 </header>
 
-                <section aria-label="Available placeholders">
-                    <div className="mb-6">
-                        <h2 className="font-mono text-[11px] uppercase tracking-[0.28em] text-signal">
-                            ::channels
-                        </h2>
-                    </div>
-
-                    <PlaceholderGrid placeholders={placeholders} />
-                </section>
+                <Suspense
+                    fallback={
+                        <section aria-label="Available placeholders">
+                            <div className="mb-6">
+                                <h2 className="font-mono text-[11px] uppercase tracking-[0.28em] text-signal">
+                                    ::channels
+                                </h2>
+                            </div>
+                        </section>
+                    }
+                >
+                    <ChannelCatalog chapters={placeholderChapters} />
+                </Suspense>
             </main>
 
             <SiteFooter />

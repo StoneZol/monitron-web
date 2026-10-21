@@ -1,8 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { useSyncExternalStore } from "react";
 import { SensitivePreviewToggle } from "@/components/SensitivePreviewToggle";
 import { PLUGIN_URL, WEB_URL } from "@/lib/audioBus";
+import {
+  getPluginLiveVersion,
+  getPluginPresent,
+  subscribePluginPresence,
+} from "@/lib/pluginPresence";
 import { PLUGIN_VERSION, SITE_VERSION } from "@/lib/versions";
 import { cn } from "@/lib/utils";
 
@@ -10,8 +16,25 @@ type SiteHeaderProps = {
   className?: string;
 };
 
+function usePluginVersionLabel(): string {
+  const live = useSyncExternalStore(
+    subscribePluginPresence,
+    getPluginLiveVersion,
+    () => null,
+  );
+  const on = useSyncExternalStore(
+    subscribePluginPresence,
+    getPluginPresent,
+    () => false,
+  );
+  if (on && live) return live;
+  return PLUGIN_VERSION;
+}
+
 /** Slim top chrome for catalog / guide — carries the sensitive-preview gate. */
 export function SiteHeader({ className }: SiteHeaderProps) {
+  const pluginVer = usePluginVersionLabel();
+
   return (
     <header
       className={cn(
@@ -59,9 +82,9 @@ export function SiteHeader({ className }: SiteHeaderProps) {
             target="_blank"
             rel="noopener noreferrer"
             className="text-muted/70 transition-colors hover:text-cyan"
-            title="monitron-plugin on GitHub"
+            title="Installed build when plugin is online; else target release"
           >
-            <span className="text-cyan/80">plugin</span> {PLUGIN_VERSION}
+            <span className="text-cyan/80">plugin</span> {pluginVer}
           </a>
         </nav>
 

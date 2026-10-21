@@ -1,5 +1,9 @@
+"use client";
+
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { panelButtonClassName } from "@/components/ControlPanel/PanelButton";
+import { homeHrefFromViaParam } from "@/lib/catalogVia";
 import { cn } from "@/lib/utils";
 
 type NavBackButtonProps = {
@@ -10,18 +14,21 @@ type NavBackButtonProps = {
 };
 
 export function NavBackButton({
-  href = "/",
+  href,
   label = "Back",
   className,
 }: NavBackButtonProps) {
+  const searchParams = useSearchParams();
+  const resolvedHref = href ?? homeHrefFromViaParam(searchParams.get("via"));
+
   return (
     <Link
-      href={href}
+      href={resolvedHref}
       aria-label={label}
       title={label}
       className={cn(
         panelButtonClassName,
-        "inline-flex size-7 shrink-0 items-center justify-center p-0 text-base leading-none",
+        "inline-flex h-9 w-9 shrink-0 items-center justify-center p-0 text-base leading-none",
         className,
       )}
     >

@@ -1,4 +1,5 @@
 export { ControlPanel, ControlSection, ControlSubSection } from "./ControlPanel";
+export { ControlCluster } from "./ControlCluster";
 export { PanelButton, panelButtonClassName } from "./PanelButton";
 export { Toggle } from "./Toggle";
 export {

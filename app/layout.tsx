@@ -2,6 +2,7 @@ import { Chakra_Petch, Geist_Mono } from "next/font/google";
 import { ConsentTripwire } from "@/components/ConsentTripwire";
 import { PhotosensitiveAlert } from "@/components/PhotosensitiveAlert";
 import { SensitiveTripwire } from "@/components/SensitiveTripwire";
+import { Analytics } from "@vercel/analytics/next"
 import { rootMetadata } from "@/lib/seo";
 import "./globals.css";
 
@@ -35,10 +36,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
 `,
                     }}
                 />
-        <PhotosensitiveAlert />
-        <ConsentTripwire />
-        <SensitiveTripwire />
-        {children}
+                <PhotosensitiveAlert />
+                <ConsentTripwire />
+                <SensitiveTripwire />
+                {children}
+                <Analytics />
             </body>
         </html>
     );

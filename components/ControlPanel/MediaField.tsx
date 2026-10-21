@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
 import { FieldLabel } from "./FieldInfo";
-import { fieldLabelRow, fieldRoot } from "./field";
+import { fieldBlock, fieldLabelRow, fieldRoot } from "./field";
 import { panelButtonClassName } from "./PanelButton";
 import {
   addMediaFromUrl,
@@ -22,13 +22,22 @@ import {
   type MediaLibraryEntry,
   type SessionMediaEntry,
 } from "@/lib/userMedia";
+import {
+  getSessionVideo,
+  removeSessionVideo,
+  SESSION_VIDEO_MAX,
+  SESSION_VIDEO_MAX_BYTES,
+  setSessionVideoFromFile,
+  subscribeSessionVideo,
+} from "@/lib/sessionVideo";
 import type { StockPlaceholder } from "@/lib/stockPlaceholders";
 import { cn } from "@/lib/utils";
 
 export type MediaSelection =
   | { kind: "stock"; id: string }
   | { kind: "library"; id: string }
-  | { kind: "session"; id: string };
+  | { kind: "session"; id: string }
+  | { kind: "video"; id: string };
 
 export type MediaFieldProps = {
   label: string;
@@ -38,6 +47,8 @@ export type MediaFieldProps = {
   info?: string;
   className?: string;
   disabled?: boolean;
+  /** Show session video slot (Wet Glass). Mutex with still slideshow. */
+  enableVideo?: boolean;
 };
 
 const EMPTY_LIB: MediaLibraryEntry[] = [];
@@ -56,6 +67,14 @@ function useSession(): SessionMediaEntry[] {
     subscribeUserMedia,
     listSessionMedia,
     () => EMPTY_SESSION,
+  );
+}
+
+function useSessionVideo() {
+  return useSyncExternalStore(
+    subscribeSessionVideo,
+    getSessionVideo,
+    () => null,
   );
 }
 
@@ -159,14 +178,18 @@ export function MediaField({
   info,
   className,
   disabled = false,
+  enableVideo = false,
 }: MediaFieldProps) {
   const urlInputId = useId();
   const fileRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLInputElement>(null);
   const library = useLibrary();
   const session = useSession();
+  const video = useSessionVideo();
   const [urlDraft, setUrlDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const videoMaxMb = Math.round(SESSION_VIDEO_MAX_BYTES / (1024 * 1024));
 
   const stockSrc =
     value.kind === "stock"
@@ -182,13 +205,15 @@ export function MediaField({
       });
     } else if (value.kind === "session") {
       setLibThumb(getSessionMediaEntry(value.id)?.previewUrl ?? null);
+    } else if (value.kind === "video") {
+      setLibThumb(getSessionVideo()?.objectUrl ?? null);
     } else {
       setLibThumb(null);
     }
     return () => {
       dead = true;
     };
-  }, [value]);
+  }, [value, video]);
 
   const previewSrc =
     value.kind === "stock"
@@ -200,7 +225,18 @@ export function MediaField({
       ? (getMediaLibraryEntry(value.id)?.name ?? "library")
       : value.kind === "session"
         ? `${getSessionMediaEntry(value.id)?.name ?? "file"} · session`
-        : `stock ${value.id}`;
+        : value.kind === "video"
+          ? `${getSessionVideo()?.name ?? "video"} · video`
+          : `stock ${value.id}`;
+
+  const pickVideo = async (files: FileList | null) => {
+    const file = files?.[0];
+    if (!file) return;
+    await run(async () => {
+      const entry = await setSessionVideoFromFile(file);
+      onChange({ kind: "video", id: entry.id });
+    });
+  };
 
   const run = async (fn: () => Promise<void>) => {
     setBusy(true);
@@ -247,7 +283,7 @@ export function MediaField({
   const stockFallback = stocks[0]?.id ?? "1";
 
   return (
-    <div className={cn(fieldRoot, className)}>
+    <div className={cn(fieldRoot, fieldBlock, "sm:max-w-72", className)}>
       <div className={fieldLabelRow}>
         <FieldLabel label={label} info={info} />
       </div>
@@ -258,7 +294,15 @@ export function MediaField({
             className="relative h-14 w-20 shrink-0 overflow-hidden border border-signal bg-screen"
             aria-hidden
           >
-            {previewSrc ? (
+            {previewSrc && value.kind === "video" ? (
+              // eslint-disable-next-line jsx-a11y/media-has-caption
+              <video
+                src={previewSrc}
+                muted
+                playsInline
+                className="h-full w-full object-cover"
+              />
+            ) : previewSrc ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={previewSrc}
@@ -407,6 +451,76 @@ export function MediaField({
           </button>
         </div>
 
+        {enableVideo ? (
+          <div>
+            <p className="mb-0.5 font-mono text-[8px] uppercase tracking-[0.16em] text-muted">
+              video · session · {video ? 1 : 0}/{SESSION_VIDEO_MAX}
+            </p>
+            <p className="mb-1 font-mono text-[9px] normal-case leading-snug tracking-normal text-muted/80">
+              One clip, max {videoMaxMb} MB. Turns off slideshow / track
+              change. Sync pushes the file to peer tabs (can hitch on big
+              clips).
+            </p>
+            {video ? (
+              <div className="mb-1 grid grid-cols-4 gap-1.5">
+                <div className="relative">
+                  <button
+                    type="button"
+                    disabled={disabled || busy}
+                    title={`${video.name} (video)`}
+                    aria-pressed={
+                      value.kind === "video" && value.id === video.id
+                    }
+                    onClick={() =>
+                      onChange({ kind: "video", id: video.id })
+                    }
+                    className={cn(
+                      "relative aspect-video w-full overflow-hidden border bg-screen",
+                      value.kind === "video" && value.id === video.id
+                        ? "border-cyan"
+                        : "border-signal hover:border-cyan/70",
+                      "disabled:opacity-40",
+                    )}
+                  >
+                    {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+                    <video
+                      src={video.objectUrl}
+                      muted
+                      playsInline
+                      className="h-full w-full object-cover"
+                    />
+                  </button>
+                  <button
+                    type="button"
+                    disabled={disabled || busy}
+                    title="Remove"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const was =
+                        value.kind === "video" && value.id === video.id;
+                      removeSessionVideo(video.id);
+                      if (was) {
+                        onChange({ kind: "stock", id: stockFallback });
+                      }
+                    }}
+                    className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center border border-signal bg-screen text-[9px] text-muted hover:border-danger hover:text-danger"
+                  >
+                    ×
+                  </button>
+                </div>
+              </div>
+            ) : null}
+            <button
+              type="button"
+              disabled={disabled || busy}
+              className={cn(panelButtonClassName, "px-2 py-1 shadow-none")}
+              onClick={() => videoRef.current?.click()}
+            >
+              {video ? "replace video" : "upload video"}
+            </button>
+          </div>
+        ) : null}
+
         {error ? (
           <p className="font-mono text-[9px] normal-case tracking-normal text-danger">
             {error}
@@ -425,6 +539,18 @@ export function MediaField({
           e.target.value = "";
         }}
       />
+      {enableVideo ? (
+        <input
+          ref={videoRef}
+          type="file"
+          accept="video/*,.mp4,.webm,.ogg,.mov,.m4v"
+          className="hidden"
+          onChange={(e) => {
+            void pickVideo(e.target.files);
+            e.target.value = "";
+          }}
+        />
+      ) : null}
     </div>
   );
 }
