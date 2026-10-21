@@ -5,6 +5,10 @@ import {
   postHelloRequest,
   subscribeAudioBus,
 } from "@/lib/audioBus";
+import {
+  notePluginGone,
+  notePluginHello,
+} from "@/lib/pluginPresence";
 
 const HELLO_STALE_MS = 6000;
 const TITLE_STALE_MS = 2500;
@@ -17,11 +21,12 @@ function truncateTitle(title: string, max = 42): string {
 }
 
 /**
- * Home-only listener: plugin hello + tab-title stream.
+ * Home-only listener: plugin hello (+ version) + tab-title stream.
  * Lives outside visualizer / viz lease — just presence + now-playing label.
  */
 export function HomePluginListen() {
   const [pluginOn, setPluginOn] = useState(false);
+  const [pluginVer, setPluginVer] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [streamOn, setStreamOn] = useState(false);
 
@@ -30,13 +35,18 @@ export function HomePluginListen() {
     let lastTitle = 0;
     let alive = true;
 
-    const markHello = () => {
+    const markHello = (version?: string) => {
       lastHello = performance.now();
-      if (alive) setPluginOn(true);
+      if (!alive) return;
+      setPluginOn(true);
+      if (version?.trim()) setPluginVer(version.trim());
     };
 
     const unsub = subscribeAudioBus({
-      onHello: markHello,
+      onHello: (hello) => {
+        notePluginHello(hello);
+        markHello(hello.version);
+      },
       onTabTitle: (msg) => {
         markHello();
         lastTitle = performance.now();
@@ -51,6 +61,8 @@ export function HomePluginListen() {
       const now = performance.now();
       if (lastHello > 0 && now - lastHello > HELLO_STALE_MS) {
         setPluginOn(false);
+        setPluginVer(null);
+        notePluginGone();
       }
       if (lastTitle > 0 && now - lastTitle > TITLE_STALE_MS) {
         setStreamOn(false);
@@ -68,6 +80,8 @@ export function HomePluginListen() {
     };
   }, []);
 
+  const verLabel = pluginVer ? `v${pluginVer}` : null;
+
   if (!pluginOn) {
     return (
       <>
@@ -82,6 +96,12 @@ export function HomePluginListen() {
     return (
       <>
         <span className="text-cyan">plugin</span>
+        {verLabel ? (
+          <>
+            <span className="text-muted">/</span>
+            <span className="text-signal/80">{verLabel}</span>
+          </>
+        ) : null}
         <span className="text-muted">/</span>
         <span className="text-warn">idle</span>
       </>
@@ -91,6 +111,12 @@ export function HomePluginListen() {
   return (
     <>
       <span className="text-cyan">plugin</span>
+      {verLabel ? (
+        <>
+          <span className="text-muted">/</span>
+          <span className="text-signal/80">{verLabel}</span>
+        </>
+      ) : null}
       <span className="text-muted">/</span>
       <span className="text-signal">live</span>
       <span className="text-muted">/</span>

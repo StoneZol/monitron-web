@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { postHelloRequest, subscribeAudioBus } from "@/lib/audioBus";
+import { notePluginGone, notePluginHello } from "@/lib/pluginPresence";
 
 const HELLO_STALE_MS = 6000;
 const HELLO_POLL_MS = 2000;
@@ -23,7 +24,10 @@ export function usePluginPresent(): boolean {
     };
 
     const unsub = subscribeAudioBus({
-      onHello: mark,
+      onHello: (hello) => {
+        notePluginHello(hello);
+        mark();
+      },
       onTabTitle: mark,
       onFrame: mark,
     });
@@ -32,6 +36,7 @@ export function usePluginPresent(): boolean {
       postHelloRequest();
       if (lastHello > 0 && performance.now() - lastHello > HELLO_STALE_MS) {
         setPresent(false);
+        notePluginGone();
       }
     };
 

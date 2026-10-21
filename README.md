@@ -301,10 +301,11 @@ Authoritative types live in [`lib/audioBus.ts`](lib/audioBus.ts). Screens derive
 **Presence**
 
 ```ts
-{ source: "monitron-extension", type: "hello" }
+{ source: "monitron-extension", type: "hello", version?: string }
 ```
 
 Shows the ControlPanel visualizer section (sets **extension** = true).
+`version` is the extension manifest build (plugin ≥1.6) — home / header show it live.
 
 **Frame** (raw analyser dump)
 
