@@ -2,6 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 import { ScreensOverlay } from "@/components/ScreensOverlay";
+import { FxOverlaySection } from "@/components/FxOverlay";
 import {
   ControlPanel,
   ControlSection,
@@ -210,6 +211,8 @@ const Wetglass = ({ showOverlay = true }: WetglassProps) => {
                 info={INFO.lightning}
               />
             </ControlSection>
+
+            <FxOverlaySection />
           </ControlPanel>
         </ScreensOverlay>
       ) : null}

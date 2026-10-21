@@ -12,6 +12,7 @@ import {
 import {
   getMediaLibraryEntry,
   getSessionMediaEntry,
+  libraryImageSrc,
 } from "@/lib/userMedia";
 import { setBgCropFromAspects } from "./Wetglass.bgCrop";
 import type { WetglassLive } from "./Wetglass.types";
@@ -52,7 +53,8 @@ function resolveBgUrl(live: WetglassLive): { key: string; url: string } {
   }
   if (live.bgSource === "library" && live.libraryId) {
     const entry = getMediaLibraryEntry(live.libraryId);
-    if (entry) return { key: `lib:${entry.id}`, url: entry.url };
+    // Remote URLs via same-origin proxy (prod CORS / hotlink 403)
+    if (entry) return { key: `lib:${entry.id}`, url: libraryImageSrc(entry) };
   }
   const stockId = live.stockId || DEFAULT_STOCK_ID;
   return { key: `stock:${stockId}`, url: stockPlaceholderSrc(stockId) };

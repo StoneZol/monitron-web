@@ -3,7 +3,10 @@
  * - Up to MEDIA_LIBRARY_MAX http(s) URLs (full image loaded live from URL).
  * - IndexedDB keeps only tiny preview blobs (PREVIEW_W×PREVIEW_H) for URL thumbs.
  * - Local file picks are SESSION-ONLY (memory) — gone after refresh / new tab.
+ * - External URL bytes go through /api/media-proxy (CORS / hotlink 403 in prod).
  */
+
+import { assertPublicHttpUrl, proxiedMediaUrl } from "@/lib/mediaProxy";
 
 export const MEDIA_LIBRARY_MAX = 20;
 export const SESSION_MEDIA_MAX = 20;
@@ -298,15 +301,7 @@ export async function addMediaFromUrl(
 ): Promise<MediaLibraryEntry> {
   const trimmed = rawUrl.trim();
   if (!trimmed) throw new Error("Empty URL");
-  let parsed: URL;
-  try {
-    parsed = new URL(trimmed);
-  } catch {
-    throw new Error("Invalid URL");
-  }
-  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
-    throw new Error("Only http(s) URLs");
-  }
+  const parsed = assertPublicHttpUrl(trimmed);
 
   const list = readList();
   const existing = list.find((e) => e.url === parsed.toString());
@@ -316,8 +311,18 @@ export async function addMediaFromUrl(
     throw new Error(`Library full (${MEDIA_LIBRARY_MAX} URLs max)`);
   }
 
-  const res = await fetch(parsed.toString(), { mode: "cors" });
-  if (!res.ok) throw new Error(`Fetch failed (${res.status})`);
+  // Same-origin proxy — direct cors fetch 403s on many CDNs in production
+  const res = await fetch(proxiedMediaUrl(parsed.toString()));
+  if (!res.ok) {
+    let detail = "";
+    try {
+      const j = (await res.json()) as { error?: string };
+      if (j.error) detail = `: ${j.error}`;
+    } catch {
+      /* body may be binary on success paths only */
+    }
+    throw new Error(`Fetch failed (${res.status})${detail}`);
+  }
   const full = await res.blob();
   if (full.type && !IMAGE_MIME.test(full.type)) {
     throw new Error("URL did not return an image");
@@ -335,6 +340,11 @@ export async function addMediaFromUrl(
   };
   writeList([entry, ...list]);
   return entry;
+}
+
+/** Draw-time URL for a library entry (proxied when remote). */
+export function libraryImageSrc(entry: MediaLibraryEntry): string {
+  return proxiedMediaUrl(entry.url);
 }
 
 export async function removeMediaLibraryEntry(id: string): Promise<void> {
