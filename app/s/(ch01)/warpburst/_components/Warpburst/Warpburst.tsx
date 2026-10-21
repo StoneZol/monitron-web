@@ -4,6 +4,7 @@ import { ScreensOverlay } from "@/components/ScreensOverlay";
 import { VisualizerSection } from "@/components/VisualizerSection";
 import {
   ColorTable,
+  ControlCluster,
   ControlPanel,
   ControlSection,
   ControlSubSection,
@@ -91,118 +92,126 @@ const Warpburst = ({ showOverlay = true }: WarpburstProps) => {
             onFullscreen={controls.fullscreen}
           >
             <ControlSection label="look" info={INFO.look}>
-              <Slider
-                label="Flight speed"
-                value={controls.flightSpeed}
-                min={WARPBURST_RANGES.flightSpeed.min}
-                max={WARPBURST_RANGES.flightSpeed.max}
-                step={WARPBURST_RANGES.flightSpeed.step}
-                onChange={controls.setFlightSpeed}
-                format={(v) => `×${v.toFixed(2)}`}
-                info={INFO.flightSpeed}
-              />
-              <Select
-                label="Camera"
-                value={controls.cameraMode}
-                options={CAMERA_MODE_OPTIONS}
-                onChange={controls.setCameraMode}
-                info={INFO.cameraMode}
-              />
-              {camFlex ? (
+              <ControlCluster layout="stack" className="w-full basis-full">
+                <TwinkleControls
+                  title="twinkle"
+                  checked={controls.twinkle}
+                  onCheckedChange={controls.setTwinkle}
+                  speed={controls.twinkleSpeed}
+                  onSpeedChange={controls.setTwinkleSpeed}
+                  s={controls.twinkleS}
+                  onSChange={controls.setTwinkleS}
+                  l={controls.twinkleL}
+                  onLChange={controls.setTwinkleL}
+                  info={INFO.twinkle}
+                  speedInfo={INFO.twinkleSpeed}
+                  sInfo={INFO.twinkleS}
+                  lInfo={INFO.twinkleL}
+                />
+                {!controls.twinkle ? (
+                  <ColorTable
+                    label="color palette"
+                    info={INFO.colorPalette}
+                    columns={["idle", "peak"]}
+                    lockedColumns={audioLocked ? ["peak"] : []}
+                    columnStamps={audioStamp}
+                    rows={[
+                      {
+                        label: "tint",
+                        cells: [
+                          {
+                            value: controls.color,
+                            onChange: controls.setColor,
+                          },
+                          {
+                            value: controls.colorPeak,
+                            onChange: controls.setColorPeak,
+                          },
+                        ],
+                      },
+                    ]}
+                  />
+                ) : null}
+              </ControlCluster>
+
+              <ControlSubSection label="camera" info={INFO.cameraMode}>
+                <Select
+                  label="Camera"
+                  value={controls.cameraMode}
+                  options={CAMERA_MODE_OPTIONS}
+                  onChange={controls.setCameraMode}
+                  info={INFO.cameraMode}
+                />
+                {camFlex ? (
+                  <Slider
+                    label="Camera bank"
+                    value={controls.cameraBank}
+                    min={WARPBURST_RANGES.cameraBank.min}
+                    max={WARPBURST_RANGES.cameraBank.max}
+                    step={WARPBURST_RANGES.cameraBank.step}
+                    onChange={controls.setCameraBank}
+                    format={(v) => `×${v.toFixed(2)}`}
+                    info={INFO.cameraBank}
+                  />
+                ) : null}
+                {camManual ? (
+                  <ControlCluster className="grid-cols-1 gap-4 sm:grid-cols-2">
+                    <Slider
+                      label="X"
+                      value={controls.yaw}
+                      min={WARPBURST_RANGES.yaw.min}
+                      max={WARPBURST_RANGES.yaw.max}
+                      step={WARPBURST_RANGES.yaw.step}
+                      onChange={controls.setYaw}
+                      format={(v) => `${v.toFixed(1)}°`}
+                      info={INFO.yaw}
+                    />
+                    <Slider
+                      label="Y"
+                      value={controls.pitch}
+                      min={WARPBURST_RANGES.pitch.min}
+                      max={WARPBURST_RANGES.pitch.max}
+                      step={WARPBURST_RANGES.pitch.step}
+                      onChange={controls.setPitch}
+                      format={(v) => `${v.toFixed(1)}°`}
+                      info={INFO.pitch}
+                    />
+                  </ControlCluster>
+                ) : null}
+              </ControlSubSection>
+
+              <ControlCluster className="w-full basis-full grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <Slider
-                  label="Camera bank"
-                  value={controls.cameraBank}
-                  min={WARPBURST_RANGES.cameraBank.min}
-                  max={WARPBURST_RANGES.cameraBank.max}
-                  step={WARPBURST_RANGES.cameraBank.step}
-                  onChange={controls.setCameraBank}
+                  label="Flight speed"
+                  value={controls.flightSpeed}
+                  min={WARPBURST_RANGES.flightSpeed.min}
+                  max={WARPBURST_RANGES.flightSpeed.max}
+                  step={WARPBURST_RANGES.flightSpeed.step}
+                  onChange={controls.setFlightSpeed}
                   format={(v) => `×${v.toFixed(2)}`}
-                  info={INFO.cameraBank}
+                  info={INFO.flightSpeed}
                 />
-              ) : null}
-              {camManual ? (
-                <>
-                  <Slider
-                    label="X"
-                    value={controls.yaw}
-                    min={WARPBURST_RANGES.yaw.min}
-                    max={WARPBURST_RANGES.yaw.max}
-                    step={WARPBURST_RANGES.yaw.step}
-                    onChange={controls.setYaw}
-                    format={(v) => `${v.toFixed(1)}°`}
-                    info={INFO.yaw}
-                  />
-                  <Slider
-                    label="Y"
-                    value={controls.pitch}
-                    min={WARPBURST_RANGES.pitch.min}
-                    max={WARPBURST_RANGES.pitch.max}
-                    step={WARPBURST_RANGES.pitch.step}
-                    onChange={controls.setPitch}
-                    format={(v) => `${v.toFixed(1)}°`}
-                    info={INFO.pitch}
-                  />
-                </>
-              ) : null}
-              <TwinkleControls
-                title="twinkle"
-                checked={controls.twinkle}
-                onCheckedChange={controls.setTwinkle}
-                speed={controls.twinkleSpeed}
-                onSpeedChange={controls.setTwinkleSpeed}
-                s={controls.twinkleS}
-                onSChange={controls.setTwinkleS}
-                l={controls.twinkleL}
-                onLChange={controls.setTwinkleL}
-                info={INFO.twinkle}
-                speedInfo={INFO.twinkleSpeed}
-                sInfo={INFO.twinkleS}
-                lInfo={INFO.twinkleL}
-              />
-              <Slider
-                label="Saturation"
-                value={controls.saturation}
-                min={WARPBURST_RANGES.saturation.min}
-                max={WARPBURST_RANGES.saturation.max}
-                step={WARPBURST_RANGES.saturation.step}
-                onChange={controls.setSaturation}
-                format={(v) => `×${v.toFixed(2)}`}
-                info={INFO.saturation}
-              />
-              <Slider
-                label="Fog detail"
-                value={controls.fogDetail}
-                min={WARPBURST_RANGES.fogDetail.min}
-                max={WARPBURST_RANGES.fogDetail.max}
-                step={WARPBURST_RANGES.fogDetail.step}
-                onChange={controls.setFogDetail}
-                format={(v) => `×${v.toFixed(2)}`}
-                info={INFO.fogDetail}
-              />
-              {!controls.twinkle ? (
-                <ColorTable
-                  label="color palette"
-                  info={INFO.colorPalette}
-                  columns={["idle", "peak"]}
-                  lockedColumns={audioLocked ? ["peak"] : []}
-                  columnStamps={audioStamp}
-                  rows={[
-                    {
-                      label: "tint",
-                      cells: [
-                        {
-                          value: controls.color,
-                          onChange: controls.setColor,
-                        },
-                        {
-                          value: controls.colorPeak,
-                          onChange: controls.setColorPeak,
-                        },
-                      ],
-                    },
-                  ]}
+                <Slider
+                  label="Saturation"
+                  value={controls.saturation}
+                  min={WARPBURST_RANGES.saturation.min}
+                  max={WARPBURST_RANGES.saturation.max}
+                  step={WARPBURST_RANGES.saturation.step}
+                  onChange={controls.setSaturation}
+                  format={(v) => `×${v.toFixed(2)}`}
+                  info={INFO.saturation}
                 />
-              ) : null}
+                <Slider
+                  label="Fog detail"
+                  value={controls.fogDetail}
+                  min={WARPBURST_RANGES.fogDetail.min}
+                  max={WARPBURST_RANGES.fogDetail.max}
+                  step={WARPBURST_RANGES.fogDetail.step}
+                  onChange={controls.setFogDetail}
+                  format={(v) => `×${v.toFixed(2)}`}
+                  info={INFO.fogDetail}
+                />
+              </ControlCluster>
             </ControlSection>
 
             <VisualizerSection
