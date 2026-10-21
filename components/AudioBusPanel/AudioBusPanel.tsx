@@ -1,5 +1,6 @@
 "use client";
 
+import { fieldBlock } from "@/components/ControlPanel/field";
 import { AUDIO_BAND_COUNT } from "@/lib/audioBus";
 import { cn } from "@/lib/utils";
 import type { AudioBusSnap } from "./AudioBusPanel.types";
@@ -84,7 +85,8 @@ export function AudioBusPanel({
   return (
     <div
       className={cn(
-        "border border-line bg-screen/60 p-2 font-mono text-[10px] tracking-[0.04em]",
+        fieldBlock,
+        "border border-line bg-screen/60 p-2 font-mono text-[10px] tracking-[0.04em] sm:max-w-72",
         className,
       )}
     >

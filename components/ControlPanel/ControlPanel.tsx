@@ -133,12 +133,13 @@ export function ControlPanel({
     return (
         <div
             className={cn(
-                "flex h-[min(80vh,720px)] flex-col border border-signal bg-screen/85 font-mono text-signal shadow-[2px_2px_0_var(--magenta)] backdrop-blur-sm",
+                "flex max-h-[min(88vh,820px)] w-full flex-col border border-signal bg-screen/85 font-mono text-signal shadow-[2px_2px_0_var(--magenta)] backdrop-blur-sm",
                 className,
             )}
         >
-            <div className="flex shrink-0 flex-col items-center gap-1.5 border-b border-line p-2">
-                <div className="flex w-full items-center gap-2">
+            {/* Compact chrome — capped width so it doesn’t stretch across a wide HUD */}
+            <div className="flex shrink-0 flex-col gap-1.5 border-b border-line p-2">
+                <div className="flex w-full max-w-md items-center gap-2">
                     {overlay ? (
                         <Suspense fallback={<NavBackButton href="/" />}>
                             <NavBackButton />
@@ -149,46 +150,44 @@ export function ControlPanel({
                     </span>
                 </div>
                 {overlay ? (
-                    <div className="flex w-full flex-col gap-1">
-                        <div className="flex w-full gap-1.5">
-                            <ChromePair
-                                label="display"
-                                info="Sync pushes this tab’s prefs (incl. audio source) to other open tabs of the same screen and hot-applies them (no reload — fullscreen stays). Hide clears the HUD on this tab only."
+                    <div className="grid w-full max-w-md grid-cols-2 gap-1.5">
+                        <ChromePair
+                            label="display"
+                            info="Sync pushes this tab’s prefs (incl. audio source) to other open tabs of the same screen and hot-applies them (no reload — fullscreen stays). Hide clears the HUD on this tab only."
+                        >
+                            {overlay.hasPeers ? (
+                                <PanelButton
+                                    onClick={overlay.sync}
+                                    className="p-1"
+                                >
+                                    sync
+                                </PanelButton>
+                            ) : null}
+                            <PanelButton
+                                onClick={overlay.hide}
+                                className="p-1"
                             >
-                                {overlay.hasPeers ? (
-                                    <PanelButton
-                                        onClick={overlay.sync}
-                                        className="p-1"
-                                    >
-                                        sync
-                                    </PanelButton>
-                                ) : null}
-                                <PanelButton
-                                    onClick={overlay.hide}
-                                    className="p-1"
-                                >
-                                    hide
-                                </PanelButton>
-                            </ChromePair>
-                            <ChromePair
-                                label="preset"
-                                info="Copy seals current look knobs + fx overlay into a monitron key (clipboard). Paste reads a key for this screen, applies it, and reloads. HUD fold state is not shared."
-                                status={shareFlash}
+                                hide
+                            </PanelButton>
+                        </ChromePair>
+                        <ChromePair
+                            label="preset"
+                            info="Copy seals current look knobs + fx overlay into a monitron key (clipboard). Paste reads a key for this screen, applies it, and reloads. HUD fold state is not shared."
+                            status={shareFlash}
+                        >
+                            <PanelButton
+                                onClick={onCopyShare}
+                                className="p-1"
                             >
-                                <PanelButton
-                                    onClick={onCopyShare}
-                                    className="p-1"
-                                >
-                                    copy
-                                </PanelButton>
-                                <PanelButton
-                                    onClick={onPasteShare}
-                                    className="p-1"
-                                >
-                                    paste
-                                </PanelButton>
-                            </ChromePair>
-                        </div>
+                                copy
+                            </PanelButton>
+                            <PanelButton
+                                onClick={onPasteShare}
+                                className="p-1"
+                            >
+                                paste
+                            </PanelButton>
+                        </ChromePair>
                     </div>
                 ) : null}
             </div>
@@ -197,7 +196,7 @@ export function ControlPanel({
                     {actions || overlay ? (
                         <div
                             className={cn(
-                                "flex gap-2",
+                                "flex max-w-md gap-2",
                                 actions ? "[&>div]:contents" : null,
                             )}
                         >
@@ -209,7 +208,7 @@ export function ControlPanel({
                         <ScreenCreditBar
                             meta={placeholder}
                             className={cn(
-                                "max-w-full",
+                                "max-w-md",
                                 actions || overlay ? "mt-2" : null,
                             )}
                         />
@@ -217,7 +216,7 @@ export function ControlPanel({
                 </div>
             ) : null}
             {overlay ? <RenderScaleChrome /> : null}
-            <div className="control-panel-scroll min-h-0 flex-1 flex flex-col gap-1.5 overflow-x-hidden overflow-y-auto overscroll-contain p-2">
+            <div className="control-panel-scroll control-panel-sections min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain p-2">
                 {children}
             </div>
         </div>
@@ -230,16 +229,18 @@ function RenderScaleChrome() {
     const renderScale = useRenderScale(overlay?.screenId);
     return (
         <div className="shrink-0 border-b border-line px-2 py-1.5">
-            <Slider
-                label="Render scale"
-                value={renderScale.scale}
-                min={renderScale.min}
-                max={renderScale.max}
-                step={renderScale.step}
-                onChange={renderScale.setScale}
-                format={(v) => `${Math.round(v * 100)}%`}
-                info="Internal buffer resolution for this screen. Default 50% ≈ half the pixels / GPU load. 100% = full native look. Slider is shared chrome; the value is saved per screen."
-            />
+            <div className="max-w-md">
+                <Slider
+                    label="Render scale"
+                    value={renderScale.scale}
+                    min={renderScale.min}
+                    max={renderScale.max}
+                    step={renderScale.step}
+                    onChange={renderScale.setScale}
+                    format={(v) => `${Math.round(v * 100)}%`}
+                    info="Internal buffer resolution for this screen. Default 50% ≈ half the pixels / GPU load. 100% = full native look. Slider is shared chrome; the value is saved per screen."
+                />
+            </div>
         </div>
     );
 }
@@ -254,6 +255,11 @@ type FoldProps = {
     className?: string;
     sectionId?: string;
     defaultOpen?: boolean;
+    /**
+     * Trailing chrome in the fold header (e.g. visualizer source).
+     * Clicks do not toggle the section. Cap width from the caller.
+     */
+    headerExtra?: ReactNode;
     /** Visual depth — top section vs nested layer */
     depth?: "section" | "sub";
 };
@@ -275,6 +281,7 @@ function PanelFold({
     className,
     sectionId: sectionIdProp,
     defaultOpen = true,
+    headerExtra,
     depth = "section",
 }: FoldProps) {
     const overlay = useScreensOverlay();
@@ -301,14 +308,18 @@ function PanelFold({
     return (
         <section
             className={cn(
-                "flex flex-col",
+                "flex min-w-0 flex-col self-start",
+                /* Nested folds = wrap chips; grow fills a short last row.
+                   @container drives ControlCluster `cols` (2-up when wide). */
+                isSub &&
+                    "@container w-full max-w-full overflow-hidden basis-full sm:min-w-62 sm:flex-1 sm:basis-62",
                 isSub ? "border border-line/30" : "border border-line/50",
                 className,
             )}
         >
             <div
                 className={cn(
-                    "flex items-center gap-1",
+                    "flex min-w-0 items-center gap-1",
                     isSub
                         ? "border-b border-line/25 px-1 py-0"
                         : "border-b border-line/40 px-1.5 py-0.5",
@@ -320,7 +331,7 @@ function PanelFold({
                     aria-controls={panelDomId}
                     onClick={toggle}
                     className={cn(
-                        "flex min-w-0 flex-1 items-center gap-1.5 text-left uppercase transition-colors",
+                        "flex min-w-0 shrink items-center gap-1.5 text-left uppercase transition-colors",
                         "focus-visible:outline focus-visible:outline-offset-1 focus-visible:outline-signal",
                         isSub
                             ? "py-0.5 text-[8px] tracking-[0.2em]"
@@ -350,14 +361,26 @@ function PanelFold({
                     <span className="truncate">{label}</span>
                 </button>
                 {info ? <FieldInfo text={info} /> : null}
+                {headerExtra ? (
+                    <div
+                        className="ml-auto flex min-w-0 shrink-0 items-center justify-end gap-1.5"
+                        onClick={(e) => e.stopPropagation()}
+                        onKeyDown={(e) => e.stopPropagation()}
+                    >
+                        {headerExtra}
+                    </div>
+                ) : null}
             </div>
             {open ? (
                 <PanelSectionPathContext.Provider value={sectionId}>
                     <div
                         id={panelDomId}
                         className={cn(
-                            "flex flex-col",
-                            isSub ? "gap-1 px-1 py-1" : "gap-1.5 px-1.5 py-1.5",
+                            isSub
+                                ? /* Stack clusters; beat fieldRoot sm:max-w so knobs fill the chip */
+                                  "flex w-full flex-col gap-1.5 px-1 py-1 *:max-w-none!"
+                                : /* Category: wrap subsection chips; orphans flex-grow to fill */
+                                  "flex flex-row flex-wrap content-start items-start gap-1.5 px-1.5 py-1.5",
                         )}
                     >
                         {children}
@@ -375,6 +398,7 @@ type ControlSectionProps = {
     className?: string;
     sectionId?: string;
     defaultOpen?: boolean;
+    headerExtra?: ReactNode;
 };
 
 /** Top-level panel fold — persists as `_panelSections[id]`. */

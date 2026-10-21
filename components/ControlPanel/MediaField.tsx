@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
 import { FieldLabel } from "./FieldInfo";
-import { fieldLabelRow, fieldRoot } from "./field";
+import { fieldBlock, fieldLabelRow, fieldRoot } from "./field";
 import { panelButtonClassName } from "./PanelButton";
 import {
   addMediaFromUrl,
@@ -283,7 +283,7 @@ export function MediaField({
   const stockFallback = stocks[0]?.id ?? "1";
 
   return (
-    <div className={cn(fieldRoot, className)}>
+    <div className={cn(fieldRoot, fieldBlock, "sm:max-w-72", className)}>
       <div className={fieldLabelRow}>
         <FieldLabel label={label} info={info} />
       </div>

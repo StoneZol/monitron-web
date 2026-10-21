@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import { fieldBlock } from "./field";
 import { FieldInfo } from "./FieldInfo";
 import { Slider } from "./Slider";
 import { Toggle } from "./Toggle";
@@ -49,7 +50,8 @@ export function TwinkleControls({
   return (
     <div
       className={cn(
-        "flex flex-col gap-1.5 border border-cyan/35 bg-cyan/[0.03] p-1.5",
+        fieldBlock,
+        "flex h-fit flex-col gap-1.5 border border-cyan/35 bg-cyan/3 p-1.5",
         checked && "border-cyan/55",
         className,
       )}
@@ -64,9 +66,10 @@ export function TwinkleControls({
         label={title}
         checked={checked}
         onChange={onCheckedChange}
+        className="sm:max-w-none"
       />
       {checked ? (
-        <div className="flex flex-col gap-1 border-t border-cyan/15 pt-1">
+        <div className="flex w-full min-w-0 flex-col gap-1 border-t border-cyan/15 pt-1">
           <Slider
             label="speed"
             value={speed}
@@ -76,6 +79,7 @@ export function TwinkleControls({
             onChange={onSpeedChange}
             format={(v) => `×${v.toFixed(2)}`}
             info={speedInfo}
+            className="sm:max-w-none"
           />
           <Slider
             label="S"
@@ -86,6 +90,7 @@ export function TwinkleControls({
             onChange={onSChange}
             format={(v) => `${Math.round(v)}%`}
             info={sInfo}
+            className="sm:max-w-none"
           />
           <Slider
             label="L"
@@ -96,6 +101,7 @@ export function TwinkleControls({
             onChange={onLChange}
             format={(v) => `${Math.round(v)}%`}
             info={lInfo}
+            className="sm:max-w-none"
           />
         </div>
       ) : null}
