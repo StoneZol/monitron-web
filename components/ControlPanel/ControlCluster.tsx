@@ -12,8 +12,8 @@ type ControlClusterProps = {
 };
 
 /**
- * Groups related knobs inside a ControlSubSection.
- * Parent sub should be `@container` so `cols` can react to chip width.
+ * Groups related knobs (inside a sub chip or a full-width look band).
+ * Self `@container` so `cols` reacts to this cluster’s width.
  */
 export function ControlCluster({
     children,
@@ -23,7 +23,7 @@ export function ControlCluster({
     return (
         <div
             className={cn(
-                "w-full min-w-0 gap-1 *:min-w-0 *:max-w-none!",
+                "@container w-full min-w-0 gap-1 *:min-w-0 *:max-w-none!",
                 layout === "stack"
                     ? "flex flex-col"
                     : "grid grid-cols-1 @min-[22rem]:grid-cols-2",
