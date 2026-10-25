@@ -86,6 +86,21 @@ export const placeholdersCh02: PlaceholderMeta[] = [
       }),
     ],
   },
+  {
+    id: "quaternion_fractal",
+    title: "Quaternion Fractal",
+    href: "/s/quaternion_fractal",
+    tags: ["reactive"],
+    cost: "high",
+    ai: MONITRON_AI,
+    sources: [
+      withPorter({
+        author: "asyncker",
+        title: "Quaternion fractal",
+        href: "https://www.shadertoy.com/view/N3tSDf",
+      }),
+    ],
+  },
 ];
 
 export const blurbsCh02: Record<string, string> = {
@@ -99,4 +114,6 @@ export const blurbsCh02: Record<string, string> = {
     "Rainbow Crystal fold march for idle monitors — reactive tint, twinkle, and speed.",
   starleidoscope:
     "Starleidoscope kaleidoscope starfield for idle monitors — twinkle, palette, reactive pattern.",
+  quaternion_fractal:
+    "Quaternion fractal raymarch for idle monitors — camera orbit, idle/peak tint, twinkle.",
 };
