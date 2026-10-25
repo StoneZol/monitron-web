@@ -10,6 +10,7 @@
         "build": "next build",
         "start": "next start",
         "lint": "eslint",
+        "decode-share": "node scripts/decode-share.mjs",
         "convert": "auto-convert-images",
         "resize": "auto-convert-images-resize"
     },
