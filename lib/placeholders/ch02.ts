@@ -102,6 +102,22 @@ export const placeholdersCh02: PlaceholderMeta[] = [
             }),
         ],
     },
+    {
+        id: "blue_002",
+        title: "002 Blue",
+        href: "/s/blue_002",
+        previewSrc: "/s/blue_002.webp",
+        tags: ["reactive"],
+        cost: "mid",
+        ai: MONITRON_AI,
+        sources: [
+            withPorter({
+                author: "haquxx",
+                title: "002-Blue",
+                href: "https://www.shadertoy.com/view/WldSRn",
+            }),
+        ],
+    },
 ];
 
 export const blurbsCh02: Record<string, string> = {
@@ -117,4 +133,6 @@ export const blurbsCh02: Record<string, string> = {
         "Starleidoscope kaleidoscope starfield for idle monitors — twinkle, palette, reactive pattern.",
     quaternion_fractal:
         "Quaternion fractal raymarch for idle monitors — camera orbit, idle/peak tint, twinkle.",
+    blue_002:
+        "002 Blue tunnel flight for idle monitors — flex look, stock path, reactive glow.",
 };
