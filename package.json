@@ -1,6 +1,6 @@
 {
     "name": "monitron-web",
-    "version": "2.3.0",
+    "version": "2.4.0",
     "private": true,
     "monitron": {
         "pluginVersion": "1.6.0"
