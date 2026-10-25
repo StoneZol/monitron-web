@@ -118,6 +118,21 @@ export const placeholdersCh02: PlaceholderMeta[] = [
             }),
         ],
     },
+    {
+        id: "dark_transit",
+        title: "Dark Transit",
+        href: "/s/dark_transit",
+        tags: ["reactive"],
+        cost: "low",
+        ai: MONITRON_AI,
+        sources: [
+            withPorter({
+                author: "diatribes",
+                title: "Dark Transit",
+                href: "https://www.shadertoy.com/view/WcdczB",
+            }),
+        ],
+    },
 ];
 
 export const blurbsCh02: Record<string, string> = {
@@ -135,4 +150,6 @@ export const blurbsCh02: Record<string, string> = {
         "Quaternion fractal raymarch for idle monitors — camera orbit, idle/peak tint, twinkle.",
     blue_002:
         "002 Blue tunnel flight for idle monitors — flex look, stock path, reactive glow.",
+    dark_transit:
+        "Dark Transit tunnel for idle monitors — cinema bars, wall/orb palettes, reactive flight.",
 };
