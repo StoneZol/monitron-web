@@ -138,7 +138,7 @@ export const placeholdersCh02: PlaceholderMeta[] = [
         id: "clouds_2d",
         title: "2D Clouds",
         href: "/s/clouds_2d",
-        tags: ["ambient"],
+        previewSrc: "/s/clouds_2d.webp",
         cost: "low",
         ai: MONITRON_AI,
         sources: [
@@ -146,6 +146,22 @@ export const placeholdersCh02: PlaceholderMeta[] = [
                 author: "drift",
                 title: "2D Clouds",
                 href: "https://www.shadertoy.com/view/4tdSWr",
+            }),
+        ],
+    },
+    {
+        id: "root_sanctum",
+        title: "Root Sanctum",
+        href: "/s/root_sanctum",
+        previewSrc: "/s/root_sanctum.webp",
+        tags: ["reactive"],
+        cost: "high",
+        ai: MONITRON_AI,
+        sources: [
+            withPorter({
+                author: "diatribes",
+                title: "Root Sanctum",
+                href: "https://www.shadertoy.com/view/3c2fz1",
             }),
         ],
     },
@@ -169,5 +185,7 @@ export const blurbsCh02: Record<string, string> = {
     dark_transit:
         "Dark Transit tunnel for idle monitors — cinema bars, wall/orb palettes, reactive flight.",
     clouds_2d:
-        "2D Clouds drift field for idle monitors — speed, cover, overcast, and time of day.",
+        "2D Clouds drift field for idle monitors — speed, cover, and time of day.",
+    root_sanctum:
+        "Root Sanctum fractal flight for idle monitors — flex look, wall/light palettes, twinkle.",
 };

@@ -5,8 +5,9 @@
  * Extras (uniforms):
  * - uFlightSpeed — multiplies stock speed (0.03)
  * - uCover — cloudcover (stock 0.2)
- * - uOvercast — sky/cloud gray wash + slight cover lift
  * - uHour — 0–24 civil hour (12 = noon / stock sky)
+ *   Sky: sunrise 5–7 (2h), clean day 7–16, sunset 16–18 (2h), else night
+ *   Night clouds gray down; stars masked by cloud opacity
  */
 
 export const clouds2dVertexShader = /* glsl */ `
@@ -26,7 +27,6 @@ uniform vec3 iResolution;
 uniform float iTime;
 uniform float uFlightSpeed;
 uniform float uCover;
-uniform float uOvercast;
 uniform float uHour;
 
 const float cloudscale = 1.1;
@@ -75,49 +75,56 @@ float fbm(vec2 n) {
   return total;
 }
 
-/** hour 0–24 → sky. 0 night, 6 dawn, 12 noon (stock), 18 dusk, 24 night. */
-vec3 skyPalette(float hour, float y) {
-  vec3 dayBot = vec3(0.4, 0.7, 1.0);
-  vec3 dayTop = vec3(0.2, 0.4, 0.6);
-
-  vec3 dawnBot = vec3(1.0, 0.55, 0.35);
-  vec3 dawnTop = vec3(0.35, 0.4, 0.65);
-
-  vec3 duskBot = vec3(0.95, 0.4, 0.25);
-  vec3 duskTop = vec3(0.25, 0.2, 0.45);
-
-  vec3 nightBot = vec3(0.05, 0.07, 0.14);
-  vec3 nightTop = vec3(0.02, 0.03, 0.08);
-
-  float t = fract(hour / 24.0);
-  vec3 bot;
-  vec3 top;
-  if (t < 0.25) {
-    float k = smoothstep(0.0, 0.25, t);
-    bot = mix(nightBot, dawnBot, k);
-    top = mix(nightTop, dawnTop, k);
-  } else if (t < 0.5) {
-    float k = smoothstep(0.25, 0.5, t);
-    bot = mix(dawnBot, dayBot, k);
-    top = mix(dawnTop, dayTop, k);
-  } else if (t < 0.75) {
-    float k = smoothstep(0.5, 0.75, t);
-    bot = mix(dayBot, duskBot, k);
-    top = mix(dayTop, duskTop, k);
-  } else {
-    float k = smoothstep(0.75, 1.0, t);
-    bot = mix(duskBot, nightBot, k);
-    top = mix(duskTop, nightTop, k);
-  }
-  return mix(bot, top, y);
+/** Soft 2h arc: ends A→C with warm B peaking at the midpoint. */
+vec3 warmArc(vec3 a, vec3 warm, vec3 c, float t, float warmAmt) {
+  float u = smoothstep(0.0, 1.0, clamp(t, 0.0, 1.0));
+  vec3 base = mix(a, c, u);
+  float peak = sin(u * 3.14159265);
+  return mix(base, warm, peak * warmAmt);
 }
 
-/** 1 in deep night, 0 by mid-morning / mid-afternoon. */
+/**
+ * Civil-hour sky.
+ * Sunrise 05–07 (2h), clean day 07–16, sunset 16–18 (2h), else night.
+ */
+vec3 skyPalette(float hour, float y) {
+  vec3 dayC = mix(vec3(0.4, 0.7, 1.0), vec3(0.2, 0.4, 0.6), y);
+  vec3 dawnC = mix(vec3(1.0, 0.55, 0.35), vec3(0.35, 0.4, 0.65), y);
+  // Dusk horizon muted — was too hot orange near the bottom
+  vec3 duskC = mix(vec3(0.62, 0.36, 0.32), vec3(0.22, 0.18, 0.38), y);
+  vec3 nightC = mix(vec3(0.05, 0.07, 0.14), vec3(0.02, 0.03, 0.08), y);
+
+  float h = mod(hour, 24.0);
+
+  if (h < 5.0) {
+    return nightC;
+  }
+  if (h < 7.0) {
+    return warmArc(nightC, dawnC, dayC, (h - 5.0) / 2.0, 0.85);
+  }
+  if (h < 16.0) {
+    return dayC;
+  }
+  if (h < 18.0) {
+    return warmArc(dayC, duskC, nightC, (h - 16.0) / 2.0, 0.55);
+  }
+  return nightC;
+}
+
+/** Stars: 1 deep night, 0 across the clean day window. */
 float nightAmount(float hour) {
   float h = mod(hour, 24.0);
-  float late = smoothstep(18.0, 21.5, h);
-  float early = 1.0 - smoothstep(4.5, 7.0, h);
-  return max(late, early);
+  float afterDusk = smoothstep(16.5, 18.0, h);
+  float beforeDawn = 1.0 - smoothstep(5.0, 7.0, h);
+  return max(afterDusk, beforeDawn);
+}
+
+/** 1 = daylight cloud fluff, 0 = night gray. Flat through 07–16. */
+float dayCloudAmount(float hour) {
+  float h = mod(hour, 24.0);
+  float rise = smoothstep(5.0, 7.0, h);
+  float set = 1.0 - smoothstep(16.0, 18.0, h);
+  return clamp(min(rise, set), 0.0, 1.0);
 }
 
 float starField(vec2 uv, float t) {
@@ -199,32 +206,32 @@ void main() {
 
   c += c1;
 
-  float oc = clamp(uOvercast, 0.0, 1.0);
   float hour = uHour;
   vec3 skycolour = skyPalette(hour, p.y);
-  vec3 graySky = vec3(mix(0.55, 0.28, p.y));
-  skycolour = mix(skycolour, graySky, oc);
 
-  // stars behind clouds — night only, washed out by overcast
-  float night = nightAmount(hour) * (1.0 - oc * 0.92);
+  float dayAmt = dayCloudAmount(hour);
+  vec3 cloudDay = vec3(1.1, 1.1, 0.9);
+  vec3 cloudNight = vec3(0.38, 0.40, 0.44);
+  vec3 cloudBase = mix(cloudNight, cloudDay, dayAmt);
+  vec3 cloudcolour = cloudBase * clamp(clouddark + cloudlight * c, 0.0, 1.0);
+
+  float cover = clamp(uCover, 0.0, 1.0);
+  f = cover + cloudalpha * f * r;
+  float cloudMask = clamp(f + c, 0.0, 1.0);
+
+  // Stars only in clear gaps — no shine through thick cloud
+  float night = nightAmount(hour);
   if (night > 0.01) {
     vec2 starUv = p * vec2(iResolution.x / iResolution.y, 1.0);
     float stars = starField(starUv, iTime);
-    skycolour += vec3(0.95, 0.97, 1.0) * stars * night;
+    float clearSky = 1.0 - smoothstep(0.04, 0.35, cloudMask);
+    skycolour += vec3(0.95, 0.97, 1.0) * stars * night * clearSky;
   }
-
-  vec3 cloudWarm = vec3(1.1, 1.1, 0.9);
-  vec3 cloudGray = vec3(0.72);
-  vec3 cloudBase = mix(cloudWarm, cloudGray, oc);
-  vec3 cloudcolour = cloudBase * clamp(clouddark + cloudlight * c, 0.0, 1.0);
-
-  float cover = clamp(uCover + oc * 0.35, 0.0, 1.2);
-  f = cover + cloudalpha * f * r;
 
   vec3 result = mix(
     skycolour,
     clamp(skytint * skycolour + cloudcolour, 0.0, 1.0),
-    clamp(f + c, 0.0, 1.0)
+    cloudMask
   );
 
   gl_FragColor = vec4(result, 1.0);

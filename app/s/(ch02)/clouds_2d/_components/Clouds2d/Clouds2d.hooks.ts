@@ -10,6 +10,7 @@ import {
   CLOUDS2D_DEFAULTS,
   CLOUDS2D_RANGES,
   deviceHourFloat,
+  snapHourQuarter,
   type Clouds2dLive,
 } from "./Clouds2d.types";
 
@@ -24,20 +25,23 @@ function clamp(n: number, min: number, max: number, fallback: number) {
   return Math.min(max, Math.max(min, n));
 }
 
-function migrateHour(raw: Stored & Record<string, unknown>): number {
-  // Allow fractional hours while device-sync is on (e.g. 14.5).
-  const hi = 23.999;
-  if (Number.isFinite(Number(raw.hour))) {
-    return clamp(Number(raw.hour), 0, hi, STORED_DEFAULTS.hour);
-  }
-  // legacy dayPhase 0–1 → hours
-  if (Number.isFinite(Number(raw.dayPhase))) {
-    return clamp(Number(raw.dayPhase) * 24, 0, hi, STORED_DEFAULTS.hour);
-  }
-  return STORED_DEFAULTS.hour;
-}
-
 function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
+  const syncDeviceTime =
+    typeof raw.syncDeviceTime === "boolean"
+      ? raw.syncDeviceTime
+      : STORED_DEFAULTS.syncDeviceTime;
+
+  let hour = STORED_DEFAULTS.hour;
+  if (Number.isFinite(Number(raw.hour))) {
+    hour = Number(raw.hour);
+  } else if (Number.isFinite(Number(raw.dayPhase))) {
+    hour = Number(raw.dayPhase) * 24;
+  }
+  // Manual mode snaps to 15 min; device-sync keeps fractional civil time
+  hour = syncDeviceTime
+    ? clamp(hour, 0, 23.999, STORED_DEFAULTS.hour)
+    : snapHourQuarter(hour);
+
   return {
     flightSpeed: clamp(
       Number(raw.flightSpeed),
@@ -51,17 +55,8 @@ function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
       CLOUDS2D_RANGES.cover.max,
       STORED_DEFAULTS.cover,
     ),
-    overcast: clamp(
-      Number(raw.overcast),
-      CLOUDS2D_RANGES.overcast.min,
-      CLOUDS2D_RANGES.overcast.max,
-      STORED_DEFAULTS.overcast,
-    ),
-    hour: migrateHour(raw),
-    syncDeviceTime:
-      typeof raw.syncDeviceTime === "boolean"
-        ? raw.syncDeviceTime
-        : STORED_DEFAULTS.syncDeviceTime,
+    hour,
+    syncDeviceTime,
   };
 }
 
@@ -100,7 +95,6 @@ function writePrefs(next: Stored) {
   emit();
 }
 
-/** Soft hour tick for UI while device-sync is on (canvas uses live clock). */
 function patchHourLive(hour: number) {
   const cur = readPrefs();
   if (!cur.syncDeviceTime) return;
@@ -133,7 +127,6 @@ export default function useClouds2dHook() {
     [],
   );
 
-  // Keep the hour slider label honest while synced
   useEffect(() => {
     if (!live.syncDeviceTime) return;
     const tick = () => patchHourLive(deviceHourFloat());
@@ -151,20 +144,19 @@ export default function useClouds2dHook() {
     controls: {
       flightSpeed: live.flightSpeed,
       cover: live.cover,
-      overcast: live.overcast,
       hour: live.hour,
       syncDeviceTime: live.syncDeviceTime,
       setFlightSpeed: (flightSpeed: number) => commit({ flightSpeed }),
       setCover: (cover: number) => commit({ cover }),
-      setOvercast: (overcast: number) => commit({ overcast }),
-      setHour: (hour: number) => commit({ hour, syncDeviceTime: false }),
+      setHour: (hour: number) =>
+        commit({ hour: snapHourQuarter(hour), syncDeviceTime: false }),
       setSyncDeviceTime: (syncDeviceTime: boolean) => {
         if (syncDeviceTime) {
           commit({ syncDeviceTime: true, hour: deviceHourFloat() });
         } else {
           commit({
             syncDeviceTime: false,
-            hour: Math.round(deviceHourFloat()) % 24,
+            hour: snapHourQuarter(deviceHourFloat()),
           });
         }
       },

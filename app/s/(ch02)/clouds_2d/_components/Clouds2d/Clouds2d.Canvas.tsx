@@ -28,7 +28,6 @@ function Clouds2dQuad({ liveRef }: { liveRef: RefObject<Clouds2dLive> }) {
           iTime: { value: 0 },
           uFlightSpeed: { value: 1 },
           uCover: { value: 0.2 },
-          uOvercast: { value: 0 },
           uHour: { value: 12 },
         },
       }),
@@ -59,7 +58,6 @@ function Clouds2dQuad({ liveRef }: { liveRef: RefObject<Clouds2dLive> }) {
     m.uniforms.iTime!.value = clock.elapsedTime;
     m.uniforms.uFlightSpeed!.value = Math.max(0, live.flightSpeed);
     m.uniforms.uCover!.value = live.cover;
-    m.uniforms.uOvercast!.value = live.overcast;
     m.uniforms.uHour!.value = live.syncDeviceTime
       ? deviceHourFloat()
       : live.hour;

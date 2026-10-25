@@ -7,8 +7,6 @@ export type Clouds2dLive = {
   flightSpeed: number;
   /** Cloud cover / density. Stock ≈ 0.2. */
   cover: number;
-  /** Gray wash — clear blue → socked-in overcast. */
-  overcast: number;
   /** Clock hour 0–23 (noon = 12 ≈ stock sky). */
   hour: number;
   /** Drive hour from the device clock. */
@@ -18,7 +16,6 @@ export type Clouds2dLive = {
 export const CLOUDS2D_DEFAULTS: Clouds2dLive = {
   flightSpeed: 1,
   cover: 0.2,
-  overcast: 0,
   hour: 12,
   syncDeviceTime: false,
 };
@@ -26,9 +23,16 @@ export const CLOUDS2D_DEFAULTS: Clouds2dLive = {
 export const CLOUDS2D_RANGES = {
   flightSpeed: { min: 0, max: 4, step: 0.05 },
   cover: { min: 0, max: 1, step: 0.01 },
-  overcast: { min: 0, max: 1, step: 0.01 },
-  hour: { min: 0, max: 23, step: 1 },
+  /** 15-minute steps: 0 … 23.75 (23:45) */
+  hour: { min: 0, max: 23.75, step: 0.25 },
 } as const;
+
+export function snapHourQuarter(hour: number): number {
+  if (!Number.isFinite(hour)) return CLOUDS2D_DEFAULTS.hour;
+  const snapped = Math.round(hour * 4) / 4;
+  const wrapped = ((snapped % 24) + 24) % 24;
+  return Math.min(CLOUDS2D_RANGES.hour.max, wrapped);
+}
 
 /** Local civil hour as float (14:30 → 14.5). */
 export function deviceHourFloat(now = new Date()): number {
