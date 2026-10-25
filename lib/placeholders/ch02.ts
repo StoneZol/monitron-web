@@ -70,6 +70,22 @@ export const placeholdersCh02: PlaceholderMeta[] = [
       }),
     ],
   },
+  {
+    id: "starleidoscope",
+    title: "Starleidoscope",
+    href: "/s/starleidoscope",
+    previewSrc: "/s/starleidoscope.webp",
+    tags: ["reactive"],
+    cost: "mid",
+    ai: MONITRON_AI,
+    sources: [
+      withPorter({
+        author: "DanielXMoore",
+        title: "Starleidoscope",
+        href: "https://www.shadertoy.com/view/ftt3R7",
+      }),
+    ],
+  },
 ];
 
 export const blurbsCh02: Record<string, string> = {
@@ -81,4 +97,6 @@ export const blurbsCh02: Record<string, string> = {
     "Cyber neon spectrum ring for idle monitors — frost lens, bloom, reactive hue and speed.",
   rainbow_crystal:
     "Rainbow Crystal fold march for idle monitors — reactive tint, twinkle, and speed.",
+  starleidoscope:
+    "Starleidoscope kaleidoscope starfield for idle monitors — twinkle, palette, reactive pattern.",
 };
