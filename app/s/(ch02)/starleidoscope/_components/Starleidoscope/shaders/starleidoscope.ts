@@ -13,6 +13,8 @@
  * - uColor / uHighlight: CPU tint (twinkle / palette)
  * - uColorMix: idle→peak blend (palette)
  * - uSaturation: look chroma
+ * - uSides: radial mirrors around center (3 = stock; >3 polar wedges + stock IFS)
+ * - uChaos: fold jitter + UV warp (0 = clean stock)
  */
 
 export const starleidoscopeVertexShader = /* glsl */ `
@@ -39,6 +41,10 @@ uniform vec3 uColor;
 uniform vec3 uHighlight;
 uniform float uColorMix;
 uniform float uSaturation;
+/** Mirror count — stock 3 (2π/3 fold). */
+uniform float uSides;
+/** 0…1 fold jitter + UV warp. */
+uniform float uChaos;
 /** Shadertoy-style audio strip: R = FFT, G = wave proxy */
 uniform sampler2D iChannel0;
 
@@ -179,7 +185,24 @@ void main() {
   vec2 uv = (fragCoord - 0.5 * iResolution.xy) / iResolution.y;
   // Stock Shadertoy used 0.01; ×5 so kaleidoscope/tunnel (not just center shimmer) moves
   float t = uPatternT * 0.05;
+  float sides = floor(clamp(uSides, 3.0, 10.0) + 0.5);
+  float chaos = clamp(uChaos, 0.0, 1.0);
+  // Stock loop = 5; more sides / chaos → denser IFS passes
+  float foldCount =
+    clamp(5.0 + max(0.0, sides - 3.0) * 0.75 + chaos * 2.0, 5.0, 12.0);
 
+  // Extra radial mirrors (sides > 3): polar sector wrap — always meets at origin
+  if (sides > 3.5) {
+    float tau = 6.28318530718;
+    float seg = tau / sides;
+    float a = atan(uv.y, uv.x);
+    float r = length(uv);
+    a = mod(a, seg);
+    a = abs(a - seg * 0.5);
+    uv = vec2(cos(a), sin(a)) * r;
+  }
+
+  // Exact DanielXMoore IFS (fixed 3-fold angles — center tunnel stays intact)
   uv.x = abs(uv.x);
   uv.y += tan((5. / 6.) * 3.1415) * 0.5;
 
@@ -189,12 +212,25 @@ void main() {
 
   n = N((2. / 3.) * 3.1415);
   uv.x += 1.5 / 1.25;
-  for (int i = 0; i < 5; i++) {
+  for (int i = 0; i < 12; i++) {
+    if (float(i) >= foldCount) break;
+    float ang =
+      (2. / 3.) * 3.1415 + chaos * 0.45 * sin(float(i) * 1.7 + t * 2.4);
+    n = N(ang);
     uv *= 1.25;
     uv.x -= 1.5;
     uv.x = abs(uv.x);
     uv.x -= 0.5;
     uv -= n * min(0., dot(uv, n)) * 2.;
+  }
+
+  if (chaos > 0.001) {
+    float w = chaos * 0.22;
+    uv += w * vec2(
+      sin(uv.y * (5.0 + chaos * 10.0) + t * 3.0),
+      cos(uv.x * (5.0 + chaos * 10.0) - t * 2.3)
+    );
+    uv *= Rot(chaos * 0.2 * sin(t * 1.4));
   }
 
   uv *= Rot(t);

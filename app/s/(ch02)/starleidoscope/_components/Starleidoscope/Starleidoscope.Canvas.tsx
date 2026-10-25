@@ -136,6 +136,8 @@ function StarleidoscopeQuad({
           uHighlight: { value: new THREE.Color("#ff88cc") },
           uColorMix: { value: 0 },
           uSaturation: { value: 1 },
+          uSides: { value: 3 },
+          uChaos: { value: 0 },
           iChannel0: { value: specTex },
         },
       }),
@@ -291,6 +293,8 @@ function StarleidoscopeQuad({
     m.uniforms.uHighlight!.value.copy(highlight);
     m.uniforms.uColorMix!.value = colorMix;
     m.uniforms.uSaturation!.value = Math.max(0, live.saturation);
+    m.uniforms.uSides!.value = Math.max(3, live.kaleidoSides);
+    m.uniforms.uChaos!.value = Math.max(0, Math.min(1, live.kaleidoChaos));
   });
 
   return (

@@ -137,6 +137,20 @@ function migratePrefs(raw: Stored & Record<string, unknown>): Stored {
       STARLEIDOSCOPE_RANGES.saturation.max,
       STORED_DEFAULTS.saturation,
     ),
+    kaleidoSides: Math.round(
+      clamp(
+        Number(raw.kaleidoSides),
+        STARLEIDOSCOPE_RANGES.kaleidoSides.min,
+        STARLEIDOSCOPE_RANGES.kaleidoSides.max,
+        STORED_DEFAULTS.kaleidoSides,
+      ),
+    ),
+    kaleidoChaos: clamp(
+      Number(raw.kaleidoChaos),
+      STARLEIDOSCOPE_RANGES.kaleidoChaos.min,
+      STARLEIDOSCOPE_RANGES.kaleidoChaos.max,
+      STORED_DEFAULTS.kaleidoChaos,
+    ),
     colorChannel: channel(raw.colorChannel, STORED_DEFAULTS.colorChannel),
     colorDrive: clamp(
       Number(raw.colorDrive),
@@ -247,6 +261,8 @@ export default function useStarleidoscopeHook() {
     controls: {
       patternSpeed: live.patternSpeed,
       colorSpeed: live.colorSpeed,
+      kaleidoSides: live.kaleidoSides,
+      kaleidoChaos: live.kaleidoChaos,
       colorMode: live.colorMode,
       color: live.color,
       colorPeak: live.colorPeak,
@@ -267,6 +283,9 @@ export default function useStarleidoscopeHook() {
       patternAccelDriveMax: STARLEIDOSCOPE_DRIVE_MAX,
       setPatternSpeed: (patternSpeed: number) => commit({ patternSpeed }),
       setColorSpeed: (colorSpeed: number) => commit({ colorSpeed }),
+      setKaleidoSides: (kaleidoSides: number) =>
+        commit({ kaleidoSides: Math.round(kaleidoSides) }),
+      setKaleidoChaos: (kaleidoChaos: number) => commit({ kaleidoChaos }),
       setColorMode: (colorMode: StarleidoscopeColorMode) =>
         commit({ colorMode }),
       setColor: (color: string) => commit({ color }),

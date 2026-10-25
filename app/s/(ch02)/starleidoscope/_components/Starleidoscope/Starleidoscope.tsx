@@ -43,6 +43,10 @@ const INFO = {
   look: "Starleidoscope (DanielXMoore) — kaleidoscope starfield with layered depth.",
   patternSpeed:
     "Kaleidoscope / tunnel scroll (edges + depth). ×1 is tuned snappy; coeffs scale from this. Star pulse stays wall-clock.",
+  kaleidoSides:
+    "Radial mirrors around center (stock = 3). Higher = more wedges meeting in the middle; stock IFS tunnel stays.",
+  kaleidoChaos:
+    "Warps fold angles and UV — 0 = clean stock mirrors, 1 = messy.",
   colorSpeed: "Palette / HSL phase rate (1 ≈ full lap / 6s).",
   colorMode:
     "original = stock + FFT. palette twinkle = stock hues × full HSL cycle. twinkle = solid HSL. palette = idle→peak.",
@@ -174,6 +178,26 @@ const Starleidoscope = ({ showOverlay = true }: StarleidoscopeProps) => {
                   onChange={controls.setSaturation}
                   format={(v) => `×${v.toFixed(2)}`}
                   info={INFO.saturation}
+                />
+                <Slider
+                  label="Mirrors"
+                  value={controls.kaleidoSides}
+                  min={STARLEIDOSCOPE_RANGES.kaleidoSides.min}
+                  max={STARLEIDOSCOPE_RANGES.kaleidoSides.max}
+                  step={STARLEIDOSCOPE_RANGES.kaleidoSides.step}
+                  onChange={controls.setKaleidoSides}
+                  format={(v) => `${Math.round(v)}`}
+                  info={INFO.kaleidoSides}
+                />
+                <Slider
+                  label="Chaos"
+                  value={controls.kaleidoChaos}
+                  min={STARLEIDOSCOPE_RANGES.kaleidoChaos.min}
+                  max={STARLEIDOSCOPE_RANGES.kaleidoChaos.max}
+                  step={STARLEIDOSCOPE_RANGES.kaleidoChaos.step}
+                  onChange={controls.setKaleidoChaos}
+                  format={(v) => v.toFixed(2)}
+                  info={INFO.kaleidoChaos}
                 />
               </ControlCluster>
             </ControlSection>
