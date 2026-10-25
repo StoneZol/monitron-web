@@ -256,30 +256,65 @@ function loadImageFromBlob(blob: Blob): Promise<HTMLImageElement> {
   });
 }
 
+function throwIfAborted(signal?: AbortSignal) {
+  if (signal?.aborted) {
+    throw new DOMException("Aborted", "AbortError");
+  }
+}
+
 /** Cover-fit into PREVIEW_W×PREVIEW_H webp/jpeg blob. */
-export async function makePreviewBlob(source: Blob): Promise<Blob> {
-  const img = await loadImageFromBlob(source);
+export async function makePreviewBlob(
+  source: Blob,
+  signal?: AbortSignal,
+): Promise<Blob> {
+  throwIfAborted(signal);
+
+  // Decode off the main thread when possible; cap decode size so phones
+  // don't hitch on multi‑MB library URLs.
+  const maxEdge = Math.max(PREVIEW_W, PREVIEW_H) * 4;
+  let bitmap: ImageBitmap | null = null;
+  if (typeof createImageBitmap === "function") {
+    try {
+      // One edge only — keeps aspect; caps decode cost on big library URLs
+      bitmap = await createImageBitmap(source, {
+        resizeWidth: maxEdge,
+        resizeQuality: "low",
+      });
+    } catch {
+      bitmap = null;
+    }
+  }
+  throwIfAborted(signal);
+
   const canvas = document.createElement("canvas");
   canvas.width = PREVIEW_W;
   canvas.height = PREVIEW_H;
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("No 2d context");
 
-  const sw = img.naturalWidth || img.width;
-  const sh = img.naturalHeight || img.height;
-  const scale = Math.max(PREVIEW_W / sw, PREVIEW_H / sh);
-  const dw = sw * scale;
-  const dh = sh * scale;
-  const dx = (PREVIEW_W - dw) / 2;
-  const dy = (PREVIEW_H - dh) / 2;
-  ctx.drawImage(img, dx, dy, dw, dh);
+  if (bitmap) {
+    const sw = bitmap.width;
+    const sh = bitmap.height;
+    const scale = Math.max(PREVIEW_W / sw, PREVIEW_H / sh);
+    const dw = sw * scale;
+    const dh = sh * scale;
+    ctx.drawImage(bitmap, (PREVIEW_W - dw) / 2, (PREVIEW_H - dh) / 2, dw, dh);
+    bitmap.close();
+  } else {
+    const img = await loadImageFromBlob(source);
+    throwIfAborted(signal);
+    const sw = img.naturalWidth || img.width;
+    const sh = img.naturalHeight || img.height;
+    const scale = Math.max(PREVIEW_W / sw, PREVIEW_H / sh);
+    const dw = sw * scale;
+    const dh = sh * scale;
+    ctx.drawImage(img, (PREVIEW_W - dw) / 2, (PREVIEW_H - dh) / 2, dw, dh);
+  }
+
+  throwIfAborted(signal);
 
   const blob = await new Promise<Blob | null>((resolve) => {
-    canvas.toBlob(
-      (b) => resolve(b),
-      "image/webp",
-      0.72,
-    );
+    canvas.toBlob((b) => resolve(b), "image/webp", 0.72);
   });
   if (blob) return blob;
 
@@ -292,27 +327,84 @@ export async function makePreviewBlob(source: Blob): Promise<Blob> {
 
 const IMAGE_MIME = /^image\//;
 
+export type AddMediaFromUrlOptions = {
+  signal?: AbortSignal;
+  /** 0…1 when Content-Length known; null = indeterminate */
+  onProgress?: (ratio: number | null) => void;
+};
+
+async function readResponseBlob(
+  res: Response,
+  signal: AbortSignal | undefined,
+  onProgress?: (ratio: number | null) => void,
+): Promise<Blob> {
+  const total = Number(res.headers.get("content-length")) || 0;
+  const type = res.headers.get("content-type") || "";
+  if (!res.body?.getReader) {
+    onProgress?.(null);
+    const blob = await res.blob();
+    throwIfAborted(signal);
+    onProgress?.(1);
+    return blob;
+  }
+
+  const reader = res.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let received = 0;
+  onProgress?.(total > 0 ? 0 : null);
+
+  try {
+    for (;;) {
+      throwIfAborted(signal);
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (!value) continue;
+      chunks.push(value);
+      received += value.byteLength;
+      onProgress?.(total > 0 ? Math.min(1, received / total) : null);
+    }
+  } catch (e) {
+    try {
+      await reader.cancel();
+    } catch {
+      /* */
+    }
+    throw e;
+  }
+
+  onProgress?.(1);
+  // BlobPart accepts BufferSource; spread typed arrays without copying twice
+  return new Blob(chunks as BlobPart[], { type });
+}
+
 /**
  * Fetch URL → tiny preview in IDB + meta in localStorage.
  * Full image is never stored; screens load from `url` at draw time.
  */
 export async function addMediaFromUrl(
   rawUrl: string,
+  opts: AddMediaFromUrlOptions = {},
 ): Promise<MediaLibraryEntry> {
+  const { signal, onProgress } = opts;
   const trimmed = rawUrl.trim();
   if (!trimmed) throw new Error("Empty URL");
+  throwIfAborted(signal);
   const parsed = assertPublicHttpUrl(trimmed);
 
   const list = readList();
   const existing = list.find((e) => e.url === parsed.toString());
-  if (existing) return existing;
+  if (existing) {
+    onProgress?.(1);
+    return existing;
+  }
 
   if (list.length >= MEDIA_LIBRARY_MAX) {
     throw new Error(`Library full (${MEDIA_LIBRARY_MAX} URLs max)`);
   }
 
   // Same-origin proxy — direct cors fetch 403s on many CDNs in production
-  const res = await fetch(proxiedMediaUrl(parsed.toString()));
+  const res = await fetch(proxiedMediaUrl(parsed.toString()), { signal });
+  throwIfAborted(signal);
   if (!res.ok) {
     let detail = "";
     try {
@@ -323,14 +415,17 @@ export async function addMediaFromUrl(
     }
     throw new Error(`Fetch failed (${res.status})${detail}`);
   }
-  const full = await res.blob();
+  const full = await readResponseBlob(res, signal, onProgress);
   if (full.type && !IMAGE_MIME.test(full.type)) {
     throw new Error("URL did not return an image");
   }
 
-  const preview = await makePreviewBlob(full);
+  onProgress?.(null); // preview encode — indeterminate
+  const preview = await makePreviewBlob(full, signal);
+  throwIfAborted(signal);
   const id = newId();
   await idbPutPreview(id, preview);
+  throwIfAborted(signal);
 
   const entry: MediaLibraryEntry = {
     id,
@@ -339,6 +434,7 @@ export async function addMediaFromUrl(
     createdAt: Date.now(),
   };
   writeList([entry, ...list]);
+  onProgress?.(1);
   return entry;
 }
 

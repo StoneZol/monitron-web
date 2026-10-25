@@ -1,0 +1,18 @@
+---
+description: Decode monitron:1:[screen]:… share keys into JSON prefs for defaults
+alwaysApply: false
+---
+
+# Share key → defaults
+
+When the user pastes a `monitron:1:[<screenId>]:…` key and wants it as screen defaults:
+
+1. Run (do not re-implement decrypt inline):
+
+```bash
+npm run decode-share -- '<full-key>'
+```
+
+Script: `scripts/decode-share.mjs` (same seal as `lib/screenShare.ts`).
+
+2. Map the JSON into that screen’s `*_DEFAULTS` / `STORED_DEFAULTS` (skip `_` HUD chrome; audio fields live on `STORED_DEFAULTS` when the screen has them).

@@ -129,8 +129,11 @@ export function useAudioReactive({
 }: UseAudioReactiveOptions = {}) {
   const vizRef = useRef<VizBands>(emptyVizBands(false));
   const pluginRef = useRef(false);
-  const sourceRef = useRef<AudioSource>(normalizeSource(preferredSource));
   const preferredRef = useRef<AudioSource>(normalizeSource(preferredSource));
+  // Prefer plugin in prefs, but start effective off until hello lands.
+  const initialSource: AudioSource =
+    preferredRef.current === "plugin" ? "off" : preferredRef.current;
+  const sourceRef = useRef<AudioSource>(initialSource);
   const micGateRef = useRef(clampMicGate(preferredMicGate));
   const micGainRef = useRef(clampMicGain(preferredMicGain));
   const peakGainRef = useRef(clampPeakGain(preferredPeakGain));
@@ -152,9 +155,7 @@ export function useAudioReactive({
   });
 
   const [pluginPresent, setPluginPresent] = useState(false);
-  const [source, setSourceState] = useState<AudioSource>(() =>
-    normalizeSource(preferredSource),
-  );
+  const [source, setSourceState] = useState<AudioSource>(initialSource);
   const [micGate, setMicGateState] = useState(() =>
     clampMicGate(preferredMicGate),
   );
@@ -387,14 +388,8 @@ export function useAudioReactive({
     const preferred = normalizeSource(preferredSource);
     // Always (re)apply — remount with source already "mic" must still open capture.
     // (Previously we bailed when preferred === sourceRef and never called start.)
-    if (preferred === "plugin" && !pluginRef.current) {
-      sourceRef.current = "plugin";
-      setSourceState("plugin");
-      if (!pluginVizReleaseRef.current) {
-        pluginVizReleaseRef.current = acquirePluginViz();
-      }
-      return;
-    }
+    // Prefer plugin in prefs, but resolve to off until hello — do not paint
+    // "plugin" or grab a viz lease while the extension is offline.
     applySourceRef.current(preferred, false);
   }, [preferredSource]);
 
@@ -438,8 +433,9 @@ export function useAudioReactive({
       syncPoll();
 
       if (!next) {
+        // Soft fall-back — keep preferred "plugin" in prefs so hello can reopen.
         if (sourceRef.current === "plugin") {
-          applySourceRef.current("off", true);
+          applySourceRef.current("off", false);
         }
       } else if (preferredRef.current === "plugin") {
         applySourceRef.current("plugin", false);

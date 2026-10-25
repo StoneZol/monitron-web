@@ -1,6 +1,6 @@
 {
     "name": "monitron-web",
-    "version": "2.3.0",
+    "version": "2.4.0",
     "private": true,
     "monitron": {
         "pluginVersion": "1.6.0"
@@ -10,6 +10,7 @@
         "build": "next build",
         "start": "next start",
         "lint": "eslint",
+        "decode-share": "node scripts/decode-share.mjs",
         "convert": "auto-convert-images",
         "resize": "auto-convert-images-resize"
     },

@@ -183,42 +183,59 @@ export function MediaField({
   const urlInputId = useId();
   const fileRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLInputElement>(null);
+  const urlAbortRef = useRef<AbortController | null>(null);
   const library = useLibrary();
   const session = useSession();
   const video = useSessionVideo();
   const [urlDraft, setUrlDraft] = useState("");
   const [busy, setBusy] = useState(false);
+  /** URL fetch/preview — separate so the rest of the panel stays interactive */
+  const [urlBusy, setUrlBusy] = useState(false);
+  /** 0…1 when known; null = indeterminate (encode / no Content-Length) */
+  const [urlProgress, setUrlProgress] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const videoMaxMb = Math.round(SESSION_VIDEO_MAX_BYTES / (1024 * 1024));
+
+  useEffect(() => {
+    return () => {
+      urlAbortRef.current?.abort();
+      urlAbortRef.current = null;
+    };
+  }, []);
 
   const stockSrc =
     value.kind === "stock"
       ? (stocks.find((s) => s.id === value.id)?.src ?? stocks[0]?.src ?? null)
       : null;
+  const sessionThumb =
+    value.kind === "session"
+      ? (getSessionMediaEntry(value.id)?.previewUrl ?? null)
+      : null;
+  const videoThumb =
+    value.kind === "video" ? (video?.objectUrl ?? null) : null;
 
   const [libThumb, setLibThumb] = useState<string | null>(null);
   useEffect(() => {
+    if (value.kind !== "library") return;
     let dead = false;
-    if (value.kind === "library") {
-      void getMediaPreviewObjectUrl(value.id).then((url) => {
-        if (!dead) setLibThumb(url);
-      });
-    } else if (value.kind === "session") {
-      setLibThumb(getSessionMediaEntry(value.id)?.previewUrl ?? null);
-    } else if (value.kind === "video") {
-      setLibThumb(getSessionVideo()?.objectUrl ?? null);
-    } else {
-      setLibThumb(null);
-    }
+    void getMediaPreviewObjectUrl(value.id).then((url) => {
+      if (!dead) setLibThumb(url);
+    });
     return () => {
       dead = true;
     };
-  }, [value, video]);
+  }, [value]);
 
   const previewSrc =
     value.kind === "stock"
       ? stockSrc
-      : libThumb;
+      : value.kind === "library"
+        ? libThumb
+        : value.kind === "session"
+          ? sessionThumb
+          : value.kind === "video"
+            ? videoThumb
+            : null;
 
   const caption =
     value.kind === "library"
@@ -250,14 +267,44 @@ export function MediaField({
     }
   };
 
+  const cancelUrlLoad = () => {
+    urlAbortRef.current?.abort();
+    urlAbortRef.current = null;
+  };
+
   const loadUrl = async () => {
     const u = urlDraft.trim();
-    if (!u) return;
-    await run(async () => {
-      const entry = await addMediaFromUrl(u);
+    if (!u || urlBusy || disabled) return;
+
+    cancelUrlLoad();
+    const ac = new AbortController();
+    urlAbortRef.current = ac;
+    setUrlBusy(true);
+    setUrlProgress(null);
+    setError(null);
+
+    try {
+      const entry = await addMediaFromUrl(u, {
+        signal: ac.signal,
+        onProgress: (ratio) => {
+          if (urlAbortRef.current !== ac) return;
+          setUrlProgress(ratio);
+        },
+      });
+      if (ac.signal.aborted) return;
       onChange({ kind: "library", id: entry.id });
       setUrlDraft("");
-    });
+    } catch (e) {
+      if (ac.signal.aborted || (e instanceof DOMException && e.name === "AbortError")) {
+        setError(null);
+        return;
+      }
+      setError(e instanceof Error ? e.message : "Failed");
+    } finally {
+      if (urlAbortRef.current === ac) urlAbortRef.current = null;
+      setUrlBusy(false);
+      setUrlProgress(null);
+    }
   };
 
   const pickFiles = async (files: FileList | null) => {
@@ -295,7 +342,6 @@ export function MediaField({
             aria-hidden
           >
             {previewSrc && value.kind === "video" ? (
-              // eslint-disable-next-line jsx-a11y/media-has-caption
               <video
                 src={previewSrc}
                 muted
@@ -387,9 +433,15 @@ export function MediaField({
               id={urlInputId}
               type="url"
               value={urlDraft}
-              disabled={disabled || busy || libCount >= MEDIA_LIBRARY_MAX}
+              disabled={
+                disabled ||
+                busy ||
+                urlBusy ||
+                libCount >= MEDIA_LIBRARY_MAX
+              }
               placeholder="https://… (cors)"
               onChange={(e) => setUrlDraft(e.target.value)}
+              onFocus={(e) => e.currentTarget.select()}
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   e.preventDefault();
@@ -398,20 +450,77 @@ export function MediaField({
               }}
               className="h-7 min-w-0 flex-1 border border-signal bg-screen px-2 font-mono text-[10px] normal-case tracking-normal text-signal placeholder:text-muted/50 focus-visible:outline focus-visible:outline-offset-1 focus-visible:outline-signal disabled:opacity-40"
             />
-            <button
-              type="button"
-              disabled={
-                disabled ||
-                busy ||
-                !urlDraft.trim() ||
-                libCount >= MEDIA_LIBRARY_MAX
-              }
-              className={cn(panelButtonClassName, "px-2 py-1 shadow-none")}
-              onClick={() => void loadUrl()}
-            >
-              add
-            </button>
+            {urlBusy ? (
+              <button
+                type="button"
+                disabled={disabled}
+                className={cn(panelButtonClassName, "px-2 py-1 shadow-none")}
+                onClick={cancelUrlLoad}
+              >
+                cancel
+              </button>
+            ) : (
+              <>
+                {urlDraft ? (
+                  <button
+                    type="button"
+                    disabled={disabled || busy}
+                    title="Clear"
+                    aria-label="Clear URL"
+                    className={cn(panelButtonClassName, "px-2 py-1 shadow-none")}
+                    onClick={() => {
+                      setUrlDraft("");
+                      setError(null);
+                    }}
+                  >
+                    ×
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  disabled={
+                    disabled ||
+                    busy ||
+                    !urlDraft.trim() ||
+                    libCount >= MEDIA_LIBRARY_MAX
+                  }
+                  className={cn(panelButtonClassName, "px-2 py-1 shadow-none")}
+                  onClick={() => void loadUrl()}
+                >
+                  add
+                </button>
+              </>
+            )}
           </div>
+          {urlBusy ? (
+            <div
+              className="flex flex-col gap-0.5"
+              role="status"
+              aria-live="polite"
+              aria-busy="true"
+            >
+              <div className="flex items-center justify-between gap-2 font-mono text-[8px] uppercase tracking-[0.16em] text-muted">
+                <span>
+                  {urlProgress == null
+                    ? "loading…"
+                    : `loading ${Math.round(urlProgress * 100)}%`}
+                </span>
+              </div>
+              <div className="h-1 w-full overflow-hidden border border-signal/40 bg-screen">
+                <div
+                  className={cn(
+                    "h-full bg-cyan/70 transition-[width] duration-150",
+                    urlProgress == null && "w-1/3 animate-pulse",
+                  )}
+                  style={
+                    urlProgress == null
+                      ? undefined
+                      : { width: `${Math.round(urlProgress * 100)}%` }
+                  }
+                />
+              </div>
+            </div>
+          ) : null}
         </div>
 
         <div>
@@ -482,7 +591,6 @@ export function MediaField({
                       "disabled:opacity-40",
                     )}
                   >
-                    {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
                     <video
                       src={video.objectUrl}
                       muted
