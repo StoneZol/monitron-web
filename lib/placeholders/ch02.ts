@@ -122,6 +122,7 @@ export const placeholdersCh02: PlaceholderMeta[] = [
         id: "dark_transit",
         title: "Dark Transit",
         href: "/s/dark_transit",
+        previewSrc: "/s/dark_transit.webp",
         tags: ["reactive"],
         cost: "low",
         ai: MONITRON_AI,
@@ -130,6 +131,21 @@ export const placeholdersCh02: PlaceholderMeta[] = [
                 author: "diatribes",
                 title: "Dark Transit",
                 href: "https://www.shadertoy.com/view/WcdczB",
+            }),
+        ],
+    },
+    {
+        id: "clouds_2d",
+        title: "2D Clouds",
+        href: "/s/clouds_2d",
+        tags: ["ambient"],
+        cost: "low",
+        ai: MONITRON_AI,
+        sources: [
+            withPorter({
+                author: "drift",
+                title: "2D Clouds",
+                href: "https://www.shadertoy.com/view/4tdSWr",
             }),
         ],
     },
@@ -152,4 +168,6 @@ export const blurbsCh02: Record<string, string> = {
         "002 Blue tunnel flight for idle monitors — flex look, stock path, reactive glow.",
     dark_transit:
         "Dark Transit tunnel for idle monitors — cinema bars, wall/orb palettes, reactive flight.",
+    clouds_2d:
+        "2D Clouds drift field for idle monitors — speed, cover, overcast, and time of day.",
 };
