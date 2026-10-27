@@ -12,7 +12,7 @@ import { FxOverlayLayer } from "@/components/FxOverlay";
  * Fx overlay layer paints over the scene on every screen.
  */
 const ScreensOverlay = ({ screenId, children }: ScreensOverlayProps) => {
-  const { ready, hideHud, hide, show, sync, hasPeers } =
+  const { ready, hideHud, hide, show, sync, follow, hasPeers, hasSitePeers } =
     useScreensOverlayHook(screenId);
 
   // Wait for client prefs — avoids HUD flash on reload when it was hidden.
@@ -38,7 +38,7 @@ const ScreensOverlay = ({ screenId, children }: ScreensOverlayProps) => {
 
   return (
     <ScreensOverlayContext.Provider
-      value={{ screenId, hide, sync, hasPeers }}
+      value={{ screenId, hide, sync, follow, hasPeers, hasSitePeers }}
     >
       <FxOverlayLayer screenId={screenId} />
       <div

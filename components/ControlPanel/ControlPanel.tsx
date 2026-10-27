@@ -168,22 +168,26 @@ export function ControlPanel({
                 {overlay ? (
                     <div className="grid w-full grid-cols-3 gap-1.5">
                         <ChromePair
-                            label="display"
-                            info="Sync pushes this tab’s prefs (incl. audio source) to other open tabs of the same screen and hot-applies them (no reload — fullscreen stays). Hide clears the HUD on this tab only."
+                            label="sync"
+                            info="Sync pushes prefs to other tabs of this same screen. Follow soft-navigates every open Monitron tab onto this screen (App Router — fullscreen stays) and applies the look."
                         >
-                            {overlay.hasPeers ? (
-                                <PanelButton
-                                    onClick={overlay.sync}
-                                    className="p-1"
-                                >
-                                    sync
-                                </PanelButton>
-                            ) : null}
                             <PanelButton
-                                onClick={overlay.hide}
+                                onClick={overlay.sync}
+                                disabled={!overlay.hasPeers}
                                 className="p-1"
+                                title="Sync same screen"
+                                aria-label="Sync same screen"
                             >
-                                hide
+                                sync
+                            </PanelButton>
+                            <PanelButton
+                                onClick={overlay.follow}
+                                disabled={!overlay.hasSitePeers}
+                                className="p-1"
+                                title="Follow — all tabs → this screen"
+                                aria-label="Follow — all tabs to this screen"
+                            >
+                                follow
                             </PanelButton>
                         </ChromePair>
                         <ChromePair
@@ -205,18 +209,46 @@ export function ControlPanel({
                             </PanelButton>
                         </ChromePair>
                         <ChromePair
-                            label="mode"
-                            info="Fullscreen fills the display. PiP floats the visual in a mini window (Chromium)."
+                            label="window"
+                            info="Minimize hides the HUD (tap empty scene to wake). Maximize is fullscreen. PiP floats the visual (Chromium)."
                         >
+                            <PanelButton
+                                onClick={overlay.hide}
+                                className="min-w-0 flex-1 px-1.5 py-2"
+                                title="Hide controls"
+                                aria-label="Hide controls"
+                            >
+                                <svg
+                                    viewBox="0 0 12 12"
+                                    className="size-3.5"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="1.35"
+                                    aria-hidden
+                                >
+                                    <path d="M2.5 9.25h7" />
+                                </svg>
+                            </PanelButton>
                             {onFullscreen ? (
                                 <PanelButton
                                     onClick={onFullscreen}
-                                    className="p-1"
+                                    className="min-w-0 flex-1 px-1.5 py-2"
+                                    title="Fullscreen"
+                                    aria-label="Fullscreen"
                                 >
-                                    fullscreen
+                                    <svg
+                                        viewBox="0 0 12 12"
+                                        className="size-3.5"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="1.25"
+                                        aria-hidden
+                                    >
+                                        <rect x="2" y="2" width="8" height="8" />
+                                    </svg>
                                 </PanelButton>
                             ) : null}
-                            <VisualPipButton className="p-1" />
+                            <VisualPipButton className="p-0" />
                         </ChromePair>
                     </div>
                 ) : null}

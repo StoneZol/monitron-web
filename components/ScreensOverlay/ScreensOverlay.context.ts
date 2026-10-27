@@ -5,10 +5,14 @@ import { createContext, useContext } from "react";
 type ScreensOverlayApi = {
   screenId: string;
   hide: () => void;
-  /** Push localStorage prefs to same-path tabs + reload this tab. */
+  /** Push prefs to other open tabs of the same screen (no navigation). */
   sync: () => void;
-  /** Other tabs of this screen are open in the browser. */
+  /** Soft-nav every Monitron tab onto this screen + apply prefs. */
+  follow: () => void;
+  /** Other tabs of this screen are open. */
   hasPeers: boolean;
+  /** Any other Monitron tab is open (any screen). */
+  hasSitePeers: boolean;
 };
 
 export const ScreensOverlayContext = createContext<ScreensOverlayApi | null>(

@@ -9,9 +9,26 @@ type VisualPipButtonProps = {
   className?: string;
 };
 
+/** Windows-style overlapping-windows glyph for picture-in-picture. */
+function PipIcon() {
+  return (
+    <svg
+      viewBox="0 0 12 12"
+      className="size-3.5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.25"
+      aria-hidden
+    >
+      <rect x="1.5" y="3.5" width="7" height="7" />
+      <rect x="3.5" y="1.5" width="7" height="7" fill="var(--color-screen, #0a0a0a)" />
+    </svg>
+  );
+}
+
 export function VisualPipButton({ className }: VisualPipButtonProps) {
   const [supported, setSupported] = useState(false);
-  const [flash, setFlash] = useState<string | null>(null);
+  const [flash, setFlash] = useState(false);
 
   useEffect(() => {
     setSupported(isVisualPipSupported());
@@ -22,18 +39,23 @@ export function VisualPipButton({ className }: VisualPipButtonProps) {
   const onClick = async () => {
     const result = await toggleVisualPip();
     if (result === "error") {
-      setFlash("fail");
-      window.setTimeout(() => setFlash(null), 1200);
+      setFlash(true);
+      window.setTimeout(() => setFlash(false), 1200);
     }
   };
 
   return (
     <PanelButton
       onClick={() => void onClick()}
-      className={cn("flex-1", className)}
-      title="Picture-in-picture — float the visual in a mini window"
+      className={cn("min-w-0 flex-1 px-1.5 py-2", className)}
+      title="Picture-in-picture"
+      aria-label="Picture-in-picture"
     >
-      {flash ?? "pip"}
+      {flash ? (
+        <span className="text-[9px] tracking-[0.14em]">!</span>
+      ) : (
+        <PipIcon />
+      )}
     </PanelButton>
   );
 }

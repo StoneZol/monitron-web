@@ -369,3 +369,227 @@ export function getTabHasPeers(screenId: string): boolean {
   }
   return bucket.peers.size > 0;
 }
+
+// ── Site-wide follow + presence (any Monitron tab) ─────────────────
+
+export const SITE_CHANNEL = "monitron:site-v1";
+export const SITE_FOLLOW_VERSION = 1 as const;
+
+export type SiteFollowMessage = {
+  v: typeof SITE_FOLLOW_VERSION;
+  kind: "site-follow";
+  /** Soft-nav target, e.g. `/s/root_sanctum` */
+  href: string;
+  screenId: string;
+  senderId: string;
+  prefs: Record<string, unknown>;
+  applyAt: number;
+  sessionMedia: SessionMediaSyncItem[];
+  sessionVideo: SessionVideoSyncItem | null;
+};
+
+type SitePresenceMsg = {
+  kind: "site-presence";
+  type: "hello" | "bye" | "ping";
+  id: string;
+};
+
+type SitePresenceBucket = {
+  peers: Map<string, number>;
+  listeners: Set<() => void>;
+  channel: BroadcastChannel | null;
+  beatTimer: number | null;
+  pruneTimer: number | null;
+  onHide?: () => void;
+};
+
+let sitePresence: SitePresenceBucket | null = null;
+
+function emitSitePresence() {
+  if (!sitePresence) return;
+  for (const listener of sitePresence.listeners) listener();
+}
+
+function pruneSitePeers() {
+  if (!sitePresence) return;
+  const now = Date.now();
+  let changed = false;
+  for (const [id, seen] of sitePresence.peers) {
+    if (now - seen > PRESENCE_TTL_MS) {
+      sitePresence.peers.delete(id);
+      changed = true;
+    }
+  }
+  if (changed) emitSitePresence();
+}
+
+/**
+ * Push every open Monitron tab onto this screen (soft navigate) + prefs.
+ * Returns applyAt so the sender can hot-apply locally too.
+ */
+export function broadcastSiteFollow(
+  screenId: string,
+  href: string,
+  prefs: Record<string, unknown>,
+  sessionMedia: SessionMediaSyncItem[] = [],
+  sessionVideo: SessionVideoSyncItem | null = null,
+): number {
+  const applyAt = Date.now() + TAB_SYNC_LEAD_MS;
+  if (typeof window === "undefined" || typeof BroadcastChannel === "undefined") {
+    return applyAt;
+  }
+  const msg: SiteFollowMessage = {
+    v: SITE_FOLLOW_VERSION,
+    kind: "site-follow",
+    href,
+    screenId,
+    senderId: getTabSyncSenderId(),
+    prefs: { ...prefs },
+    applyAt,
+    sessionMedia,
+    sessionVideo,
+  };
+  const ch = new BroadcastChannel(SITE_CHANNEL);
+  ch.postMessage(msg);
+  ch.close();
+  return applyAt;
+}
+
+/** Listen for master “follow me” redirects (any path). */
+export function subscribeSiteFollow(
+  onMessage: (msg: SiteFollowMessage) => void,
+): () => void {
+  if (typeof window === "undefined" || typeof BroadcastChannel === "undefined") {
+    return () => {};
+  }
+  const ch = new BroadcastChannel(SITE_CHANNEL);
+  ch.onmessage = (ev: MessageEvent) => {
+    const data = ev.data as SiteFollowMessage;
+    if (
+      !data ||
+      data.kind !== "site-follow" ||
+      data.v !== SITE_FOLLOW_VERSION ||
+      data.senderId === getTabSyncSenderId()
+    ) {
+      return;
+    }
+    onMessage(data);
+  };
+  return () => ch.close();
+}
+
+/**
+ * Apply follow payload: session media + prefs for target screen, then
+ * schedule hot-apply. Caller handles navigation.
+ */
+export function applyIncomingSiteFollow(msg: SiteFollowMessage): void {
+  void (async () => {
+    try {
+      await replaceSessionMediaFromSync(
+        Array.isArray(msg.sessionMedia) ? msg.sessionMedia : [],
+      );
+    } catch {
+      /* ignore */
+    }
+    try {
+      await replaceSessionVideoFromSync(msg.sessionVideo ?? null);
+    } catch {
+      /* ignore */
+    }
+    saveScreenPrefs(msg.screenId, msg.prefs);
+    scheduleTabSyncApply(Math.max(msg.applyAt, Date.now()), msg.screenId);
+  })();
+}
+
+/** Any other Monitron tab open (any screen). */
+export function subscribeSitePresence(onChange: () => void): () => void {
+  if (typeof window === "undefined" || typeof BroadcastChannel === "undefined") {
+    return () => {};
+  }
+
+  if (!sitePresence) {
+    const id = getTabSyncSenderId();
+    const channel = new BroadcastChannel(SITE_CHANNEL);
+    sitePresence = {
+      peers: new Map(),
+      listeners: new Set(),
+      channel,
+      beatTimer: null,
+      pruneTimer: null,
+    };
+
+    const post = (type: SitePresenceMsg["type"]) => {
+      const msg: SitePresenceMsg = { kind: "site-presence", type, id };
+      channel.postMessage(msg);
+    };
+
+    channel.onmessage = (ev: MessageEvent) => {
+      const data = ev.data as SitePresenceMsg | SiteFollowMessage;
+      if (!data || data.kind !== "site-presence") return;
+      if (data.id === id) return;
+      if (data.type === "bye") {
+        if (sitePresence!.peers.delete(data.id)) emitSitePresence();
+        return;
+      }
+      const before = sitePresence!.peers.size;
+      sitePresence!.peers.set(data.id, Date.now());
+      if (sitePresence!.peers.size !== before) emitSitePresence();
+      if (data.type === "ping") post("hello");
+    };
+
+    const onHide = () => post("bye");
+    window.addEventListener("pagehide", onHide);
+    sitePresence.onHide = onHide;
+
+    post("hello");
+    post("ping");
+    sitePresence.beatTimer = window.setInterval(
+      () => post("hello"),
+      PRESENCE_BEAT_MS,
+    );
+    sitePresence.pruneTimer = window.setInterval(
+      pruneSitePeers,
+      PRESENCE_BEAT_MS,
+    );
+  }
+
+  sitePresence.listeners.add(onChange);
+  return () => {
+    sitePresence!.listeners.delete(onChange);
+    if (sitePresence!.listeners.size > 0) return;
+
+    queueMicrotask(() => {
+      if (!sitePresence || sitePresence.listeners.size > 0) return;
+      const id = getTabSyncSenderId();
+      try {
+        sitePresence.channel?.postMessage({
+          kind: "site-presence",
+          type: "bye",
+          id,
+        } satisfies SitePresenceMsg);
+      } catch {
+        /* ignore */
+      }
+      if (sitePresence.beatTimer != null) {
+        window.clearInterval(sitePresence.beatTimer);
+      }
+      if (sitePresence.pruneTimer != null) {
+        window.clearInterval(sitePresence.pruneTimer);
+      }
+      if (sitePresence.onHide) {
+        window.removeEventListener("pagehide", sitePresence.onHide);
+      }
+      sitePresence.channel?.close();
+      sitePresence = null;
+    });
+  };
+}
+
+export function getSiteHasPeers(): boolean {
+  if (typeof window === "undefined" || !sitePresence) return false;
+  const now = Date.now();
+  for (const [id, seen] of sitePresence.peers) {
+    if (now - seen > PRESENCE_TTL_MS) sitePresence.peers.delete(id);
+  }
+  return sitePresence.peers.size > 0;
+}
