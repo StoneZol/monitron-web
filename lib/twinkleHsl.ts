@@ -138,6 +138,37 @@ export function advanceTwinkleHue(
   return next;
 }
 
+/**
+ * Hue from system clock — same on every tab of this machine.
+ * Prefer this over `advanceTwinkleHue` when Sync/Follow should stay locked;
+ * rAF-accumulated dt drifts (esp. background tabs).
+ */
+export function twinkleHueFromClock(
+  speed: number,
+  nowMs: number = Date.now(),
+): number {
+  if (!(speed > 0)) return 0;
+  let hue = (nowMs / 1000) * HUE_DEG_PER_SEC * speed;
+  hue %= 360;
+  if (hue < 0) hue += 360;
+  return hue;
+}
+
+/** Radians phase from system clock (palette twinkle / similar). */
+export function twinklePhaseFromClock(
+  radPerSecAt1: number,
+  speed: number,
+  nowMs: number = Date.now(),
+): number {
+  if (!(speed > 0) || !(radPerSecAt1 > 0)) return 0;
+  // Wrap to 0…2π — absolute epoch seconds blow float32 fract in shaders.
+  const TAU = Math.PI * 2;
+  let phase = (nowMs / 1000) * radPerSecAt1 * speed;
+  phase %= TAU;
+  if (phase < 0) phase += TAU;
+  return phase;
+}
+
 /** Write hsl(H S% L%) into target; returns target. */
 export function resolveTwinkleColor(
   hueDeg: number,

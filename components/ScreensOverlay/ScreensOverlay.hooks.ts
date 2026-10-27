@@ -2,16 +2,20 @@
 
 import { useCallback, useEffect, useSyncExternalStore } from "react";
 import { bindFullscreenEscape } from "@/lib/fullscreen";
+import { placeholders } from "@/lib/placeholders";
 import { snapshotScreenPrefsForSync } from "@/lib/screenLivePrefs";
 import {
   applyIncomingTabSync,
   broadcastHudHide,
+  broadcastSiteFollow,
   broadcastTabSync,
+  getSiteHasPeers,
   getTabHasPeers,
   getTabSyncSenderId,
   hudSessionKey,
   scheduleTabSyncApply,
   subscribeHudHide,
+  subscribeSitePresence,
   subscribeTabPresence,
   subscribeTabSync,
 } from "@/lib/tabBroadcast";
@@ -58,13 +62,17 @@ function writeHiddenLocal(screenId: string, hidden: boolean) {
       const key = hudSessionKey(screenId);
       if (hidden) window.sessionStorage.setItem(key, "1");
       else window.sessionStorage.removeItem(key);
-      // Drop legacy shared localStorage so hide can't leak via storage events.
       window.localStorage.removeItem(key);
     } catch {
       /* private mode */
     }
   }
   emit(screenId);
+}
+
+/** Local only — used by Follow slaves so the HUD stays down after soft-nav. */
+export function forceHideHudLocal(screenId: string) {
+  writeHiddenLocal(screenId, true);
 }
 
 const subscribeNoop = () => () => {};
@@ -76,10 +84,6 @@ const useScreensOverlayHook = (screenId: string) => {
     () => false,
   );
 
-  // Subscribe fns MUST be stable — inline arrows re-subscribe every render.
-  // Presence teardown posts "bye" + recreates the channel; with 2+ tabs that
-  // becomes a hello/bye storm (CPU melts, audio drops). Fullscreen re-renders
-  // made it obvious.
   const subscribeHud = useCallback(
     (listener: () => void) => subscribe(screenId, listener),
     [screenId],
@@ -87,6 +91,10 @@ const useScreensOverlayHook = (screenId: string) => {
   const subscribePeers = useCallback(
     (listener: () => void) => subscribeTabPresence(screenId, listener),
     [screenId],
+  );
+  const subscribeSite = useCallback(
+    (listener: () => void) => subscribeSitePresence(listener),
+    [],
   );
 
   const hideHud = useSyncExternalStore(
@@ -101,9 +109,14 @@ const useScreensOverlayHook = (screenId: string) => {
     () => false,
   );
 
+  const hasSitePeers = useSyncExternalStore(
+    subscribeSite,
+    () => getSiteHasPeers(),
+    () => false,
+  );
+
   useEffect(() => bindFullscreenEscape(), []);
 
-  // One-shot: clear shared localStorage hide leftover from older builds.
   useEffect(() => {
     try {
       window.localStorage.removeItem(hudSessionKey(screenId));
@@ -112,12 +125,10 @@ const useScreensOverlayHook = (screenId: string) => {
     }
   }, [screenId]);
 
-  // Remote hide → close this tab's overlay; show is never received.
   useEffect(() => {
     return subscribeHudHide(screenId, () => writeHiddenLocal(screenId, true));
   }, [screenId]);
 
-  // Cross-tab sync — prefs + session local media; does not force-hide.
   useEffect(() => {
     return subscribeTabSync(screenId, (msg) => {
       if (msg.senderId === getTabSyncSenderId()) return;
@@ -125,14 +136,34 @@ const useScreensOverlayHook = (screenId: string) => {
     });
   }, [screenId]);
 
-  const sync = () => {
-    if (!getTabHasPeers(screenId)) return;
+  const syncPayload = () => {
     const sessionMedia = exportSessionMediaForSync();
     const sessionVideo = exportSessionVideoForSync();
-    // Prefer this tab's in-memory prefs when registered (wet glass bg, etc.)
+    const prefs = snapshotScreenPrefsForSync(screenId);
+    return { sessionMedia, sessionVideo, prefs };
+  };
+
+  const sync = () => {
+    if (!getTabHasPeers(screenId)) return;
+    const { sessionMedia, sessionVideo, prefs } = syncPayload();
     const applyAt = broadcastTabSync(
       screenId,
-      snapshotScreenPrefsForSync(screenId),
+      prefs,
+      sessionMedia,
+      sessionVideo,
+    );
+    scheduleTabSyncApply(applyAt, screenId);
+  };
+
+  const follow = () => {
+    if (!getSiteHasPeers()) return;
+    const href =
+      placeholders.find((p) => p.id === screenId)?.href ?? `/s/${screenId}`;
+    const { sessionMedia, sessionVideo, prefs } = syncPayload();
+    const applyAt = broadcastSiteFollow(
+      screenId,
+      href,
+      prefs,
       sessionMedia,
       sessionVideo,
     );
@@ -143,12 +174,14 @@ const useScreensOverlayHook = (screenId: string) => {
     ready: isClient,
     hideHud,
     hasPeers,
+    hasSitePeers,
     hide: () => {
       writeHiddenLocal(screenId, true);
       broadcastHudHide(screenId);
     },
     show: () => writeHiddenLocal(screenId, false),
     sync,
+    follow,
   };
 };
 

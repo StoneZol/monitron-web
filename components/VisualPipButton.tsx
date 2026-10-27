@@ -2,7 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { PanelButton } from "@/components/ControlPanel/PanelButton";
-import { isVisualPipSupported, toggleVisualPip } from "@/lib/visualPip";
+import {
+  PipEnterIcon,
+  PipExitIcon,
+} from "@/components/ControlPanel/chromeIcons";
+import {
+  isVisualPipActive,
+  isVisualPipSupported,
+  toggleVisualPip,
+  VISUAL_PIP_CHANGE,
+} from "@/lib/visualPip";
 import { cn } from "@/lib/utils";
 
 type VisualPipButtonProps = {
@@ -11,29 +20,43 @@ type VisualPipButtonProps = {
 
 export function VisualPipButton({ className }: VisualPipButtonProps) {
   const [supported, setSupported] = useState(false);
-  const [flash, setFlash] = useState<string | null>(null);
+  const [active, setActive] = useState(false);
+  const [flash, setFlash] = useState(false);
 
   useEffect(() => {
     setSupported(isVisualPipSupported());
+    const sync = () => setActive(isVisualPipActive());
+    sync();
+    window.addEventListener(VISUAL_PIP_CHANGE, sync);
+    return () => window.removeEventListener(VISUAL_PIP_CHANGE, sync);
   }, []);
 
   if (!supported) return null;
 
   const onClick = async () => {
     const result = await toggleVisualPip();
+    setActive(isVisualPipActive());
     if (result === "error") {
-      setFlash("fail");
-      window.setTimeout(() => setFlash(null), 1200);
+      setFlash(true);
+      window.setTimeout(() => setFlash(false), 1200);
     }
   };
 
   return (
     <PanelButton
       onClick={() => void onClick()}
-      className={cn("flex-1", className)}
-      title="Picture-in-picture — float the visual in a mini window"
+      className={cn(className)}
+      title={active ? "Exit picture-in-picture" : "Picture-in-picture"}
+      aria-label={active ? "Exit picture-in-picture" : "Picture-in-picture"}
+      aria-pressed={active}
     >
-      {flash ?? "pip"}
+      {flash ? (
+        <span className="text-[9px] tracking-[0.14em]">!</span>
+      ) : active ? (
+        <PipExitIcon />
+      ) : (
+        <PipEnterIcon />
+      )}
     </PanelButton>
   );
 }

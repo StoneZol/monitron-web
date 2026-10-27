@@ -6,10 +6,11 @@ import * as THREE from "three";
 import type { VizBands } from "@/lib/audioBus";
 import { risingEdge } from "@/lib/audioDerive";
 import {
-  advanceTwinkleHue,
   createTwinklePulseEnv,
   pulseTwinkleLight,
   resolveTwinkleColor,
+  twinkleHueFromClock,
+  twinklePhaseFromClock,
   updateTwinklePulseEnv,
 } from "@/lib/twinkleHsl";
 import {
@@ -43,6 +44,19 @@ const MODE_CODE = {
 } as const;
 /** Full HSL hue lap of stock colors ≈ same as twinkle (1 ≈ 6s). */
 const PALETTE_PHASE_RAD_PER_SEC = (Math.PI * 2 * 60) / 360;
+/**
+ * Wall-clock phases must stay small: GPU float32 loses fract/sin precision
+ * past ~1e5 (absolute Date.now()/1000 ≈ 1.7e9 → black screen).
+ * Wrap period is long vs tunnel/shimmer cycles; same on every Sync tab.
+ */
+const PHASE_WRAP_SEC = 3600;
+
+function wallClockPhase(speed: number, nowMs = Date.now()): number {
+  const s = Math.max(0, speed);
+  if (!(s > 0)) return 0;
+  const raw = (nowMs / 1000) * s;
+  return raw - Math.floor(raw / PHASE_WRAP_SEC) * PHASE_WRAP_SEC;
+}
 
 type StarleidoscopeCanvasProps = {
   liveRef: RefObject<StarleidoscopeLive>;
@@ -91,15 +105,12 @@ function StarleidoscopeQuad({
 }) {
   const tint = useMemo(() => new THREE.Color("#a8c8ff"), []);
   const highlight = useMemo(() => new THREE.Color("#ff88cc"), []);
-  const patternT = useRef(0);
-  const shimmerT = useRef(0);
-  const palettePhase = useRef(0);
+  /** Local audio excess over wall-clock pattern (Sync-safe base stays Date.now). */
+  const patternAudioBoost = useRef(0);
   const lastT = useRef(0);
   const colorEnv = useRef(0);
   const colorPrev = useRef(0);
-  const colorKick = useRef(createMotionKickState());
   const patternKick = useRef(createMotionKickState());
-  const twinkleHue = useRef(0);
   const twinklePulse = useRef(createTwinklePulseEnv());
 
   const specData = useMemo(() => new Uint8Array(SPEC_W * 4), []);
@@ -164,14 +175,10 @@ function StarleidoscopeQuad({
 
   useEffect(() => {
     return registerRuntimeReset("starleidoscope", () => {
-      patternT.current = 0;
-      shimmerT.current = 0;
-      palettePhase.current = 0;
+      patternAudioBoost.current = 0;
       lastT.current = 0;
-      twinkleHue.current = 0;
       colorEnv.current = 0;
       twinklePulse.current = createTwinklePulseEnv();
-      colorKick.current = createMotionKickState();
       patternKick.current = createMotionKickState();
     });
   }, []);
@@ -184,9 +191,8 @@ function StarleidoscopeQuad({
     const rawDt = Math.max(0, t - lastT.current);
     const dt = Math.min(0.05, rawDt);
     lastT.current = t;
-
     const reactive = Boolean(viz?.enabled);
-    // Silence = zero strip (locked stock hues); live = stock FFT@0.25 reaction
+    // Strip kept for any future stock hooks; star hues are hash-only (Sync-safe).
     packAudioStrip(specData, viz?.bands, viz?.peak ?? 0, reactive);
     specTex.needsUpdate = true;
 
@@ -199,17 +205,9 @@ function StarleidoscopeQuad({
       ? channelLevel(viz!, live.patternAccelChannel)
       : 0;
 
-    const { speedMul: colorMul } = motionSpeedMul({
-      cruiseRaw: colorRaw,
-      cruiseDrive: live.colorDrive,
-      cruiseArmed: reactive && live.colorChannel !== "off",
-      kickRaw: colorAccelRaw,
-      kickDrive: live.colorAccelDrive,
-      kickArmed: reactive && live.colorAccelChannel !== "off",
-      kick: colorKick.current,
-      dt,
-    });
-
+    const patternArmed =
+      reactive &&
+      (live.patternChannel !== "off" || live.patternAccelChannel !== "off");
     const { speedMul: patternMul } = motionSpeedMul({
       cruiseRaw: patternRaw,
       cruiseDrive: live.patternDrive,
@@ -221,12 +219,23 @@ function StarleidoscopeQuad({
       dt,
     });
 
-    // Pattern slider → kaleidoscope / tunnel only (edges). Shimmer stays wall-clock.
-    patternT.current +=
-      rawDt * Math.max(0.05, live.patternSpeed) * patternMul;
-    shimmerT.current += rawDt;
+    // Wall-clock pattern + shimmer (wrapped) so Sync tabs share geometry.
+    // Audio only adds a local boost on top; Sync resets that boost.
+    const pSpeed = Math.max(0.05, live.patternSpeed);
+    if (patternArmed && patternMul !== 1) {
+      patternAudioBoost.current += rawDt * pSpeed * (patternMul - 1);
+      // Keep boost in wrap range so it can't blow float32 either.
+      if (Math.abs(patternAudioBoost.current) > PHASE_WRAP_SEC) {
+        patternAudioBoost.current %= PHASE_WRAP_SEC;
+      }
+    }
+    const patternT =
+      wallClockPhase(pSpeed) + patternAudioBoost.current;
+    const shimmerT = wallClockPhase(1);
 
-    const colorRate = Math.max(0, live.colorSpeed) * colorMul;
+    // Hue/phase from wall clock so Sync tabs stay locked (rAF dt drifts).
+    // Audio color bands punch lightness only — not phase rate.
+    const colorRate = Math.max(0, live.colorSpeed);
     const mode = live.colorMode;
     const colorArmed = reactive && live.colorChannel !== "off";
     const colorPunch = drivenLevel(colorRaw, live.colorDrive);
@@ -240,20 +249,15 @@ function StarleidoscopeQuad({
     const colorAmt = colorArmed ? colorEnv.current : 0;
 
     let colorMix = 0;
+    let palettePhase = 0;
     if (mode === "paletteTwinkle") {
-      palettePhase.current += dt * PALETTE_PHASE_RAD_PER_SEC * colorRate;
-    } else if (mode === "twinkle") {
-      twinkleHue.current = advanceTwinkleHue(
-        twinkleHue.current,
-        dt,
+      palettePhase = twinklePhaseFromClock(
+        PALETTE_PHASE_RAD_PER_SEC,
         colorRate,
       );
-      resolveTwinkleColor(
-        twinkleHue.current,
-        live.twinkleS,
-        live.twinkleL,
-        tint,
-      );
+    } else if (mode === "twinkle") {
+      const hue = twinkleHueFromClock(colorRate);
+      resolveTwinkleColor(hue, live.twinkleS, live.twinkleL, tint);
       if (colorArmed) {
         const pulseAmt = updateTwinklePulseEnv(
           twinklePulse.current,
@@ -285,9 +289,9 @@ function StarleidoscopeQuad({
       hexToVec3(live.colorPeak, highlight);
     }
 
-    m.uniforms.uPatternT!.value = patternT.current;
-    m.uniforms.uShimmerT!.value = shimmerT.current;
-    m.uniforms.uPalettePhase!.value = palettePhase.current;
+    m.uniforms.uPatternT!.value = patternT;
+    m.uniforms.uShimmerT!.value = shimmerT;
+    m.uniforms.uPalettePhase!.value = palettePhase;
     m.uniforms.uColorMode!.value = MODE_CODE[mode];
     m.uniforms.uColor!.value.copy(tint);
     m.uniforms.uHighlight!.value.copy(highlight);

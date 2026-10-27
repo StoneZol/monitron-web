@@ -12,6 +12,7 @@ type PanelButtonProps = {
   className?: string;
   type?: "button" | "submit" | "reset";
   title?: string;
+  "aria-label"?: string;
   "aria-pressed"?: boolean;
   "aria-expanded"?: boolean;
   "aria-controls"?: string;
@@ -26,6 +27,7 @@ export function PanelButton({
   className,
   type = "button",
   title,
+  "aria-label": ariaLabel,
   "aria-pressed": ariaPressed,
   "aria-expanded": ariaExpanded,
   "aria-controls": ariaControls,
@@ -37,6 +39,7 @@ export function PanelButton({
       onClick={onClick}
       disabled={disabled}
       title={title}
+      aria-label={ariaLabel}
       aria-pressed={ariaPressed}
       aria-expanded={ariaExpanded}
       aria-controls={ariaControls}

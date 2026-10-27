@@ -8,7 +8,8 @@ export const STOCK_PLACEHOLDER_IDS = ["1", "2", "3", "4"] as const;
 export type StockPlaceholderId = (typeof STOCK_PLACEHOLDER_IDS)[number];
 
 export type StockPlaceholder = {
-  id: StockPlaceholderId;
+  /** Wet Glass uses "1"…"4"; other screens may use their own stock ids. */
+  id: string;
   src: string;
   label: string;
 };

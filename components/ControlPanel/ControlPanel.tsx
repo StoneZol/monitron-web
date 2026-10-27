@@ -25,7 +25,13 @@ import {
     encodeScreenShare,
     type ShareDecodeError,
 } from "@/lib/screenShare";
+import { isFullscreen } from "@/lib/fullscreen";
 import { FieldInfo } from "./FieldInfo";
+import {
+    FullscreenEnterIcon,
+    FullscreenExitIcon,
+    HideHudIcon,
+} from "./chromeIcons";
 import { PanelButton } from "./PanelButton";
 import { Slider } from "./Slider";
 import { useRenderScale } from "@/lib/renderScale";
@@ -48,6 +54,9 @@ const SHARE_FLASH: Record<ShareDecodeError | "copied" | "fail", string> = {
     decrypt: "bad key",
     fail: "fail",
 };
+
+/** Same hit area for text chrome + window icons. */
+const chromeBtnClass = "h-9 min-w-0 flex-1 px-1.5 py-0";
 
 function ChromePair({
     label,
@@ -77,6 +86,39 @@ function ChromePair({
                 {children}
             </div>
         </div>
+    );
+}
+
+function FullscreenChromeButton({
+    onClick,
+    className,
+}: {
+    onClick: () => void;
+    className?: string;
+}) {
+    const [active, setActive] = useState(false);
+
+    useEffect(() => {
+        const sync = () => setActive(isFullscreen());
+        sync();
+        document.addEventListener("fullscreenchange", sync);
+        document.addEventListener("webkitfullscreenchange", sync);
+        return () => {
+            document.removeEventListener("fullscreenchange", sync);
+            document.removeEventListener("webkitfullscreenchange", sync);
+        };
+    }, []);
+
+    return (
+        <PanelButton
+            onClick={onClick}
+            className={className}
+            title={active ? "Exit fullscreen" : "Fullscreen"}
+            aria-label={active ? "Exit fullscreen" : "Fullscreen"}
+            aria-pressed={active}
+        >
+            {active ? <FullscreenExitIcon /> : <FullscreenEnterIcon />}
+        </PanelButton>
     );
 }
 
@@ -168,22 +210,26 @@ export function ControlPanel({
                 {overlay ? (
                     <div className="grid w-full grid-cols-3 gap-1.5">
                         <ChromePair
-                            label="display"
-                            info="Sync pushes this tab’s prefs (incl. audio source) to other open tabs of the same screen and hot-applies them (no reload — fullscreen stays). Hide clears the HUD on this tab only."
+                            label="sync"
+                            info="Sync pushes prefs to other tabs of this same screen. Follow soft-navigates every open Monitron tab onto this screen (App Router — fullscreen stays) and applies the look."
                         >
-                            {overlay.hasPeers ? (
-                                <PanelButton
-                                    onClick={overlay.sync}
-                                    className="p-1"
-                                >
-                                    sync
-                                </PanelButton>
-                            ) : null}
                             <PanelButton
-                                onClick={overlay.hide}
-                                className="p-1"
+                                onClick={overlay.sync}
+                                disabled={!overlay.hasPeers}
+                                className={chromeBtnClass}
+                                title="Sync same screen"
+                                aria-label="Sync same screen"
                             >
-                                hide
+                                sync
+                            </PanelButton>
+                            <PanelButton
+                                onClick={overlay.follow}
+                                disabled={!overlay.hasSitePeers}
+                                className={chromeBtnClass}
+                                title="Follow — all tabs → this screen"
+                                aria-label="Follow — all tabs to this screen"
+                            >
+                                follow
                             </PanelButton>
                         </ChromePair>
                         <ChromePair
@@ -193,30 +239,36 @@ export function ControlPanel({
                         >
                             <PanelButton
                                 onClick={onCopyShare}
-                                className="p-1"
+                                className={chromeBtnClass}
                             >
                                 copy
                             </PanelButton>
                             <PanelButton
                                 onClick={onPasteShare}
-                                className="p-1"
+                                className={chromeBtnClass}
                             >
                                 paste
                             </PanelButton>
                         </ChromePair>
                         <ChromePair
-                            label="mode"
-                            info="Fullscreen fills the display. PiP floats the visual in a mini window (Chromium)."
+                            label="window"
+                            info="Eye hides the HUD overlay (tap empty scene to wake). Corners toggle page fullscreen — while immersive the glyph flips to restore. PiP floats the visual in a inset window (Chromium)."
                         >
+                            <PanelButton
+                                onClick={overlay.hide}
+                                className={chromeBtnClass}
+                                title="Hide controls"
+                                aria-label="Hide controls"
+                            >
+                                <HideHudIcon />
+                            </PanelButton>
                             {onFullscreen ? (
-                                <PanelButton
+                                <FullscreenChromeButton
                                     onClick={onFullscreen}
-                                    className="p-1"
-                                >
-                                    fullscreen
-                                </PanelButton>
+                                    className={chromeBtnClass}
+                                />
                             ) : null}
-                            <VisualPipButton className="p-1" />
+                            <VisualPipButton className={chromeBtnClass} />
                         </ChromePair>
                     </div>
                 ) : null}

@@ -165,6 +165,37 @@ export const placeholdersCh02: PlaceholderMeta[] = [
             }),
         ],
     },
+    {
+        id: "insomnium",
+        title: "Insomnium",
+        href: "/s/insomnium",
+        previewSrc: "/s/insomnium.webp",
+        tags: ["reactive"],
+        cost: "high",
+        ai: MONITRON_AI,
+        sources: [
+            withPorter({
+                author: "diatribes",
+                title: "Insomnium",
+                href: "https://www.shadertoy.com/view/3cSBR1",
+            }),
+        ],
+    },
+    {
+        id: "old_guard",
+        title: "Old Guard",
+        href: "/s/old_guard",
+        previewSrc: "/s/old_guard.webp",
+        cost: "low",
+        ai: MONITRON_AI,
+        sources: [
+            withPorter({
+                author: "piyushslayer",
+                title: "Flag (wave doodle)",
+                href: "https://www.shadertoy.com/view/3lyGRd",
+            }),
+        ],
+    },
 ];
 
 export const blurbsCh02: Record<string, string> = {
@@ -188,4 +219,8 @@ export const blurbsCh02: Record<string, string> = {
         "2D Clouds drift field for idle monitors — speed, cover, and time of day.",
     root_sanctum:
         "Root Sanctum fractal flight for idle monitors — flex look, wall/light palettes, twinkle.",
+    insomnium:
+        "Insomnium fractal cavern for idle monitors — flex look, wall/light palettes, twinkle.",
+    old_guard:
+        "Old Guard waving empire flags for idle monitors — stock Napoleonic set, local/URL art, fabric wave.",
 };
