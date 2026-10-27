@@ -2,42 +2,40 @@
 
 import { useEffect, useState } from "react";
 import { PanelButton } from "@/components/ControlPanel/PanelButton";
-import { isVisualPipSupported, toggleVisualPip } from "@/lib/visualPip";
+import {
+  PipEnterIcon,
+  PipExitIcon,
+} from "@/components/ControlPanel/chromeIcons";
+import {
+  isVisualPipActive,
+  isVisualPipSupported,
+  toggleVisualPip,
+  VISUAL_PIP_CHANGE,
+} from "@/lib/visualPip";
 import { cn } from "@/lib/utils";
 
 type VisualPipButtonProps = {
   className?: string;
 };
 
-/** Windows-style overlapping-windows glyph for picture-in-picture. */
-function PipIcon() {
-  return (
-    <svg
-      viewBox="0 0 12 12"
-      className="size-3.5"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.25"
-      aria-hidden
-    >
-      <rect x="1.5" y="3.5" width="7" height="7" />
-      <rect x="3.5" y="1.5" width="7" height="7" fill="var(--color-screen, #0a0a0a)" />
-    </svg>
-  );
-}
-
 export function VisualPipButton({ className }: VisualPipButtonProps) {
   const [supported, setSupported] = useState(false);
+  const [active, setActive] = useState(false);
   const [flash, setFlash] = useState(false);
 
   useEffect(() => {
     setSupported(isVisualPipSupported());
+    const sync = () => setActive(isVisualPipActive());
+    sync();
+    window.addEventListener(VISUAL_PIP_CHANGE, sync);
+    return () => window.removeEventListener(VISUAL_PIP_CHANGE, sync);
   }, []);
 
   if (!supported) return null;
 
   const onClick = async () => {
     const result = await toggleVisualPip();
+    setActive(isVisualPipActive());
     if (result === "error") {
       setFlash(true);
       window.setTimeout(() => setFlash(false), 1200);
@@ -48,13 +46,16 @@ export function VisualPipButton({ className }: VisualPipButtonProps) {
     <PanelButton
       onClick={() => void onClick()}
       className={cn(className)}
-      title="Picture-in-picture"
-      aria-label="Picture-in-picture"
+      title={active ? "Exit picture-in-picture" : "Picture-in-picture"}
+      aria-label={active ? "Exit picture-in-picture" : "Picture-in-picture"}
+      aria-pressed={active}
     >
       {flash ? (
         <span className="text-[9px] tracking-[0.14em]">!</span>
+      ) : active ? (
+        <PipExitIcon />
       ) : (
-        <PipIcon />
+        <PipEnterIcon />
       )}
     </PanelButton>
   );

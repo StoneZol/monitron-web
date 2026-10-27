@@ -25,7 +25,13 @@ import {
     encodeScreenShare,
     type ShareDecodeError,
 } from "@/lib/screenShare";
+import { isFullscreen } from "@/lib/fullscreen";
 import { FieldInfo } from "./FieldInfo";
+import {
+    FullscreenEnterIcon,
+    FullscreenExitIcon,
+    HideHudIcon,
+} from "./chromeIcons";
 import { PanelButton } from "./PanelButton";
 import { Slider } from "./Slider";
 import { useRenderScale } from "@/lib/renderScale";
@@ -80,6 +86,39 @@ function ChromePair({
                 {children}
             </div>
         </div>
+    );
+}
+
+function FullscreenChromeButton({
+    onClick,
+    className,
+}: {
+    onClick: () => void;
+    className?: string;
+}) {
+    const [active, setActive] = useState(false);
+
+    useEffect(() => {
+        const sync = () => setActive(isFullscreen());
+        sync();
+        document.addEventListener("fullscreenchange", sync);
+        document.addEventListener("webkitfullscreenchange", sync);
+        return () => {
+            document.removeEventListener("fullscreenchange", sync);
+            document.removeEventListener("webkitfullscreenchange", sync);
+        };
+    }, []);
+
+    return (
+        <PanelButton
+            onClick={onClick}
+            className={className}
+            title={active ? "Exit fullscreen" : "Fullscreen"}
+            aria-label={active ? "Exit fullscreen" : "Fullscreen"}
+            aria-pressed={active}
+        >
+            {active ? <FullscreenExitIcon /> : <FullscreenEnterIcon />}
+        </PanelButton>
     );
 }
 
@@ -213,7 +252,7 @@ export function ControlPanel({
                         </ChromePair>
                         <ChromePair
                             label="window"
-                            info="Minimize hides the HUD (tap empty scene to wake). Maximize is fullscreen. PiP floats the visual (Chromium)."
+                            info="Eye hides the HUD overlay (tap empty scene to wake). Corners toggle page fullscreen — while immersive the glyph flips to restore. PiP floats the visual in a inset window (Chromium)."
                         >
                             <PanelButton
                                 onClick={overlay.hide}
@@ -221,35 +260,13 @@ export function ControlPanel({
                                 title="Hide controls"
                                 aria-label="Hide controls"
                             >
-                                <svg
-                                    viewBox="0 0 12 12"
-                                    className="size-3.5"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="1.35"
-                                    aria-hidden
-                                >
-                                    <path d="M2.5 9.25h7" />
-                                </svg>
+                                <HideHudIcon />
                             </PanelButton>
                             {onFullscreen ? (
-                                <PanelButton
+                                <FullscreenChromeButton
                                     onClick={onFullscreen}
                                     className={chromeBtnClass}
-                                    title="Fullscreen"
-                                    aria-label="Fullscreen"
-                                >
-                                    <svg
-                                        viewBox="0 0 12 12"
-                                        className="size-3.5"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        strokeWidth="1.25"
-                                        aria-hidden
-                                    >
-                                        <rect x="2" y="2" width="8" height="8" />
-                                    </svg>
-                                </PanelButton>
+                                />
                             ) : null}
                             <VisualPipButton className={chromeBtnClass} />
                         </ChromePair>
