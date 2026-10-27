@@ -49,6 +49,9 @@ const SHARE_FLASH: Record<ShareDecodeError | "copied" | "fail", string> = {
     fail: "fail",
 };
 
+/** Same hit area for text chrome + window icons. */
+const chromeBtnClass = "h-9 min-w-0 flex-1 px-1.5 py-0";
+
 function ChromePair({
     label,
     info,
@@ -174,7 +177,7 @@ export function ControlPanel({
                             <PanelButton
                                 onClick={overlay.sync}
                                 disabled={!overlay.hasPeers}
-                                className="p-1"
+                                className={chromeBtnClass}
                                 title="Sync same screen"
                                 aria-label="Sync same screen"
                             >
@@ -183,7 +186,7 @@ export function ControlPanel({
                             <PanelButton
                                 onClick={overlay.follow}
                                 disabled={!overlay.hasSitePeers}
-                                className="p-1"
+                                className={chromeBtnClass}
                                 title="Follow — all tabs → this screen"
                                 aria-label="Follow — all tabs to this screen"
                             >
@@ -197,13 +200,13 @@ export function ControlPanel({
                         >
                             <PanelButton
                                 onClick={onCopyShare}
-                                className="p-1"
+                                className={chromeBtnClass}
                             >
                                 copy
                             </PanelButton>
                             <PanelButton
                                 onClick={onPasteShare}
-                                className="p-1"
+                                className={chromeBtnClass}
                             >
                                 paste
                             </PanelButton>
@@ -214,7 +217,7 @@ export function ControlPanel({
                         >
                             <PanelButton
                                 onClick={overlay.hide}
-                                className="min-w-0 flex-1 px-1.5 py-2"
+                                className={chromeBtnClass}
                                 title="Hide controls"
                                 aria-label="Hide controls"
                             >
@@ -232,7 +235,7 @@ export function ControlPanel({
                             {onFullscreen ? (
                                 <PanelButton
                                     onClick={onFullscreen}
-                                    className="min-w-0 flex-1 px-1.5 py-2"
+                                    className={chromeBtnClass}
                                     title="Fullscreen"
                                     aria-label="Fullscreen"
                                 >
@@ -248,7 +251,7 @@ export function ControlPanel({
                                     </svg>
                                 </PanelButton>
                             ) : null}
-                            <VisualPipButton className="p-0" />
+                            <VisualPipButton className={chromeBtnClass} />
                         </ChromePair>
                     </div>
                 ) : null}

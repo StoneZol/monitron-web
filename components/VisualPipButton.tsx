@@ -47,7 +47,7 @@ export function VisualPipButton({ className }: VisualPipButtonProps) {
   return (
     <PanelButton
       onClick={() => void onClick()}
-      className={cn("min-w-0 flex-1 px-1.5 py-2", className)}
+      className={cn(className)}
       title="Picture-in-picture"
       aria-label="Picture-in-picture"
     >

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { forceHideHudLocal } from "@/components/ScreensOverlay/ScreensOverlay.hooks";
 import {
   applyIncomingSiteFollow,
   getTabSyncSenderId,
@@ -13,6 +14,7 @@ import {
 /**
  * Site-wide heartbeats + “follow master” soft-nav.
  * Mount once in the root layout so home/guide tabs also listen.
+ * Followers land with HUD hidden (master keeps theirs).
  */
 export function SiteFollowBridge() {
   const router = useRouter();
@@ -27,6 +29,8 @@ export function SiteFollowBridge() {
       if (msg.senderId === getTabSyncSenderId()) return;
 
       applyIncomingSiteFollow(msg);
+      // Slaves: clean switch, no overlay. Local only — don’t hide the master.
+      forceHideHudLocal(msg.screenId);
 
       const here = pathRef.current;
       const target = msg.href;

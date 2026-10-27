@@ -70,6 +70,11 @@ function writeHiddenLocal(screenId: string, hidden: boolean) {
   emit(screenId);
 }
 
+/** Local only — used by Follow slaves so the HUD stays down after soft-nav. */
+export function forceHideHudLocal(screenId: string) {
+  writeHiddenLocal(screenId, true);
+}
+
 const subscribeNoop = () => () => {};
 
 const useScreensOverlayHook = (screenId: string) => {
