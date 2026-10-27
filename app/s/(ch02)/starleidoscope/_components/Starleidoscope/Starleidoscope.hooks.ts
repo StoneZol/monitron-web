@@ -15,6 +15,7 @@ import {
 import { toggleFullscreen } from "@/lib/fullscreen";
 import { resetFxOverlay } from "@/components/FxOverlay";
 import { loadScreenPrefs, saveScreenPrefs } from "@/lib/screenPrefs";
+import { registerScreenLivePrefs } from "@/lib/screenLivePrefs";
 import { onTabSyncApply } from "@/lib/tabSyncHotApply";
 import {
   TWINKLE_DEFAULT_L,
@@ -238,6 +239,11 @@ export default function useStarleidoscopeHook() {
   );
 
   useEffect(() => onTabSyncApply(SCREEN_ID, rehydrateFromStorage), []);
+
+  useEffect(
+    () => registerScreenLivePrefs(SCREEN_ID, () => ({ ...readPrefs() })),
+    [],
+  );
 
   const commit = (patch: Partial<Stored>) => {
     writePrefs({ ...readPrefs(), ...patch });

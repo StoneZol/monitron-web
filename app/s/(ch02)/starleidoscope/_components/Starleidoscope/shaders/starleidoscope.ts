@@ -3,9 +3,9 @@
  * “Starleidoscope” — DanielXMoore
  *
  * Changes from original:
- * - iChannel0 kept for stock audio hue (FFT.r / wave.g @ 0.25)
+ * - iChannel0 reserved (stock FFT hue removed — Sync-safe hash palette)
  * - Mouse look frozen at center (no iMouse)
- * - uPatternT: geometry clock (dt × patternSpeed × audio mul)
+ * - uPatternT: wall-clock × patternSpeed (+ local audio boost)
  * - uShimmerT: wall-clock seconds for star pulse (stock iTime, not patternSpeed)
  * - Geometry uses t = uPatternT * 0.05 (stock was 0.01; ×5 so folds/tunnel match feel)
  * - uColorMode: 0 original, 1 paletteTwinkle, 2 twinkle, 3 palette
@@ -125,15 +125,15 @@ vec3 hueRotateRgb(vec3 c, float rad) {
   return hsl2rgb(hsl);
 }
 
-/** Stock DanielXMoore star tint (+ FFT@0.25). */
-vec3 stockStarColor(vec2 uv, float n, float size) {
+/**
+ * Stock DanielXMoore star tint.
+ * Hue seed is hash-only (no iChannel0) so Sync tabs share the same palette;
+ * FFT@0.25 used to re-seed fract and made master/slave hues diverge.
+ * Audio still drives pattern speed / twinkle pulse on the CPU side.
+ */
+vec3 stockStarColor(float n, float size) {
   vec3 hueShift =
-    fract(
-      n * 2345.2 +
-        dot(uv / 420., texture(iChannel0, vec2(0.25, 0.)).rg)
-    ) *
-    vec3(0.2, 0.3, 0.9) *
-    123.2;
+    fract(n * 2345.2) * vec3(0.2, 0.3, 0.9) * 123.2;
   vec3 color = sin(hueShift) * 0.5 + 0.5;
   return color * vec3(1., 0.25, 1. + size);
 }
@@ -157,10 +157,10 @@ vec3 StarLayer(vec2 uv) {
       vec3 color;
       float mode = floor(uColorMode + 0.5);
       if (mode < 0.5) {
-        color = stockStarColor(uv, n, size);
+        color = stockStarColor(n, size);
       } else if (mode < 1.5) {
         // Stock look, HSL hue walks full cycle (greens/yellows included)
-        color = hueRotateRgb(stockStarColor(uv, n, size), uPalettePhase);
+        color = hueRotateRgb(stockStarColor(n, size), uPalettePhase);
       } else if (mode < 2.5) {
         color = uColor * (0.65 + 0.55 * size);
       } else {
