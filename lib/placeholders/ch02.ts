@@ -181,6 +181,21 @@ export const placeholdersCh02: PlaceholderMeta[] = [
             }),
         ],
     },
+    {
+        id: "old_guard",
+        title: "Old Guard",
+        href: "/s/old_guard",
+        previewSrc: "/s/old_guard.webp",
+        cost: "low",
+        ai: MONITRON_AI,
+        sources: [
+            withPorter({
+                author: "piyushslayer",
+                title: "Flag (wave doodle)",
+                href: "https://www.shadertoy.com/view/3lyGRd",
+            }),
+        ],
+    },
 ];
 
 export const blurbsCh02: Record<string, string> = {
@@ -206,4 +221,6 @@ export const blurbsCh02: Record<string, string> = {
         "Root Sanctum fractal flight for idle monitors — flex look, wall/light palettes, twinkle.",
     insomnium:
         "Insomnium fractal cavern for idle monitors — flex look, wall/light palettes, twinkle.",
+    old_guard:
+        "Old Guard waving empire flags for idle monitors — stock Napoleonic set, local/URL art, fabric wave.",
 };
