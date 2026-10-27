@@ -165,6 +165,22 @@ export const placeholdersCh02: PlaceholderMeta[] = [
             }),
         ],
     },
+    {
+        id: "insomnium",
+        title: "Insomnium",
+        href: "/s/insomnium",
+        previewSrc: "/s/insomnium.webp",
+        tags: ["reactive"],
+        cost: "high",
+        ai: MONITRON_AI,
+        sources: [
+            withPorter({
+                author: "diatribes",
+                title: "Insomnium",
+                href: "https://www.shadertoy.com/view/3cSBR1",
+            }),
+        ],
+    },
 ];
 
 export const blurbsCh02: Record<string, string> = {
@@ -188,4 +204,6 @@ export const blurbsCh02: Record<string, string> = {
         "2D Clouds drift field for idle monitors — speed, cover, and time of day.",
     root_sanctum:
         "Root Sanctum fractal flight for idle monitors — flex look, wall/light palettes, twinkle.",
+    insomnium:
+        "Insomnium fractal cavern for idle monitors — flex look, wall/light palettes, twinkle.",
 };
